@@ -1,0 +1,219 @@
+# Copyright (c) 2015 Nordic Semiconductor. All Rights Reserved.
+#
+# The information contained herein is property of Nordic Semiconductor ASA.
+# Terms and conditions of usage are described in detail in NORDIC
+# SEMICONDUCTOR STANDARD SOFTWARE LICENSE AGREEMENT.
+#
+# Licensees are granted free, non-transferable use of the information. NO
+# WARRANTY of ANY KIND is provided. This heading must NOT be removed from
+# the file.
+
+# Python libraries
+import json
+import binascii
+import os
+
+# Nordic libraries
+from nordicsemi.exceptions import NotImplementedException
+from nordicsemi.dfu.init_packet import PacketField
+from nordicsemi.dfu.model import HexType, FirmwareKeys
+
+
+class ManifestGenerator(object):
+    def __init__(self, dfu_version, firmwares_data):
+        """
+        The Manifest Generator constructor. Needs a data structure to generate a manifest from.
+
+        :type float dfu_version: The dfu version number to state in manifest
+        :type dict firmwares_data: The firmwares data structure describing the Nordic DFU package
+        """
+        self.dfu_version = dfu_version
+        self.firmwares_data = firmwares_data
+        self.manifest = None
+
+    def generate_manifest(self):
+        self.manifest = Manifest()
+        self.manifest.dfu_version = self.dfu_version
+
+        for key in self.firmwares_data:
+            firmware_dict = self.firmwares_data[key]
+
+            if key == HexType.SD_BL:
+                _firmware = SoftdeviceBootloaderFirmware()
+                _firmware.bl_size = firmware_dict[FirmwareKeys.BL_SIZE]
+                _firmware.sd_size = firmware_dict[FirmwareKeys.SD_SIZE]
+            else:
+                _firmware = Firmware()
+
+            if key == 'dfu_version':
+                self.manifest.dfu_version = self.firmwares_data[key]
+
+        # Strip path, add only filename
+            _firmware.bin_file = os.path.basename(firmware_dict[FirmwareKeys.BIN_FILENAME])
+            _firmware.dat_file = os.path.basename(firmware_dict[FirmwareKeys.DAT_FILENAME])
+
+            init_packet_data = InitPacketData()
+
+            for init_packet_data_key in firmware_dict[FirmwareKeys.INIT_PACKET_DATA]:
+                field = firmware_dict[FirmwareKeys.INIT_PACKET_DATA][init_packet_data_key]
+
+                if init_packet_data_key == PacketField.APP_VERSION:
+                    init_packet_data.application_version = field
+                elif init_packet_data_key == PacketField.PACKET_VERSION:
+                    init_packet_data.packet_version = field
+                elif init_packet_data_key == PacketField.COMPRESSION_TYPE:
+                    init_packet_data.compression_type = field
+                elif init_packet_data_key == PacketField.DEVICE_TYPE:
+                    init_packet_data.device_type = field
+                elif init_packet_data_key == PacketField.DEVICE_REVISION:
+                    init_packet_data.device_revision = field
+                elif init_packet_data_key == PacketField.REQUIRED_SOFTDEVICES_ARRAY:
+                    init_packet_data.softdevice_req = field
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
+                    init_packet_data.firmware_hash = binascii.hexlify(field)
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16:
+                    init_packet_data.firmware_crc16 = field
+                else:
+                    raise NotImplementedException(
+                        "Support for init packet data type {0} not implemented yet.".format(init_packet_data_key))
+
+                _firmware.init_packet_data = init_packet_data
+
+            if key == HexType.APPLICATION:
+                self.manifest.application = _firmware
+            elif key == HexType.BOOTLOADER:
+                self.manifest.bootloader = _firmware
+            elif key == HexType.SOFTDEVICE:
+                self.manifest.softdevice = _firmware
+            elif key == HexType.SD_BL:
+                self.manifest.softdevice_bootloader = _firmware
+            else:
+                raise NotImplementedException("Support for firmware type {0} not implemented yet.".format(key))
+
+        return self.to_json()
+
+    def to_json(self):
+        def remove_none_entries(d):
+            if not isinstance(d, dict):
+                return d
+
+            return dict((k, remove_none_entries(v)) for k, v in d.iteritems() if v is not None)
+
+        return json.dumps({'manifest': self.manifest},
+                          default=lambda o: remove_none_entries(o.__dict__),
+                          sort_keys=True, indent=4,
+                          separators=(',', ': '))
+
+
+class InitPacketData(object):
+    def __init__(self,
+                 packet_version=None,
+                 compression_type=None,
+                 device_type=None,
+                 device_revision=None,
+                 application_version=None,
+                 softdevice_req=None,
+                 firmware_hash=None,
+                 firmware_crc16=None
+                 ):
+        """
+        The InitPacketData data model.
+
+        :param int packet_version: init packet version
+        :param int compression_type: init packet compression type
+        :param int device_type:  device type
+        :param int device_revision: device revision
+        :param int application_version:  application version
+        :param list softdevice_req: softdevice requirements
+        :param str firmware_hash: firmware hash
+        :param int firmware_crc16: firmware CRC-16 calculated value
+        :return: InitPacketData
+        """
+        self.firmware_hash = firmware_hash
+        self.softdevice_req = softdevice_req
+        self.application_version = application_version
+        self.device_revision = device_revision
+        self.compression_type = compression_type
+        self.packet_version = packet_version
+        self.device_type = device_type
+        self.firmware_crc16 = firmware_crc16
+
+
+class Firmware(object):
+    def __init__(self,
+                 bin_file=None,
+                 dat_file=None,
+                 init_packet_data=None):
+        """
+        The firmware datamodel
+
+        :param str bin_file: Firmware binary file
+        :param str dat_file: Firmware .dat file (init packet for Nordic DFU)
+        :param InitPacketData init_packet_data:  Initial packet data
+        :return:
+        """
+        self.dat_file = dat_file
+        self.bin_file = bin_file
+
+        if init_packet_data:
+            self.init_packet_data = InitPacketData(**init_packet_data)
+
+
+class SoftdeviceBootloaderFirmware(Firmware):
+    def __init__(self,
+                 bin_file=None,
+                 dat_file=None,
+                 init_packet_data=None,
+                 sd_size=None,
+                 bl_size=None):
+        """
+        The SoftdeviceBootloaderFirmware data model
+
+        :param str bin_file: Firmware binary file
+        :param str dat_file: Firmware .dat file (init packet for Nordic DFU)
+        :param int sd_size: The softdevice size
+        :param int bl_size: The bootloader size
+        :return: SoftdeviceBootloaderFirmware
+        """
+        super(SoftdeviceBootloaderFirmware, self).__init__(
+            bin_file,
+            dat_file,
+            init_packet_data)
+        self.sd_size = sd_size
+        self.bl_size = bl_size
+
+
+class Manifest:
+    def __init__(self,
+                 application=None,
+                 bootloader=None,
+                 softdevice=None,
+                 softdevice_bootloader=None,
+                 dfu_version=None):
+        """
+        The Manifest data model.
+
+        :param Firmware application: Application firmware in package
+        :param Firmware bootloader: Bootloader firmware in package
+        :param Firmware softdevice: Softdevice firmware in package
+        :param SoftdeviceBootloaderFirmware softdevice_bootloader: Combined softdevice and bootloader firmware in package
+        :return: Manifest
+        """
+        self.softdevice_bootloader = \
+            SoftdeviceBootloaderFirmware(**softdevice_bootloader) if softdevice_bootloader else None
+
+        self.softdevice = Firmware(**softdevice) if softdevice else None
+        self.bootloader = Firmware(**bootloader) if bootloader else None
+        self.application = Firmware(**application) if application else None
+        self.dfu_version = dfu_version
+
+    @staticmethod
+    def from_json(data):
+        """
+        Parses a manifest according to Nordic DFU package specification.
+
+        :param str data: The manifest in string format
+        :return: Manifest
+        """
+        kwargs = json.loads(data)
+        return Manifest(**kwargs['manifest'])
