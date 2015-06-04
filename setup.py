@@ -22,6 +22,7 @@ import platform
 
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
+from nordicsemi import version
 import os
 
 if platform.system() == 'Windows':
@@ -52,8 +53,7 @@ dll_excludes = [
     "WS2_32.DLL",
     "GDI32.DLL"]
 
-nrfutil_version = os.environ.get("NRFUTIL_VERSION", "0.0.0")
-build_dir = os.environ.get("NRFUTIL_BUILD_DIR", "./{}".format(nrfutil_version))
+build_dir = os.environ.get("NRFUTIL_BUILD_DIR", "./{}".format(version.NRFUTIL_VERSION))
 description = """A Python package that includes the nrfutil utility and the nordicsemi library"""
 
 
@@ -67,16 +67,11 @@ class NoseTestCommand(TestCommand):
         import nose
         nose.run_exit(argv=['nosetests', '--with-xunit'])
 
-common_requirements=[
-    "pyserial >= 2.7",
-    "enum34 >= 1.0.4",
-    "click",
-]
-
+common_requirements=[]
 
 setup(
     name="nrfutil",
-    version=nrfutil_version,
+    version=version.NRFUTIL_VERSION,
     license="Nordic Semicondictor proprietary license",
     url="https://github.com/NordicSemiconductor/pc-nrfutil",
     description="Nordic Semiconductor nrfutil utility and Python library",

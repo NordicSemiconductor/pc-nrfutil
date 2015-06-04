@@ -21,10 +21,8 @@ import binascii
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 from nordicsemi.dfu.package import Package
+from nordicsemi import version as nrfutil_version
 import shutil
-
-
-NRF_VERSION = "0.2.1"
 
 
 class nRFException(Exception):
@@ -64,16 +62,19 @@ def cli(verbose):
     else:
         logging.basicConfig(format='%(message)s')
 
+
 @cli.command()
 def version():
-    """"Displays nrf utility version."""
-    click.echo("nrfutil version {}".format(NRF_VERSION))
+    """Displays nrf utility version."""
+    click.echo("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
 
 
 @cli.group()
 def dfu():
     """
-    This set of commands support .dat file generation, hash generation of firmware files, automatic conversion of .hex files to .bin files, Nordic DFU OTA package generation for distribution to applications.
+    This set of commands support .dat file generation, hash generation of firmware files, automatic
+    conversion of .hex files to .bin files, Nordic DFU OTA package generation for distribution to
+    applications.
     """
     pass
 
@@ -100,8 +101,9 @@ def dfu():
               help='DFU packet version to use',
               type=click.FLOAT)
 @click.option('--sd-req',
-              help='SoftDevice requirement. What SoftDevice is required to already be present on the '
-                   'target device. Should be a list of firmware IDs. Example: --sd-req 0x4F,0x5A. '
+              help='SoftDevice requirement. What SoftDevice is required to already be present on '
+                   'the target device. Should be a list of firmware IDs. '
+                   'Example: --sd-req 0x4F,0x5A. '
                    'For an empty list use \'none\'. '
                    'See: http://developer.nordicsemi.com/nRF51_SDK/doc/7.2.0/s110/html/a00065.html',
               type=click.STRING)
