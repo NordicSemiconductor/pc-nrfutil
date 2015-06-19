@@ -1,15 +1,33 @@
-# Copyright (c) 2015 Nordic Semiconductor. All Rights Reserved.
+# Copyright (c) 2015, Nordic Semiconductor
+# All rights reserved.
 #
-# The information contained herein is property of Nordic Semiconductor ASA.
-# Terms and conditions of usage are described in detail in NORDIC
-# SEMICONDUCTOR STANDARD SOFTWARE LICENSE AGREEMENT.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# Licensees are granted free, non-transferable use of the information. NO
-# WARRANTY of ANY KIND is provided. This heading must NOT be removed from
-# the file.
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# * Neither the name of Nordic Semiconductor ASA nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Python standard library
-import time
+from time import sleep
 from datetime import datetime, timedelta
 import abc
 import logging
@@ -29,6 +47,7 @@ class DfuOpcodesBle(object):
         See http://developer.nordicsemi.com/nRF51_SDK/doc/7.2.0/s110/html/a00949.html#gafa9a52a3e6c43ccf00cf680f944d67a3
         for further information
     """
+    INVALID_OPCODE = 0
     START_DFU = 1
     INITIALIZE_DFU = 2
     RECEIVE_FIRMWARE_IMAGE = 3
@@ -95,10 +114,6 @@ class DfuTransportBle(DfuTransport):
 
     def __init__(self):
         super(DfuTransportBle, self).__init__()
-        self.ready_to_send = True
-        self.response_opcode_received = None
-        self.last_error = DfuErrorCodeBle.SUCCESS
-        self.disconnected_event_received = False
 
     def open(self):
         super(DfuTransportBle, self).open()
@@ -109,39 +124,36 @@ class DfuTransportBle(DfuTransport):
     def close(self):
         super(DfuTransportBle, self).close()
 
-    def _wait_for_response(self, opcode):
+    def _wait_for_condition(self, condition_function, expected_condition_value=True, timeout_message="Condition timed out"):
         """
-        Waits for self.response_opcode_received to be set to the expected opcode
+        Waits for condition_function to be true
         Will timeout after 10 seconds
 
-        :param int opcode: The expected opcode
+        :param function condition_function: The function we are waiting for to return true
+        :param str timeout_message: Message that should be logged
         :return:
         """
         timeout = 10
+        log_message = timeout_message
         start_time = datetime.now()
 
-        while self.response_opcode_received != opcode:
+        while condition_function() != expected_condition_value:
             timed_out = datetime.now() - start_time > timedelta(0, timeout)
             if timed_out:
-                log_message = "Timeout while waiting for response from device."
                 self._send_event(DfuEvent.TIMEOUT_EVENT, log_message=log_message)
                 raise NordicSemiException(log_message)
 
-            if self.disconnected_event_received:
+            if not self.is_open():
                 log_message = "Disconnected from device."
                 raise IllegalStateException(log_message)
 
-            time.sleep(0.1)
+            sleep(0.1)
 
-        if self.last_error != DfuErrorCodeBle.SUCCESS:
-            error_message = DfuErrorCodeBle.error_code_lookup(self.last_error)
+        if self.get_last_error() != DfuErrorCodeBle.SUCCESS:
+            error_message = DfuErrorCodeBle.error_code_lookup(self.get_last_error())
             self._send_event(DfuEvent.ERROR_EVENT, log_message=error_message)
             raise NordicSemiException(error_message)
 
-        self.response_opcode_received = None
-
-    def _disconnected_event(self, reason):
-        self.disconnected_event_received = True
 
     @abc.abstractmethod
     def send_packet_data(self, data):
@@ -166,12 +178,59 @@ class DfuTransportBle(DfuTransport):
         """
         pass
 
+
+    @abc.abstractmethod
+    def get_received_response(self):
+        """
+        Returns True if the transport layer has received a response it expected
+
+        :return: bool
+        """
+        pass
+
+    def clear_received_response(self):
+        """
+        Clears the received response status, sets it to False.
+
+        :return:
+        """
+        pass
+
+    @abc.abstractmethod
+    def is_waiting_for_notification(self):
+        """
+        Returns True if the transport layer is waiting for a notification
+
+        :return: bool
+        """
+        pass
+
+    def set_waiting_for_notification(self):
+        """
+        Notifies the transport layer that it should wait for notification
+
+        :return:
+        """
+        pass
+
+
+    @abc.abstractmethod
+    def get_last_error(self):
+        """
+        Returns the last error code
+
+        :return: DfuErrorCodeBle
+        """
+        pass
+
     def _start_dfu(self, program_mode, image_size_packet):
         logger.debug("Sending 'START DFU' command")
         self.send_control_data(DfuOpcodesBle.START_DFU, chr(program_mode))
         logger.debug("Sending image size")
         self.send_packet_data(image_size_packet)
-        self._wait_for_response(DfuOpcodesBle.START_DFU)
+        self._wait_for_condition(self.get_received_response, timeout_message="Timeout while waiting for response from device")
+        self.clear_received_response()
+
 
     def send_start_dfu(self, program_mode, softdevice_size=0, bootloader_size=0, app_size=0):
         super(DfuTransportBle, self).send_start_dfu(program_mode, softdevice_size, bootloader_size, app_size)
@@ -184,11 +243,10 @@ class DfuTransportBle(DfuTransport):
         except IllegalStateException:
             # We got disconnected. Try to send Start DFU again in case of buttonless dfu.
             self.close()
-            self.disconnected_event_received = False
             self.open()
 
             if not self.is_open():
-                raise IllegalStateException("Failed to open transport backend.")
+                raise IllegalStateException("Failed to reopen transport backend.")
 
             self._start_dfu(program_mode, image_size_packet)
 
@@ -207,7 +265,8 @@ class DfuTransportBle(DfuTransport):
 
         logger.debug("Sending 'Init Packet Complete' command")
         self.send_control_data(DfuOpcodesBle.INITIALIZE_DFU, init_packet_end)
-        self._wait_for_response(DfuOpcodesBle.INITIALIZE_DFU)
+        self._wait_for_condition(self.get_received_response, timeout_message="Timeout while waiting for response from device")
+        self.clear_received_response()
 
         if NUM_OF_PACKETS_BETWEEN_NOTIF:
             packet = int16_to_bytes(NUM_OF_PACKETS_BETWEEN_NOTIF)
@@ -218,34 +277,11 @@ class DfuTransportBle(DfuTransport):
         def progress_percentage(part, complete):
             """
                 Calculate progress percentage
-                :param part: Part value
-                :type part: int
-                :param complete: Completed value
-                :type complete: int
-                :return: Percentage complete
-                :rtype: int
+                :param int part: Part value
+                :param int complete: Completed value
+                :return: int: Percentage complete
                 """
             return min(100, (part + DATA_PACKET_SIZE) * 100 / complete)
-
-        def sleep_until_ready_to_send():
-            """
-            Waits until a notification is received from peer device
-            Will timeout after 10 seconds
-
-            :return:
-            """
-            if NUM_OF_PACKETS_BETWEEN_NOTIF:
-                timeout = 10
-                start_time = datetime.now()
-
-                while not self.ready_to_send:
-                    timed_out = datetime.now() - start_time > timedelta(0, timeout)
-                    if timed_out:
-                        log_message = "Timeout while waiting for notification from device."
-                        self._send_event(DfuEvent.TIMEOUT_EVENT, log_message=log_message)
-                        raise NordicSemiException(log_message)
-
-                    time.sleep(0.1)
 
         super(DfuTransportBle, self).send_firmware(firmware)
         packets_sent = 0
@@ -261,27 +297,31 @@ class DfuTransportBle(DfuTransport):
                 self._send_event(DfuEvent.PROGRESS_EVENT, progress=progress, log_message="Uploading firmware")
                 last_progress_update = progress
 
-            sleep_until_ready_to_send()
+            self._wait_for_condition(self.is_waiting_for_notification, expected_condition_value=False,
+                                     timeout_message="Timeout while waiting for notification from device.")
 
             data_to_send = firmware[i:i + DATA_PACKET_SIZE]
 
             log_message = "Sending Firmware bytes [{0}, {1}]".format(i, i + len(data_to_send))
             logger.debug(log_message)
-            self.send_packet_data(data_to_send)
 
             packets_sent += 1
 
             if NUM_OF_PACKETS_BETWEEN_NOTIF != 0:
                 if (packets_sent % NUM_OF_PACKETS_BETWEEN_NOTIF) == 0:
-                    self.ready_to_send = False
+                    self.set_waiting_for_notification()
 
-        self._wait_for_response(DfuOpcodesBle.RECEIVE_FIRMWARE_IMAGE)
+            self.send_packet_data(data_to_send)
+
+        self._wait_for_condition(self.get_received_response, timeout_message="Timeout while waiting for response from device")
+        self.clear_received_response()
 
     def send_validate_firmware(self):
         super(DfuTransportBle, self).send_validate_firmware()
         logger.debug("Sending 'VALIDATE FIRMWARE IMAGE' command")
         self.send_control_data(DfuOpcodesBle.VALIDATE_FIRMWARE_IMAGE)
-        self._wait_for_response(DfuOpcodesBle.VALIDATE_FIRMWARE_IMAGE)
+        self._wait_for_condition(self.get_received_response, timeout_message="Timeout while waiting for response from device")
+        self.clear_received_response()
         logger.info("Firmware validated OK.")
 
     def send_activate_firmware(self):
