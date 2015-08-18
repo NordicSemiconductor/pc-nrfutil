@@ -41,17 +41,21 @@ from nordicsemi.dfu import crc16
 from nordicsemi.exceptions import NordicSemiException
 from nordicsemi.dfu.dfu_transport import DfuTransport, DfuEvent
 
-DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
-ACK_PACKET_TIMEOUT = 1.0  # Timeout time for for ACK packet received before reporting timeout through event system
-SEND_INIT_PACKET_WAIT_TIME = 1.0  # Time to wait before communicating with bootloader after init packet is sent
-SEND_START_DFU_WAIT_TIME = 10.0  # Time to wait before communicating with bootloader after start DFU packet is sent
-DFU_PACKET_MAX_SIZE = 512  # The DFU packet max size
 
 logger = logging.getLogger(__name__)
 
 
 class DfuTransportSerial(DfuTransport):
-    def __init__(self, com_port, baud_rate=38400, flow_control=False, timeout=DEFAULT_SERIAL_PORT_TIMEOUT):
+
+    DEFAULT_BAUD_RATE = 38400
+    DEFAULT_FLOW_CONTROL = False
+    DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
+    ACK_PACKET_TIMEOUT = 1.0  # Timeout time for for ACK packet received before reporting timeout through event system
+    SEND_INIT_PACKET_WAIT_TIME = 1.0  # Time to wait before communicating with bootloader after init packet is sent
+    SEND_START_DFU_WAIT_TIME = 10.0  # Time to wait before communicating with bootloader after start DFU packet is sent
+    DFU_PACKET_MAX_SIZE = 512  # The DFU packet max size
+
+    def __init__(self, com_port, baud_rate=DEFAULT_BAUD_RATE, flow_control=DEFAULT_FLOW_CONTROL, timeout=DEFAULT_SERIAL_PORT_TIMEOUT):
         super(DfuTransportSerial, self).__init__()
         self.com_port = com_port
         self.baud_rate = baud_rate
@@ -93,7 +97,7 @@ class DfuTransportSerial(DfuTransport):
 
         packet = HciPacket(frame)
         self.send_packet(packet)
-        time.sleep(SEND_INIT_PACKET_WAIT_TIME)
+        time.sleep(DfuTransportSerial.SEND_INIT_PACKET_WAIT_TIME)
 
     def send_start_dfu(self, mode, softdevice_size=None, bootloader_size=None, app_size=None):
         super(DfuTransportSerial, self).send_start_dfu(mode, softdevice_size, bootloader_size, app_size)
@@ -104,7 +108,7 @@ class DfuTransportSerial(DfuTransport):
 
         packet = HciPacket(frame)
         self.send_packet(packet)
-        time.sleep(SEND_START_DFU_WAIT_TIME)
+        time.sleep(DfuTransportSerial.SEND_START_DFU_WAIT_TIME)
 
     def send_activate_firmware(self):
         super(DfuTransportSerial, self).send_activate_firmware()
@@ -118,8 +122,8 @@ class DfuTransportSerial(DfuTransport):
         frames = []
         self._send_event(DfuEvent.PROGRESS_EVENT, progress=0, done=False, log_message="")
 
-        for i in range(0, len(firmware), DFU_PACKET_MAX_SIZE):
-            data_packet = HciPacket(int32_to_bytes(DFU_DATA_PACKET) + firmware[i:i + DFU_PACKET_MAX_SIZE])
+        for i in range(0, len(firmware), DfuTransportSerial.DFU_PACKET_MAX_SIZE):
+            data_packet = HciPacket(int32_to_bytes(DFU_DATA_PACKET) + firmware[i:i + DfuTransportSerial.DFU_PACKET_MAX_SIZE])
             frames.append(data_packet)
 
         frames_count = len(frames)
@@ -175,7 +179,7 @@ class DfuTransportSerial(DfuTransport):
             if temp:
                 uart_buffer += temp
 
-            if is_timeout(start, ACK_PACKET_TIMEOUT):
+            if is_timeout(start, DfuTransportSerial.ACK_PACKET_TIMEOUT):
                 # reset HciPacket numbering back to 0
                 HciPacket.sequence_number = 0
                 self._send_event(DfuEvent.TIMEOUT_EVENT,

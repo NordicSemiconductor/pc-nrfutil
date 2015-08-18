@@ -32,6 +32,7 @@ import unittest
 import nordicsemi.dfu.nrfhex as nrfhex
 import nordicsemi.dfu.intelhex as intelhex
 
+
 class TestnRFHex(unittest.TestCase):
     def setUp(self):
         script_abspath = os.path.abspath(__file__)
@@ -59,52 +60,74 @@ class TestnRFHex(unittest.TestCase):
         self.assertEqual(actualfile_data, wantedfile_data)
 
     def test_tobinfile_single_file_without_uicr_content(self):
-        nrf = nrfhex.nRFHex("bar.hex")
-        nrf.tobinfile("bar.bin")
+        nrf = nrfhex.nRFHex("firmwares/bar.hex")
+        nrf.tobinfile("firmwares/bar.bin")
 
-        self.comparefiles("bar.bin", "bar_wanted.bin")
+        self.comparefiles("firmwares/bar.bin", "firmwares/bar_wanted.bin")
 
     def test_tobinfile_single_file_with_uicr_content(self):
-        nrf = nrfhex.nRFHex("foo.hex")
-        nrf.tobinfile("foo.bin")
+        nrf = nrfhex.nRFHex("firmwares/foo.hex")
+        nrf.tobinfile("firmwares/foo.bin")
 
-        self.comparefiles("foo.bin", "foo_wanted.bin")
+        self.comparefiles("firmwares/foo.bin", "firmwares/foo_wanted.bin")
 
     def test_tobinfile_single_bin_file(self):
-        nrf = nrfhex.nRFHex("bar_wanted.bin")
-        nrf.tobinfile("bar.bin")
+        nrf = nrfhex.nRFHex("firmwares/bar_wanted.bin")
+        nrf.tobinfile("firmwares/bar.bin")
 
-        self.comparefiles("bar.bin", "bar_wanted.bin")
+        self.comparefiles("firmwares/bar.bin", "firmwares/bar_wanted.bin")
 
     def test_tobinfile_two_hex_files(self):
-        nrf = nrfhex.nRFHex("foo.hex", "bar.hex")
-        nrf.tobinfile("foobar.bin")
+        nrf = nrfhex.nRFHex("firmwares/foo.hex", "firmwares/bar.hex")
+        nrf.tobinfile("firmwares/foobar.bin")
 
-        self.comparefiles("foobar.bin", "foobar_wanted.bin")
+        self.comparefiles("firmwares/foobar.bin", "firmwares/foobar_wanted.bin")
 
     def test_tobinfile_one_hex_one_bin(self):
-        nrf = nrfhex.nRFHex("foo_wanted.bin", "bar.hex")
-        nrf.tobinfile("foobar.bin")
+        nrf = nrfhex.nRFHex("firmwares/foo_wanted.bin", "firmwares/bar.hex")
+        nrf.tobinfile("firmwares/foobar.bin")
 
-        self.comparefiles("foobar.bin", "foobar_wanted.bin")
+        self.comparefiles("firmwares/foobar.bin", "firmwares/foobar_wanted.bin")
 
     def test_tobinfile_one_bin_one_hex(self):
-        nrf = nrfhex.nRFHex("foo.hex", "bar_wanted.bin")
-        nrf.tobinfile("foobar.bin")
+        nrf = nrfhex.nRFHex("firmwares/foo.hex", "firmwares/bar_wanted.bin")
+        nrf.tobinfile("firmwares/foobar.bin")
 
-        self.comparefiles("foobar.bin", "foobar_wanted.bin")
+        self.comparefiles("firmwares/foobar.bin", "firmwares/foobar_wanted.bin")
 
     def test_tobinfile_two_bin(self):
-        nrf = nrfhex.nRFHex("foo_wanted.bin", "bar_wanted.bin")
-        nrf.tobinfile("foobar.bin")
+        nrf = nrfhex.nRFHex("firmwares/foo_wanted.bin", "firmwares/bar_wanted.bin")
+        nrf.tobinfile("firmwares/foobar.bin")
 
-        self.comparefiles("foobar.bin", "foobar_wanted.bin")
+        self.comparefiles("firmwares/foobar.bin", "firmwares/foobar_wanted.bin")
 
     def test_sizes(self):
-        nrf = nrfhex.nRFHex("foo.hex", "bar.hex")
+        nrf = nrfhex.nRFHex("firmwares/foo.hex", "firmwares/bar.hex")
 
+        self.assertEqual(nrf.get_mbr_end_address(), 0x1000)
+        self.assertEqual(nrf.minaddr(), 0x1000)
         self.assertEqual(nrf.size(), 73152)
         self.assertEqual(nrf.bootloadersize(), 13192)
+
+        nrf = nrfhex.nRFHex("firmwares/s132_nrf52_mini.hex")
+
+        self.assertEqual(nrf.get_mbr_end_address(), 0x3000)
+        self.assertEqual(nrf.minaddr(), 0x3000)
+        self.assertEqual(nrf.size(), 12288)
+        self.assertEqual(nrf.bootloadersize(), 0)
+
+    def test_get_softdevice_variant(self):
+        nrf = nrfhex.nRFHex("firmwares/foo.hex")
+
+        self.assertEqual(nrf.get_softdevice_variant(), "unknown")
+
+        nrf = nrfhex.nRFHex("firmwares/s130_nrf51_mini.hex")
+
+        self.assertEqual(nrf.get_softdevice_variant(), "s1x0")
+
+        nrf = nrfhex.nRFHex("firmwares/s132_nrf52_mini.hex")
+
+        self.assertEqual(nrf.get_softdevice_variant(), "s132")
 
 
 if __name__ == '__main__':

@@ -28,18 +28,16 @@
 
 """nrfutil command line tool."""
 import logging
-
 import os
-
 import click
 
-import tempfile
-import binascii
 from nordicsemi.dfu.dfu import Dfu
+from nordicsemi.dfu.dfu_transport import DfuEvent
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
-import shutil
+from nordicsemi.dfu.signing import Signing
+from nordicsemi.dfu.util import query_func
 
 
 class nRFException(Exception):
@@ -57,16 +55,27 @@ def int_as_text_to_int(value):
         raise nRFException('%s is not a valid integer' % value)
 
 
-class BasedIntParamType(click.ParamType):
-    name = 'integer'
+class BasedIntOrNoneParamType(click.ParamType):
+    name = 'Int or None'
 
     def convert(self, value, param, ctx):
         try:
+            if value.lower() == 'none':
+                return 'none'
             return int_as_text_to_int(value)
         except nRFException:
             self.fail('%s is not a valid integer' % value, param, ctx)
 
-BASED_INT = BasedIntParamType()
+BASED_INT_OR_NONE = BasedIntOrNoneParamType()
+
+
+class TextOrNoneParamType(click.ParamType):
+    name = 'Text or None'
+
+    def convert(self, value, param, ctx):
+        return value
+
+TEXT_OR_NONE = TextOrNoneParamType()
 
 
 @click.group()
@@ -86,47 +95,91 @@ def version():
     click.echo("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
 
 
+@cli.command(short_help='Generate keys for signing or generate public keys')
+@click.argument('key_file', required=True)
+@click.option('--gen-key',
+              help='generate signing key and store at given path (pem-file)',
+              type=click.BOOL,
+              is_flag=True)
+@click.option('--show-vk',
+              help='Show the verification keys for DFU Signing (hex|code|pem)',
+              type=click.STRING)
+def keys(key_file,
+         gen_key,
+         show_vk):
+    """
+    This set of commands support creation of signing key (private) and showing the verification key (public)
+    from a previously loaded signing key. Signing key is stored in PEM format
+    """
+    if not gen_key and show_vk is None:
+        raise nRFException("Use either gen-key or show-vk.")
+
+    signer = Signing()
+
+    if gen_key:
+        if os.path.exists(key_file):
+            if not query_func("File found at %s. Do you want to overwrite the file?" % key_file):
+                click.echo('Key generation aborted')
+                return
+
+        signer.gen_key(key_file)
+        click.echo("Generated key at: %s" % key_file)
+
+    elif show_vk:
+        if not os.path.isfile(key_file):
+            raise nRFException("No key file to load at: %s" % key_file)
+
+        signer.load_key(key_file)
+        click.echo(signer.get_vk(show_vk))
+
+
 @cli.group()
 def dfu():
     """
-    This set of commands support .dat file generation, hash generation of firmware files, automatic
-    conversion of .hex files to .bin files, Nordic DFU OTA package generation for distribution to
-    applications.
+    This set of commands support Nordic DFU OTA package generation for distribution to
+    applications and serial DFU.
     """
     pass
 
 
 @dfu.command(short_help='Generate a package for distribution to Apps supporting Nordic DFU OTA')
 @click.argument('zipfile',
-                required=True)
+                required=True,
+                type=click.Path())
 @click.option('--application',
               help='The application firmware file',
               type=click.STRING)
 @click.option('--application-version',
-              help='Application version',
-              type=BASED_INT)
+              help='Application version, default: 0xFFFFFFFF',
+              type=BASED_INT_OR_NONE,
+              default=str(Package.DEFAULT_APP_VERSION))
 @click.option('--bootloader',
               help='The bootloader firmware file',
               type=click.STRING)
 @click.option('--dev-revision',
-              help='Device revision',
-              type=BASED_INT)
+              help='Device revision, default: 0xFFFF',
+              type=BASED_INT_OR_NONE,
+              default=str(Package.DEFAULT_DEV_REV))
 @click.option('--dev-type',
-              help='Device type',
-              type=BASED_INT)
+              help='Device type, default: 0xFFFF',
+              type=BASED_INT_OR_NONE,
+              default=str(Package.DEFAULT_DEV_TYPE))
 @click.option('--dfu-ver',
-              help='DFU packet version to use',
-              type=click.FLOAT)
+              help='DFU packet version to use, default: 0.5',
+              type=click.FLOAT,
+              default=Package.DEFAULT_DFU_VER)
 @click.option('--sd-req',
-              help='SoftDevice requirement. What SoftDevice is required to already be present on '
-                   'the target device. Should be a list of firmware IDs. '
-                   'Example: --sd-req 0x4F,0x5A. '
-                   'For an empty list use \'none\'. '
-                   'See: http://developer.nordicsemi.com/nRF51_SDK/doc/7.2.0/s110/html/a00065.html',
-              type=click.STRING)
+              help='SoftDevice requirement. A list of SoftDevice versions (1 or more)'
+                   'of which one is required to be present on the target device.'
+                   'Example: --sd-req 0x4F,0x5A. Default: 0xFFFE.',
+              type=TEXT_OR_NONE,
+              default=str(Package.DEFAULT_SD_REQ[0]))
 @click.option('--softdevice',
               help='The SoftDevice firmware file',
               type=click.STRING)
+@click.option('--key-file',
+              help='Signing key (pem fomat)',
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 def genpkg(zipfile,
            application,
            application_version,
@@ -135,17 +188,29 @@ def genpkg(zipfile,
            dev_type,
            dfu_ver,
            sd_req,
-           softdevice):
+           softdevice,
+           key_file):
     """
     Generate a zipfile package for distribution to Apps supporting Nordic DFU OTA.
     The application, bootloader and softdevice files are converted to .bin if it is a .hex file.
+    For more information on the generated init packet see:
+    http://developer.nordicsemi.com/nRF51_SDK/doc/7.2.0/s110/html/a00065.html
     """
-    zipfile_path = zipfile  # TODO: check if we can use click.path instead
+    zipfile_path = zipfile
+
+    if application_version == 'none':
+        application_version = None
+
+    if dev_revision == 'none':
+        dev_revision = None
+
+    if dev_type == 'none':
+        dev_type = None
+
     sd_req_list = None
 
-    if sd_req == "none":
+    if sd_req.lower() == 'none':
         sd_req_list = []
-
     elif sd_req:
         try:
             # This will parse any string starting with 0x as base 16.
@@ -155,15 +220,18 @@ def genpkg(zipfile,
             raise nRFException("Could not parse value for --sd-req. "
                                "Hex values should be prefixed with 0x.")
 
+    if key_file and dfu_ver < 0.8:
+        click.echo("Key file was given, setting DFU version to 0.8")
+
     package = Package(dev_type,
                       dev_revision,
                       application_version,
-                      '',
                       sd_req_list,
                       application,
                       bootloader,
                       softdevice,
-                      dfu_ver)
+                      dfu_ver,
+                      key_file)
 
     package.generate_package(zipfile_path)
 
@@ -171,26 +239,13 @@ def genpkg(zipfile,
     click.echo(log_message)
 
 
-@dfu.command(short_help='Generate a hash for the firmware file provided')
-@click.argument('firmware')
-def hash(firmware):
-    """Calculates a hash for the provided file. The file is converted to .bin if it is a .hex file."""
+global_bar = None
 
-    firmware_path = firmware[0]
 
-    work_directory = tempfile.mkdtemp(prefix="nrf_", suffix="_dfu")
-    Package.normalize_firmware_to_bin(work_directory, firmware_path)
-
-    firmware_bin_filename = os.path.basename(firmware_path)
-    firmware_bin_filename = firmware_bin_filename.replace(".hex", ".bin")
-    firmware_bin_path = os.path.join(work_directory, firmware_bin_filename)
-
-    firmware_hash = Package.calculate_sha256_hash(firmware_bin_path)
-    shutil.rmtree(work_directory)
-
-    result = binascii.hexlify(firmware_hash)
-    log_message = "Calculated hash for {0}: {1}".format(firmware_path, result)
-    click.echo(log_message)
+def update_progress(progress=0, done=False, log_message=""):
+    del done, log_message  # Unused parameters
+    if global_bar:
+        global_bar.update(max(1, progress))
 
 
 @dfu.command(short_help="Program a device with bootloader that support serial DFU")
@@ -204,26 +259,28 @@ def hash(firmware):
               required=True)
 @click.option('-b', '--baudrate',
               help='Desired baud rate 38400/96000/115200/230400/250000/460800/921600/1000000 (default: 38400). '
-                   'Note: Baud rates >115200 are supported by nRF51822, '
-                   'but may not be supported by all RS232 devices on Windows.',
+                   'Note: Physical serial ports (e.g. COM1) typically do not support baud rates > 115200',
               type=click.INT,
-              default=38400)
+              default=DfuTransportSerial.DEFAULT_BAUD_RATE)
 @click.option('-fc', '--flowcontrol',
               help='Enable flow control, default: disabled',
               type=click.BOOL,
               is_flag=True)
 def serial(package, port, baudrate, flowcontrol):
     """Program a device with bootloader that support serial DFU"""
-
-    # TODO: Look into using click.progressbar to show progress during DFU
     serial_backend = DfuTransportSerial(port, baudrate, flowcontrol)
+    serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(package, dfu_transport=serial_backend)
 
     click.echo("Upgrading target on {1} with DFU package {0}. Flow control is {2}."
                .format(package, port, "enabled" if flowcontrol else "disabled"))
 
     try:
-        dfu.dfu_send_images()
+        with click.progressbar(length=100) as bar:
+            global global_bar
+            global_bar = bar
+            dfu.dfu_send_images()
+
     except Exception as e:
         click.echo("")
         click.echo("Failed to upgrade target. Error is: {0}".format(e.message))

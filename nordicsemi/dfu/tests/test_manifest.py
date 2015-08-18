@@ -45,9 +45,13 @@ class TestManifest(unittest.TestCase):
             PacketField.DEVICE_REVISION: 2,
             PacketField.APP_VERSION: 1000,
             PacketField.REQUIRED_SOFTDEVICES_ARRAY: [22, 11],
-            PacketField.COMPRESSION_TYPE: 10,
+            PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID: 2,
+            PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH: 1234,
             PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
-                '\xc9\xd3\xbfi\xf2\x1e\x88\xa01\x1e\r\xd2BSa\x12\xf8BW\x9b\xef&Z$\xbd\x02U\xfdD?u\x9e'
+                '\xc9\xd3\xbfi\xf2\x1e\x88\xa01\x1e\r\xd2BSa\x12\xf8BW\x9b\xef&Z$\xbd\x02U\xfdD?u\x9e',
+            PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
+                '1\xd7B8\x129\xaa\xc3\xe6\x8b\xe2\x01\xd11\x17\x01\x00\xae\x1e\x04\xf9~q\xcd\xbfv"\xdan\xc0f2\xd49' +
+                '\xdc\xc7\xf8\xae\x16VV\x17\x90\xa3\x96\xadxPa\x0bs\xfe\xbdi]\xb2\x95\x81\x99\xe4\xb0\xcf\xe9\xda'
         }
 
         self.firmwares_data_a[HexType.APPLICATION] = {
@@ -80,12 +84,10 @@ class TestManifest(unittest.TestCase):
             FirmwareKeys.INIT_PACKET_DATA: init_packet_data_b
         }
 
-        self.firmwares_data_b[HexType.SD_BL] = {
-            FirmwareKeys.BIN_FILENAME: "sd_bl_fw.bin",
-            FirmwareKeys.DAT_FILENAME: "sd_bl_fw.dat",
+        self.firmwares_data_b[HexType.BOOTLOADER] = {
+            FirmwareKeys.BIN_FILENAME: "bootloader_fw.bin",
+            FirmwareKeys.DAT_FILENAME: "bootloader_fw.dat",
             FirmwareKeys.INIT_PACKET_DATA: copy.copy(init_packet_data_b),  # Fake the hash
-            FirmwareKeys.BL_SIZE: 50,
-            FirmwareKeys.SD_SIZE: 90
         }
 
         self.firmwares_data_c = {}
@@ -98,9 +100,9 @@ class TestManifest(unittest.TestCase):
             PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16: 0xfaae
         }
 
-        self.firmwares_data_c[HexType.APPLICATION] = {
-            FirmwareKeys.BIN_FILENAME: "app_fw.bin",
-            FirmwareKeys.DAT_FILENAME: "app_fw.dat",
+        self.firmwares_data_c[HexType.SOFTDEVICE] = {
+            FirmwareKeys.BIN_FILENAME: "softdevice_fw.bin",
+            FirmwareKeys.DAT_FILENAME: "softdevice_fw.dat",
             FirmwareKeys.INIT_PACKET_DATA: init_packet_data_c
         }
 
@@ -121,22 +123,22 @@ class TestManifest(unittest.TestCase):
         self.assertIn('bin_file', application)
 
         init_packet_data = application['init_packet_data']
-        self.assertNotIn('packet_version', init_packet_data)
         self.assertIn('firmware_hash', init_packet_data)
         self.assertIn('softdevice_req', init_packet_data)
         self.assertIn('device_revision', init_packet_data)
         self.assertIn('device_type', init_packet_data)
         self.assertIn('application_version', init_packet_data)
-        self.assertIn('compression_type', init_packet_data)
 
         # Test for values in document
         self.assertEqual("app_fw.bin", application['bin_file'])
         self.assertEqual("app_fw.dat", application['dat_file'])
 
-        self.assertNotIn('packet_version', init_packet_data)
+        self.assertEqual(2, init_packet_data['ext_packet_id'])
+        self.assertEqual(1234, init_packet_data['firmware_length'])
         self.assertEqual('c9d3bf69f21e88a0311e0dd242536112f842579bef265a24bd0255fd443f759e',
                          init_packet_data['firmware_hash'])
-        self.assertEqual(10, init_packet_data['compression_type'])
+        self.assertEqual('31d742381239aac3e68be201d131170100ae1e04f97e71cdbf7622da6ec06632d439dcc7f8ae1656561790a396ad7850610b73febd695db2958199e4b0cfe9da',
+                         init_packet_data['init_packet_ecds'])
         self.assertEqual(1000, init_packet_data['application_version'])
         self.assertEqual(1, init_packet_data['device_type'])
         self.assertEqual(2, init_packet_data['device_revision'])
@@ -174,27 +176,26 @@ class TestManifest(unittest.TestCase):
         self.assertIsNotNone(m.application)
         self.assertEqual("app_fw.bin", m.application.bin_file)
         self.assertEqual("app_fw.dat", m.application.dat_file)
-        self.assertIsNone(m.bootloader)
+        self.assertIsNotNone(m.bootloader)
+        self.assertEqual("bootloader_fw.bin", m.bootloader.bin_file)
+        self.assertEqual("bootloader_fw.dat", m.bootloader.dat_file)
         self.assertIsNone(m.softdevice)
-        self.assertIsNotNone(m.softdevice_bootloader)
-        self.assertEqual(90, m.softdevice_bootloader.sd_size)
-        self.assertEqual(50, m.softdevice_bootloader.bl_size)
-        self.assertEqual("sd_bl_fw.bin", m.softdevice_bootloader.bin_file)
-        self.assertEqual("sd_bl_fw.dat", m.softdevice_bootloader.dat_file)
+        self.assertIsNone(m.softdevice_bootloader)
         self.assertEqual(0xfaae, m.application.init_packet_data.firmware_crc16)
-        self.assertEqual(0xfaae, m.softdevice_bootloader.init_packet_data.firmware_crc16)
+        self.assertEqual(0xfaae, m.bootloader.init_packet_data.firmware_crc16)
+
 
     def test_manifest_c(self):
         r = ManifestGenerator("0.5", self.firmwares_data_c)
         m = Manifest.from_json(r.generate_manifest())
         self.assertIsNotNone(m)
-        self.assertIsNotNone(m.application)
-        self.assertEqual('app_fw.bin', m.application.bin_file)
-        self.assertEqual('app_fw.dat', m.application.dat_file)
+        self.assertIsNone(m.application)
         self.assertIsNone(m.bootloader)
-        self.assertIsNone(m.softdevice)
+        self.assertIsNotNone(m.softdevice)
+        self.assertEqual('softdevice_fw.bin', m.softdevice.bin_file)
+        self.assertEqual('softdevice_fw.dat', m.softdevice.dat_file)
         self.assertIsNone(m.softdevice_bootloader)
-        self.assertEqual(0xfaae, m.application.init_packet_data.firmware_crc16)
+        self.assertEqual(0xfaae, m.softdevice.init_packet_data.firmware_crc16)
 
 if __name__ == '__main__':
     unittest.main()

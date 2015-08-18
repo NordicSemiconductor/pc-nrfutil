@@ -30,16 +30,22 @@ from enum import Enum
 import struct
 
 
+INIT_PACKET_USES_CRC16 = 0
+INIT_PACKET_USES_HASH = 1
+INIT_PACKET_EXT_USES_ECDS = 2
+
+
 class PacketField(Enum):
-    PACKET_VERSION = 1
-    COMPRESSION_TYPE = 2
-    DEVICE_TYPE = 3
-    DEVICE_REVISION = 4
-    APP_VERSION = 5
-    REQUIRED_SOFTDEVICES_ARRAY = 6
-    OPT_DATA = 7
+    DEVICE_TYPE = 1
+    DEVICE_REVISION = 2
+    APP_VERSION = 3
+    REQUIRED_SOFTDEVICES_ARRAY = 4
+    OPT_DATA = 5
+    NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID = 6
+    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH = 7
     NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH = 8
     NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16 = 9
+    NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS = 10
 
 
 class Packet(object):
@@ -63,6 +69,7 @@ class Packet(object):
     def generate_packet(self):
         """
         Generates a binary packet from provided init_packet_fields provided in constructor.
+        This version includes the extended data
 
         :return str: Returns a string representing the init_packet (in binary)
 
@@ -78,11 +85,6 @@ class Packet(object):
                        PacketField.OPT_DATA]:
                 args.append(len(self.init_packet_fields[key]))
                 args.extend(self.init_packet_fields[key])
-            elif key in [PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH]:
-                hash_length = len(self.init_packet_fields[key])
-                args.append(hash_length + 1)  # Optional data length
-                args.append(hash_length)  # Firmware hash length
-                args.append(self.init_packet_fields[key])  # Firmware hash
             else:
                 args.append(self.init_packet_fields[key])
 
@@ -93,9 +95,7 @@ class Packet(object):
         # see https://docs.python.org/2/library/struct.html
 
         for key in sorted(self.init_packet_fields.keys(), key=lambda x: x.value):
-            if key in [PacketField.PACKET_VERSION,
-                       PacketField.COMPRESSION_TYPE,
-                       PacketField.DEVICE_TYPE,
+            if key in [PacketField.DEVICE_TYPE,
                        PacketField.DEVICE_REVISION,
                        ]:
                 format_string += Packet.UNSIGNED_SHORT
@@ -111,11 +111,15 @@ class Packet(object):
             elif key in [PacketField.OPT_DATA]:
                 format_string += Packet.UNSIGNED_SHORT  # Add length field to optional data
                 format_string += "{0}{1}".format(len(self.init_packet_fields[key]), Packet.CHAR_ARRAY)
+            elif key in [PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID]:
+                format_string += Packet.UNSIGNED_INT  # Add the extended packet id field
+            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH:
+                format_string += Packet.UNSIGNED_INT  # Add the firmware length field
             elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
-                format_string += Packet.UNSIGNED_SHORT  # Add length field to optional data
-                format_string += Packet.UNSIGNED_CHAR  # Add firmware hash length
                 format_string += "32{0}".format(Packet.CHAR_ARRAY)  # SHA-256 requires 32 bytes
             elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16:
                 format_string += Packet.UNSIGNED_SHORT
+            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
+                format_string += "64{0}".format(Packet.CHAR_ARRAY)  # ECDS based on P-256 using SHA-256 requires 64 bytes
 
         return format_string

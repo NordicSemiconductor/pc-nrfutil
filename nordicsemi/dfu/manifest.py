@@ -63,10 +63,7 @@ class ManifestGenerator(object):
             else:
                 _firmware = Firmware()
 
-            if key == 'dfu_version':
-                self.manifest.dfu_version = self.firmwares_data[key]
-
-        # Strip path, add only filename
+            # Strip path, add only filename
             _firmware.bin_file = os.path.basename(firmware_dict[FirmwareKeys.BIN_FILENAME])
             _firmware.dat_file = os.path.basename(firmware_dict[FirmwareKeys.DAT_FILENAME])
 
@@ -77,20 +74,22 @@ class ManifestGenerator(object):
 
                 if init_packet_data_key == PacketField.APP_VERSION:
                     init_packet_data.application_version = field
-                elif init_packet_data_key == PacketField.PACKET_VERSION:
-                    init_packet_data.packet_version = field
-                elif init_packet_data_key == PacketField.COMPRESSION_TYPE:
-                    init_packet_data.compression_type = field
                 elif init_packet_data_key == PacketField.DEVICE_TYPE:
                     init_packet_data.device_type = field
                 elif init_packet_data_key == PacketField.DEVICE_REVISION:
                     init_packet_data.device_revision = field
                 elif init_packet_data_key == PacketField.REQUIRED_SOFTDEVICES_ARRAY:
                     init_packet_data.softdevice_req = field
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID:
+                    init_packet_data.ext_packet_id = field
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH:
+                    init_packet_data.firmware_length = field
                 elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
                     init_packet_data.firmware_hash = binascii.hexlify(field)
                 elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16:
                     init_packet_data.firmware_crc16 = field
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
+                    init_packet_data.init_packet_ecds = binascii.hexlify(field)
                 else:
                     raise NotImplementedException(
                         "Support for init packet data type {0} not implemented yet.".format(init_packet_data_key))
@@ -125,36 +124,39 @@ class ManifestGenerator(object):
 
 class InitPacketData(object):
     def __init__(self,
-                 packet_version=None,
-                 compression_type=None,
                  device_type=None,
                  device_revision=None,
                  application_version=None,
                  softdevice_req=None,
+                 ext_packet_id=None,
+                 firmware_length=None,
                  firmware_hash=None,
-                 firmware_crc16=None
+                 firmware_crc16=None,
+                 init_packet_ecds=None
                  ):
         """
         The InitPacketData data model.
 
-        :param int packet_version: init packet version
-        :param int compression_type: init packet compression type
         :param int device_type:  device type
         :param int device_revision: device revision
         :param int application_version:  application version
         :param list softdevice_req: softdevice requirements
+        :param int ext_packet_id: packet extension id
+        :param int firmware_length: firmware length
         :param str firmware_hash: firmware hash
         :param int firmware_crc16: firmware CRC-16 calculated value
+        :param str init_packet_ecds: Init packet signature
         :return: InitPacketData
         """
-        self.firmware_hash = firmware_hash
-        self.softdevice_req = softdevice_req
-        self.application_version = application_version
-        self.device_revision = device_revision
-        self.compression_type = compression_type
-        self.packet_version = packet_version
         self.device_type = device_type
+        self.device_revision = device_revision
+        self.application_version = application_version
+        self.softdevice_req = softdevice_req
+        self.ext_packet_id = ext_packet_id
+        self.firmware_length = firmware_length
+        self.firmware_hash = firmware_hash
         self.firmware_crc16 = firmware_crc16
+        self.init_packet_ecds = init_packet_ecds
 
 
 class Firmware(object):
@@ -167,7 +169,7 @@ class Firmware(object):
 
         :param str bin_file: Firmware binary file
         :param str dat_file: Firmware .dat file (init packet for Nordic DFU)
-        :param InitPacketData init_packet_data:  Initial packet data
+        :param dict init_packet_data:  Initial packet data
         :return:
         """
         self.dat_file = dat_file
@@ -211,10 +213,10 @@ class Manifest:
         """
         The Manifest data model.
 
-        :param Firmware application: Application firmware in package
-        :param Firmware bootloader: Bootloader firmware in package
-        :param Firmware softdevice: Softdevice firmware in package
-        :param SoftdeviceBootloaderFirmware softdevice_bootloader: Combined softdevice and bootloader firmware in package
+        :param dict application: Application firmware in package
+        :param dict bootloader: Bootloader firmware in package
+        :param dict softdevice: Softdevice firmware in package
+        :param dict softdevice_bootloader: Combined softdevice and bootloader firmware in package
         :return: Manifest
         """
         self.softdevice_bootloader = \

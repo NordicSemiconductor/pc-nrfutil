@@ -31,6 +31,7 @@ To generate a self-contained Windows exe version of the utility (Windows only):
 ```
 python setup.py py2exe
 ```
+NOTE: Some anti-virus programs will stop py2exe from executing correctly when it modifies the .exe file.
 
 Usage
 -----

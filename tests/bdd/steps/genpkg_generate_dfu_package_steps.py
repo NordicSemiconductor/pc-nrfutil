@@ -70,42 +70,78 @@ def step_impl(context, application, bootloader, softdevice, package):
 
 @given(u'with option --application-version {app_ver}')
 def step_impl(context, app_ver):
-    if app_ver != u'not_set':
+    context.application_version = None
+
+    if app_ver == u'not_set':
+        context.application_version = 0xFFFFFFFF
+    elif app_ver == u'none':
+        context.args.extend(['--application-version', 'None'])
+    else:
         context.args.extend(['--application-version', app_ver])
         context.application_version = int_as_text_to_int(app_ver)
-    else:
-        context.application_version = None
+
 
 @given(u'with option --dev-revision {dev_rev}')
 def step_impl(context, dev_rev):
-    if dev_rev != u'not_set':
+    context.dev_revision = None
+
+    if dev_rev == u'not_set':
+        context.dev_revision = 0xFFFF
+    elif dev_rev == u'none':
+        context.args.extend(['--dev-revision', 'None'])
+    else:
         context.args.extend(['--dev-revision', dev_rev])
         context.dev_revision = int_as_text_to_int(dev_rev)
-    else:
-        context.dev_revision = None
 
 
 @given(u'with option --dev-type {dev_type}')
 def step_impl(context, dev_type):
-    if dev_type != u'not_set':
+    context.dev_type = None
+
+    if dev_type == u'not_set':
+        context.dev_type = 0xFFFF
+    elif dev_type == u'none':
+        context.args.extend(['--dev-type', 'None'])
+    else:
         context.args.extend(['--dev-type', dev_type])
         context.dev_type = int_as_text_to_int(dev_type)
-    else:
-        context.dev_type = None
 
 
 @given(u'with option --dfu-ver {dfu_ver}')
 def step_impl(context, dfu_ver):
-    if dfu_ver != u'not_set':
+    context.firmware_hash = None
+    context.ext_packet_id = None
+    context.init_packet_ecds = None
+
+    if dfu_ver == u'not_set':
+        context.dfu_ver = 0.5
+        context.ext_packet_id = 0
+    else:
+        if dfu_ver == 0.5:
+            pass
+        elif dfu_ver == 0.6:
+            context.ext_packet_id = 0
+        elif dfu_ver == 0.7:
+            context.ext_packet_id = 1
+            context.firmware_hash = 'exists'
+        elif dfu_ver == 0.8:
+            context.ext_packet_id = 2
+            context.firmware_hash = 'exists'
+            context.init_packet_ecds = 'exists'
+
         context.args.extend(['--dfu-ver', dfu_ver])
         context.dfu_ver = float(dfu_ver)
-    else:
-        context.dfu_ver = None
 
 
 @given(u'with option --sd-req {sd_reqs}')
 def step_impl(context, sd_reqs):
-    if sd_reqs != u'not_set':
+    context.sd_req = None
+
+    if sd_reqs == u'not_set':
+        context.sd_req = [0xFFFE]
+    elif sd_reqs == u'none':
+        context.args.extend(['--sd-req', 'None'])
+    else:
         context.args.extend(['--sd-req', sd_reqs])
 
         sd_reqs = sd_reqs.split(",")
@@ -115,8 +151,13 @@ def step_impl(context, sd_reqs):
             sd_reqs_value.append(int_as_text_to_int(sd_req))
 
         context.sd_req = sd_reqs_value
-    else:
-        context.sd_req = None
+
+
+@given(u'with option --key-file {pem_file}')
+def step_impl(context, pem_file):
+    if pem_file != u'not_set':
+        context.args.extend(['--key-file', os.path.join(get_resources_path(), pem_file)])
+        context.dfu_ver = 0.8
 
 
 @when(u'user press enter')
@@ -164,9 +205,8 @@ def step_impl(context, package):
                 _json = json.load(f)
 
                 if context.dfu_ver:
-                    assert _json['manifest'].has_key('dfu_version')
+                    assert 'dfu_version' in _json['manifest']
                     assert _json['manifest']['dfu_version'] == context.dfu_ver
-
 
                 if context.bootloader and context.softdevice:
                     data = _json['manifest']['softdevice_bootloader']['init_packet_data']
@@ -184,18 +224,27 @@ def step_impl(context, package):
 
 def assert_init_packet_data(context, data):
     if context.application_version:
-        assert data.has_key('application_version')
+        assert 'application_version' in data
         assert data['application_version'] == context.application_version
 
     if context.dev_revision:
-        assert data.has_key('device_revision')
+        assert 'device_revision' in data
         assert data['device_revision'] == context.dev_revision
 
     if context.dev_type:
-        assert data.has_key('device_type')
+        assert 'device_type' in data
         assert data['device_type'] == context.dev_type
 
     if context.sd_req:
-        assert data.has_key('softdevice_req')
+        assert 'softdevice_req' in data
         assert data['softdevice_req'] == context.sd_req
 
+    if context.ext_packet_id:
+        assert 'ext_packet_id' in data
+        assert data['ext_packet_id'] == context.ext_packet_id
+
+    if context.firmware_hash:
+        assert 'firmware_hash' in data
+
+    if context.init_packet_ecds:
+        assert 'init_packet_ecds' in data

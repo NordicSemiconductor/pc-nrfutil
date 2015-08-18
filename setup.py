@@ -36,12 +36,14 @@ USAGE:
     python setup.py py2exe
 
 """
+import os
 import platform
 
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
+from setuptools_behave import behave_test
+
 from nordicsemi import version
-import os
 
 if platform.system() == 'Windows':
     import py2exe  # Required even if it is not used in this file. This import adds py2exe to distutils.
@@ -81,7 +83,7 @@ class NoseTestCommand(TestCommand):
 
     def run_tests(self):
         import nose
-        nose.run_exit(argv=['nosetests', '--with-xunit'])
+        nose.run_exit(argv=['nosetests', '--with-xunit', '--xunit-file=test-reports/unittests.xml'])
 
 common_requirements=[]
 
@@ -105,7 +107,10 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 2.7",
     ],
-    cmdclass={'test': NoseTestCommand},
+    cmdclass={
+        'test': NoseTestCommand
+        # 'bdd_test': behave_test
+    },
     entry_points='''
       [console_scripts]
       nrfutil = nordicsemi.__main__:cli

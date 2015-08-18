@@ -124,36 +124,38 @@ class DfuTransportBle(DfuTransport):
     def close(self):
         super(DfuTransportBle, self).close()
 
-    def _wait_for_condition(self, condition_function, expected_condition_value=True, timeout_message="Condition timed out"):
+    def _wait_for_condition(self, condition_function, expected_condition_value=True, timeout=10,
+                            waiting_for="condition"):
         """
         Waits for condition_function to be true
-        Will timeout after 10 seconds
+        Will timeout after 60 seconds
 
         :param function condition_function: The function we are waiting for to return true
         :param str timeout_message: Message that should be logged
         :return:
         """
-        timeout = 10
-        log_message = timeout_message
+
         start_time = datetime.now()
 
         while condition_function() != expected_condition_value:
+            timeout_message = "Timeout while waiting for {0}.".format(waiting_for)
             timed_out = datetime.now() - start_time > timedelta(0, timeout)
             if timed_out:
-                self._send_event(DfuEvent.TIMEOUT_EVENT, log_message=log_message)
-                raise NordicSemiException(log_message)
+                self._send_event(DfuEvent.TIMEOUT_EVENT, log_message=timeout_message)
+                raise NordicSemiException(timeout_message)
 
             if not self.is_open():
-                log_message = "Disconnected from device."
+                log_message = "Disconnected from device while waiting for {0}.".format(waiting_for)
                 raise IllegalStateException(log_message)
 
             sleep(0.1)
 
         if self.get_last_error() != DfuErrorCodeBle.SUCCESS:
-            error_message = DfuErrorCodeBle.error_code_lookup(self.get_last_error())
+            error_message = "Error occoured while waiting for {0}. Error response {1}."
+            error_code = DfuErrorCodeBle.error_code_lookup(self.get_last_error())
+            error_message = error_message.format(waiting_for, error_code)
             self._send_event(DfuEvent.ERROR_EVENT, log_message=error_message)
             raise NordicSemiException(error_message)
-
 
     @abc.abstractmethod
     def send_packet_data(self, data):
@@ -161,7 +163,6 @@ class DfuTransportBle(DfuTransport):
         Send data to the packet characteristic
 
         :param str data: The data to be sent
-        :param str log_message: Message describing the data packet
         :return:
         """
         pass
@@ -173,11 +174,9 @@ class DfuTransportBle(DfuTransport):
 
         :param int opcode: The opcode for the operation command sent to the control characteristic
         :param str data: The data to be sent
-        :param str log_message: Message describing the control packet
         :return:
         """
         pass
-
 
     @abc.abstractmethod
     def get_received_response(self):
@@ -213,7 +212,6 @@ class DfuTransportBle(DfuTransport):
         """
         pass
 
-
     @abc.abstractmethod
     def get_last_error(self):
         """
@@ -228,9 +226,8 @@ class DfuTransportBle(DfuTransport):
         self.send_control_data(DfuOpcodesBle.START_DFU, chr(program_mode))
         logger.debug("Sending image size")
         self.send_packet_data(image_size_packet)
-        self._wait_for_condition(self.get_received_response, timeout_message="Timeout while waiting for response from device")
+        self._wait_for_condition(self.get_received_response, waiting_for="response for START DFU")
         self.clear_received_response()
-
 
     def send_start_dfu(self, program_mode, softdevice_size=0, bootloader_size=0, app_size=0):
         super(DfuTransportBle, self).send_start_dfu(program_mode, softdevice_size, bootloader_size, app_size)
@@ -265,7 +262,7 @@ class DfuTransportBle(DfuTransport):
 
         logger.debug("Sending 'Init Packet Complete' command")
         self.send_control_data(DfuOpcodesBle.INITIALIZE_DFU, init_packet_end)
-        self._wait_for_condition(self.get_received_response, timeout_message="Timeout while waiting for response from device")
+        self._wait_for_condition(self.get_received_response, timeout=60, waiting_for="response for INITIALIZE DFU")
         self.clear_received_response()
 
         if NUM_OF_PACKETS_BETWEEN_NOTIF:
@@ -298,7 +295,7 @@ class DfuTransportBle(DfuTransport):
                 last_progress_update = progress
 
             self._wait_for_condition(self.is_waiting_for_notification, expected_condition_value=False,
-                                     timeout_message="Timeout while waiting for notification from device.")
+                                     waiting_for="notification from device")
 
             data_to_send = firmware[i:i + DATA_PACKET_SIZE]
 
@@ -313,14 +310,14 @@ class DfuTransportBle(DfuTransport):
 
             self.send_packet_data(data_to_send)
 
-        self._wait_for_condition(self.get_received_response, timeout_message="Timeout while waiting for response from device")
+        self._wait_for_condition(self.get_received_response, waiting_for="response for RECEIVE FIRMWARE IMAGE")
         self.clear_received_response()
 
     def send_validate_firmware(self):
         super(DfuTransportBle, self).send_validate_firmware()
         logger.debug("Sending 'VALIDATE FIRMWARE IMAGE' command")
         self.send_control_data(DfuOpcodesBle.VALIDATE_FIRMWARE_IMAGE)
-        self._wait_for_condition(self.get_received_response, timeout_message="Timeout while waiting for response from device")
+        self._wait_for_condition(self.get_received_response, waiting_for="response for VALIDATE FIRMWARE IMAGE")
         self.clear_received_response()
         logger.info("Firmware validated OK.")
 

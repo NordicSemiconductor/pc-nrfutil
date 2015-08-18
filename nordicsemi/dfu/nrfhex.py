@@ -27,6 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from nordicsemi.dfu import intelhex
+from struct import unpack
 
 
 class nRFHex(intelhex.IntelHex):
@@ -34,7 +35,14 @@ class nRFHex(intelhex.IntelHex):
         Converts and merges .hex and .bin files into one .bin file.
     """
 
-    mbr_end_address = 0x1000
+    info_struct_address_base = 0x00003000
+    info_struct_address_offset = 0x1000
+
+    info_struct_magic_number = 0x51B1E5DB
+    info_struct_magic_number_offset = 0x004
+
+    s1x0_mbr_end_address = 0x1000
+    s132_mbr_end_address = 0x3000
 
     def __init__(self, source, bootloader=None):
         """
@@ -68,12 +76,42 @@ class nRFHex(intelhex.IntelHex):
             for i in range(uicr_start_address, maxaddress + 1):
                 self._buf.pop(i, 0)
 
+    def address_has_magic_number(self, address):
+        try:
+            potential_magic_number = self.gets(address, 4)
+            potential_magic_number = unpack('L', potential_magic_number)[0]
+            return nRFHex.info_struct_magic_number == potential_magic_number
+        except Exception:
+            return False
+
+    def get_softdevice_variant(self):
+        potential_magic_number_address = nRFHex.info_struct_address_base + nRFHex.info_struct_magic_number_offset
+
+        if self.address_has_magic_number(potential_magic_number_address):
+            return "s1x0"
+
+        for i in xrange(4):
+            potential_magic_number_address += nRFHex.info_struct_address_offset
+
+            if self.address_has_magic_number(potential_magic_number_address):
+                return "s132"
+
+        return "unknown"
+
+    def get_mbr_end_address(self):
+        softdevice_variant = self.get_softdevice_variant()
+
+        if softdevice_variant == "s132":
+            return nRFHex.s132_mbr_end_address
+        else:
+            return nRFHex.s1x0_mbr_end_address
+
     def minaddr(self):
         min_address = super(nRFHex, self).minaddr()
 
-        # Addresses lower than 0x1000 are reserved for master boot record
+        # Lower addresses are reserved for master boot record
         if self.file_format != 'bin':
-            min_address = max(nRFHex.mbr_end_address, min_address)
+            min_address = max(self.get_mbr_end_address(), min_address)
 
         return min_address
 
@@ -104,7 +142,7 @@ class nRFHex(intelhex.IntelHex):
 
         return self.bootloaderhex.size()
 
-    def tobinfile(self, fobj):
+    def tobinfile(self, fobj, start=None, end=None, pad=None, size=None):
         """
         Writes a binary version of source and bootloader respectivly to fobj which could be a
         file object or a file path.

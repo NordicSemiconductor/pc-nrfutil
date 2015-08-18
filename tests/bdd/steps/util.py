@@ -60,28 +60,95 @@ def kill_processes(context):
 
 def generate_options_table_for_cucumber():
     retval = ""
-    number_of_optional_options = 5
-    number_of_optional_option_permutations = int(math.pow(2, number_of_optional_options))
+
+    number_of_2_option_options = 1
+    number_of_3_option_options = 4
+    number_of_4_option_options = 1
+
+    number_of_optional_option_permutations = 1
+    number_of_optional_option_permutations *= int(math.pow(2, number_of_2_option_options))
+    number_of_optional_option_permutations *= int(math.pow(3, number_of_3_option_options))
+    number_of_optional_option_permutations *= int(math.pow(4, number_of_4_option_options))
 
     for x in xrange(0, number_of_optional_option_permutations):
         retval += "{0:<8}".format(" ")
         retval += "| {0:<12}| {1:<29}| {2:<29}|".format("blinky.bin", "not_set", "not_set")
-        retval += " {0:<8}|".format("0x{0:02x}".format(randint(0, 255)) if x & 1 else "not_set")
-        retval += " {0:<8}|".format("0x{0:02x}".format(randint(0, 255)) if x & 2 else "not_set")
-        retval += " {0:<8}|".format("0x{0:02x}".format(randint(0, 255)) if x & 4 else "not_set")
-        retval += " {0:<10}|".format("0.1" if x & 8 else "not_set")
 
-        if x & 16:
+        permutation_name = ""
+        options_factor = 1
+
+        option = int(x / options_factor % 3)
+        options_factor *= 3
+        permutation_name = str(option) + permutation_name
+
+        if option == 0:
+            retval += " {0:<8}|".format("none")
+        if option == 1:
+            retval += " {0:<8}|".format("not_set")
+        if option == 2:
+            retval += " {0:<8}|".format("0x{0:02x}".format(randint(0, 255)))
+
+        option = int(x / options_factor % 3)
+        options_factor *= 3
+        permutation_name = str(option) + permutation_name
+
+        if option == 0:
+            retval += " {0:<8}|".format("none")
+        if option == 1:
+            retval += " {0:<8}|".format("not_set")
+        if option == 2:
+            retval += " {0:<8}|".format("0x{0:02x}".format(randint(0, 255)))
+
+        option = int(x / options_factor % 3)
+        options_factor *= 3
+        permutation_name = str(option) + permutation_name
+
+        if option == 0:
+            retval += " {0:<9}|".format("none")
+        if option == 1:
+            retval += " {0:<9}|".format("not_set")
+        if option == 2:
+            retval += " {0:<9}|".format("0x{0:02x}".format(randint(0, 255)))
+
+
+        option = int(x / options_factor % 4)
+        options_factor *= 4
+        permutation_name = str(option) + permutation_name
+
+        if option == 0:
+            retval += " {0:<8}|".format("not_set")
+        if option == 1:
+            retval += " {0:<8}|".format("0.5")
+        if option == 2:
+            retval += " {0:<8}|".format("0.6")
+        if option == 3:
+            retval += " {0:<8}|".format("0.7")
+
+        option = int(x / options_factor % 3)
+        options_factor *= 3
+        permutation_name = str(option) + permutation_name
+
+        if option == 0:
+            retval += " {0:<28}|".format("none")
+        if option == 1:
+            retval += " {0:<28}|".format("not_set")
+        if option == 2:
             sd_reqs = []
 
             for i in xrange(0, randint(1, 4)):
                 sd_reqs.append("0x{0:04x}".format(randint(0, 65535)))
 
-            retval += " {0:<33}|".format(",".join(sd_reqs))
-        else:
-            retval += " {0:<33}|".format("not_set")
+            retval += " {0:<28}|".format(",".join(sd_reqs))
 
-        retval += " {0:<16}|".format("100_{0:05b}.zip".format(x))
+        option = int(x / options_factor % 2)
+        permutation_name = str(option) + permutation_name
+
+        if option == 0:
+            retval += " {0:<9}|".format("not_set")
+        if option == 1:
+            retval += " {0:<9}|".format("test.pem")
+
+        retval += " {0:<15}|".format("100_{0:0>6}.zip".format(permutation_name))
         retval += "\n"
 
     return retval
