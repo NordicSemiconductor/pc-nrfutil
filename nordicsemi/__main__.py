@@ -149,10 +149,26 @@ def dfu():
 @click.option('--application',
               help='The application firmware file',
               type=click.STRING)
+@click.option('--company-id',
+            help='Company ID for mesh-application. Must either be a Bluetooth SIG assigned company ID'
+            '(see https://www.bluetooth.com/specifications/assigned-numbers/company-identifiers'
+            'for more information), or a random number between 65535 and 4294967295. If a random number'
+            'is chosen, it is recommended to not use the \"lazy\" approach of selecting an easy number,'
+            'as this increases the risk of namespace collisions for the app-IDs. It is also recommended to'
+            'use the same company-ID for all your applications.',
+            type=BASED_INT_OR_NONE)
+@click.option('--application-id',
+            help='Mesh application ID, default: 0x0000',
+            type=BASED_INT_OR_NONE,
+            default=str(Package.DEFAULT_MESH_APP_ID))
 @click.option('--application-version',
-              help='Application version, default: 0xFFFFFFFF',
-              type=BASED_INT_OR_NONE,
-              default=str(Package.DEFAULT_APP_VERSION))
+            help='Application version, default: 0xFFFFFFFF',
+            type=BASED_INT_OR_NONE,
+            default=str(Package.DEFAULT_APP_VERSION))
+@click.option('--bootloader-id',
+            help='Mesh bootloader id, default: 0xFF00',
+            type=BASED_INT_OR_NONE,
+            default=str(Package.DEFAULT_MESH_BOOTLOADER_ID))
 @click.option('--bootloader',
               help='The bootloader firmware file',
               type=click.STRING)
@@ -180,16 +196,24 @@ def dfu():
 @click.option('--key-file',
               help='Signing key (pem fomat)',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
+@click.option('--mesh',
+              help='Generate a package targeting Mesh-DFU',
+              type=click.BOOL,
+              is_flag=True)
 def genpkg(zipfile,
            application,
+           company_id,
+           application_id,
            application_version,
+           bootloader_id
            bootloader,
            dev_revision,
            dev_type,
            dfu_ver,
            sd_req,
            softdevice,
-           key_file):
+           key_file,
+           mesh):
     """
     Generate a zipfile package for distribution to Apps supporting Nordic DFU OTA.
     The application, bootloader and softdevice files are converted to .bin if it is a .hex file.
@@ -197,6 +221,12 @@ def genpkg(zipfile,
     http://developer.nordicsemi.com/nRF51_SDK/doc/7.2.0/s110/html/a00065.html
     """
     zipfile_path = zipfile
+
+    if company_id == 'none':
+        company_id = None
+
+    if application_id == 'none':
+        application_id = None
 
     if application_version == 'none':
         application_version = None
@@ -206,6 +236,9 @@ def genpkg(zipfile,
 
     if dev_type == 'none':
         dev_type = None
+
+    if bootloader_id == 'none':
+        bootloader_id = None
 
     sd_req_list = None
 
@@ -225,13 +258,17 @@ def genpkg(zipfile,
 
     package = Package(dev_type,
                       dev_revision,
+                      company_id,
+                      application_id,
                       application_version,
+                      bootloader_id,
                       sd_req_list,
                       application,
                       bootloader,
                       softdevice,
                       dfu_ver,
-                      key_file)
+                      key_file,
+                      mesh)
 
     package.generate_package(zipfile_path)
 
