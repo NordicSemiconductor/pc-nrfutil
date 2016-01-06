@@ -99,32 +99,39 @@ class Packet(object):
         format_string = "<"  # Use little endian format with standard sizes for python,
         # see https://docs.python.org/2/library/struct.html
 
-        for key in sorted(self.init_packet_fields.keys(), key=lambda x: x.value):
-            if key in [PacketField.DEVICE_TYPE,
-                       PacketField.DEVICE_REVISION,
-                       ]:
-                format_string += Packet.UNSIGNED_SHORT
+        if (PacketField.NORDIC_PROPRIETARY_OPT_DATA_IS_MESH in self.init_packet_fields.keys() and
+            self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_IS_MESH]):
+            # ordering is important, and must match the nRF5x side hashing function, so we find and add the
+            # keys by hand.
 
-            elif key in [PacketField.APP_VERSION]:
-                format_string += Packet.UNSIGNED_INT
-            elif key in [PacketField.REQUIRED_SOFTDEVICES_ARRAY]:
-                array_elements = self.init_packet_fields[key]
-                format_string += Packet.UNSIGNED_SHORT  # Add length field to format packet
 
-                for _ in range(len(array_elements)):
+        else:
+            for key in sorted(self.init_packet_fields.keys(), key=lambda x: x.value):
+                if key in [PacketField.DEVICE_TYPE,
+                           PacketField.DEVICE_REVISION,
+                           ]:
                     format_string += Packet.UNSIGNED_SHORT
-            elif key in [PacketField.OPT_DATA]:
-                format_string += Packet.UNSIGNED_SHORT  # Add length field to optional data
-                format_string += "{0}{1}".format(len(self.init_packet_fields[key]), Packet.CHAR_ARRAY)
-            elif key in [PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID]:
-                format_string += Packet.UNSIGNED_INT  # Add the extended packet id field
-            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH:
-                format_string += Packet.UNSIGNED_INT  # Add the firmware length field
-            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
-                format_string += "32{0}".format(Packet.CHAR_ARRAY)  # SHA-256 requires 32 bytes
-            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16:
-                format_string += Packet.UNSIGNED_SHORT
-            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
-                format_string += "64{0}".format(Packet.CHAR_ARRAY)  # ECDS based on P-256 using SHA-256 requires 64 bytes
+
+                elif key in [PacketField.APP_VERSION]:
+                    format_string += Packet.UNSIGNED_INT
+                elif key in [PacketField.REQUIRED_SOFTDEVICES_ARRAY]:
+                    array_elements = self.init_packet_fields[key]
+                    format_string += Packet.UNSIGNED_SHORT  # Add length field to format packet
+
+                    for _ in range(len(array_elements)):
+                        format_string += Packet.UNSIGNED_SHORT
+                elif key in [PacketField.OPT_DATA]:
+                    format_string += Packet.UNSIGNED_SHORT  # Add length field to optional data
+                    format_string += "{0}{1}".format(len(self.init_packet_fields[key]), Packet.CHAR_ARRAY)
+                elif key in [PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID]:
+                    format_string += Packet.UNSIGNED_INT  # Add the extended packet id field
+                elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH:
+                    format_string += Packet.UNSIGNED_INT  # Add the firmware length field
+                elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
+                    format_string += "32{0}".format(Packet.CHAR_ARRAY)  # SHA-256 requires 32 bytes
+                elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16:
+                    format_string += Packet.UNSIGNED_SHORT
+                elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
+                    format_string += "64{0}".format(Packet.CHAR_ARRAY)  # ECDS based on P-256 using SHA-256 requires 64 bytes
 
         return format_string
