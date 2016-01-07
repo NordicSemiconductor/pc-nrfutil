@@ -165,6 +165,8 @@ class Package(object):
         if key_file:
             self.dfu_ver = 0.8
             self.key_file = key_file
+        elif mesh:
+            self.dfu_ver = 0.8
 
     def generate_package(self, filename, preserve_work_directory=False):
         """
@@ -233,20 +235,22 @@ class Package(object):
                 firmware_hash = Package.calculate_sha256_hash(bin_file_path)
                 init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = int(Package.calculate_file_size(bin_file_path))
                 init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH] = firmware_hash
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE] = key
-                temp_packet = self._create_init_packet(firmware)
-                if self.is_mesh:
-                    # mesh continues the hash for the firmware, instead of hashing it twice.
-                    with open(bin_file_path, 'rb') as fw_file:
-                        temp_packet += fw_file.read()
-                signer = Signing()
-                signer.load_key(self.key_file)
-                signature = signer.sign(temp_packet)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
+                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE] = hex_type
+                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_START_ADDR] = 0xFFFFFFFF
+                if self.key_file:
+                    temp_packet = self._create_init_packet(firmware, self.is_mesh)
+                    if self.is_mesh:
+                        # mesh continues the hash for the firmware, instead of hashing it twice.
+                        with open(bin_file_path, 'rb') as fw_file:
+                            temp_packet += fw_file.read()
+                    signer = Signing()
+                    signer.load_key(self.key_file)
+                    signature = signer.sign(temp_packet)
+                    init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
 
 
             # Store the .dat file in the work directory
-            init_packet = self._create_init_packet(firmware)
+            init_packet = self._create_init_packet(firmware, self.is_mesh)
             init_packet_filename = firmware[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")
 
             with open(os.path.join(work_directory, init_packet_filename), 'wb') as init_packet_file:
@@ -344,8 +348,11 @@ class Package(object):
             self.firmwares_data[firmware_type][FirmwareKeys.BL_SIZE] = bl_size
 
     @staticmethod
-    def _create_init_packet(firmware_data):
-        p = Packet(firmware_data[FirmwareKeys.INIT_PACKET_DATA])
+    def _create_init_packet(firmware_data, is_mesh = False):
+        if is_mesh:
+            p = PacketMesh(firmware_data[FirmwareKeys.INIT_PACKET_DATA])
+        else:
+            p = Packet(firmware_data[FirmwareKeys.INIT_PACKET_DATA])
         return p.generate_packet()
 
     @staticmethod
