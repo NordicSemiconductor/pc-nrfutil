@@ -94,7 +94,7 @@ class DfuVersion:
             return number
         else:
             print "UNABLE TO GET DFU NUMBER WITH TYPE {0}".format(ord(dfu_type))
-        return None
+            return None
 
 
     def is_larger_than(self, other, dfu_type):
@@ -124,9 +124,12 @@ class DfuInfoMesh:
         self.dfu_type = ord(data[0])
         self.start_addr = bytes_to_int32(data[1:5])
         self.fw_len = bytes_to_int32(data[5:9])
-        self.sign_len = data[9]
-        self.signature = data[10:10 + self.sign_len]
-        raw_ver = data[10 + self.sign_len:]
+        if len(data) > 32:
+            self.sign_len = 32
+            self.signature = data[9:9 + self.sign_len]
+        else:
+            self.sign_len = 0
+        raw_ver = data[9 + self.sign_len:]
         self.ver = DfuVersion(
             sd = bytes_to_int32(raw_ver[0:2]),
             bl_id = ord(raw_ver[0]),
@@ -299,9 +302,9 @@ class DfuTransportMesh(DfuTransport):
             packet_len = self.serial_port.read(1)
             if packet_len:
                 packet_len = ord(packet_len)
-        rx_count = 0
-        rx_data = self.serial_port.read(packet_len)
-        return rx_data
+                rx_count = 0
+                rx_data = self.serial_port.read(packet_len)
+                return rx_data
         return None
 
     def receive_thread(self):
