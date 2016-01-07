@@ -33,12 +33,13 @@ import binascii
 import logging
 from threading import Thread, Lock
 import struct
+import random
 
 # Python 3rd party imports
 from serial import Serial
 
 # Nordic Semiconductor imports
-from nordicsemi.dfu.util import int16_to_bytes, int32_to_bytes
+from nordicsemi.dfu.util import int16_to_bytes, int32_to_bytes, bytes_to_int32
 from nordicsemi.exceptions import NordicSemiException
 from nordicsemi.dfu.dfu_transport import DfuTransport, DfuEvent
 
@@ -67,30 +68,32 @@ class DfuVersion:
 
     def get_number(self, dfu_type):
         if dfu_type == DFU_UPDATE_MODE_SD:
-            if not sd:
+            if not self.sd:
                 raise ValueError("sd can't be None if type is SD")
-            return int16_to_bytes(sd)
+            return int16_to_bytes(self.sd)
         elif dfu_type == DFU_UPDATE_MODE_BL:
-            if not bl_id:
+            if not self.bl_id:
                 raise ValueError("bl_id can't be None if type is BL")
-            if not bl_ver:
+            if not self.bl_ver:
                 raise ValueError("bl_ver can't be None if type is BL")
             number = ''
-            number += chr(bl_id)
-            number += chr(bl_ver)
+            number += chr(self.bl_id)
+            number += chr(self.bl_ver)
             return number
         elif dfu_type == DFU_UPDATE_MODE_APP:
-            if not company_id:
+            if not self.company_id:
                 raise ValueError("company_id can't be None if type is APP")
-            if not app_id:
+            if not self.app_id:
                 raise ValueError("app_id can't be None if type is APP")
-            if not app_ver:
+            if not self.app_ver:
                 raise ValueError("app_ver can't be None if type is APP")
             number = ''
-            number += int32_to_bytes(company_id)
-            number += int16_to_bytes(app_id)
-            number += int32_to_bytes(app_ver)
+            number += int32_to_bytes(self.company_id)
+            number += int16_to_bytes(self.app_id)
+            number += int32_to_bytes(self.app_ver)
             return number
+        else:
+            print "UNABLE TO GET DFU NUMBER WITH TYPE {0}".format(ord(dfu_type))
         return None
 
 
@@ -118,7 +121,7 @@ class DfuVersion:
 class DfuInfoMesh:
 
     def __init__(self, data):
-        self.dfu_type = data[0]
+        self.dfu_type = ord(data[0])
         self.start_addr = bytes_to_int32(data[1:5])
         self.fw_len = bytes_to_int32(data[5:9])
         self.sign_len = data[9]
@@ -126,8 +129,8 @@ class DfuInfoMesh:
         raw_ver = data[10 + self.sign_len:]
         self.ver = DfuVersion(
             sd = bytes_to_int32(raw_ver[0:2]),
-            bl_id = raw_ver[0],
-            bl_ver = raw_ver[1],
+            bl_id = ord(raw_ver[0]),
+            bl_ver = ord(raw_ver[1]),
             company_id = bytes_to_int32(raw_ver[0:4]),
             app_id = bytes_to_int32(raw_ver[4:6]),
             app_ver = bytes_to_int32(raw_ver[6:10]))
@@ -202,10 +205,10 @@ class DfuTransportMesh(DfuTransport):
         self.tid = random.randint(0, 0xFFFFFFFF)
         ready = ''
         ready += int16_to_bytes(MESH_DFU_PACKET_STATE)
-        ready += self.info.dfu_type
+        ready += chr(self.info.dfu_type)
         ready += chr(0x0F)
         ready += int32_to_bytes(self.tid)
-        ready += self.info.version.get_number(self.info.dfu_version)
+        ready += self.info.ver.get_number(self.info.dfu_type)
 
         ready_packet = SerialPacket(self, ready)
         self.send_packet(ready_packet)
@@ -291,23 +294,27 @@ class DfuTransportMesh(DfuTransport):
         pkt.send()
         pkt.wait_for_ack()
 
-    def receive_thread(self):
-        while self.serial_port:
-            rx_data = receive_packet(self)
-            if rx_data and rx_data[0] in self.packet_handlers:
-                self.packet_handlers[rx_data[0]](rx_data)
-
     def receive_packet(self):
-        packet_len = int(self.serial_port.read(1))
+        if self.serial_port and self.serial_port.isOpen():
+            packet_len = self.serial_port.read(1)
+            if packet_len:
+                packet_len = ord(packet_len)
         rx_count = 0
         rx_data = self.serial_port.read(packet_len)
         return rx_data
+        return None
+
+    def receive_thread(self):
+        while self.serial_port:
+            rx_data = self.receive_packet()
+            if rx_data and rx_data[0] in self.packet_handlers:
+                self.packet_handlers[rx_data[0]](rx_data)
 
     def send_bytes(self, data):
         with self.write_lock:
             self.serial_port.write(data)
 
-    def timeout(self):
+    def push_timeout(self):
         self._send_event(DfuEvent.TIMEOUT_EVENT,
                 log_message="Timed out waiting for acknowledgement from device.")
 
@@ -389,10 +396,10 @@ class SerialPacket(object):
     def run(self):
         while self.retries < 3 and self.transport.serial_port and not self.is_acked:
             self.transport.send_bytes(self.data)
-            retries += 1
+            self.retries += 1
             time.sleep(DfuTransportMesh.RETRY_WAIT_TIME)
         if self.retries is 3:
-            transport.timeout()
+            self.transport.push_timeout()
 
     def get_type(self):
         temp = '\x00\x00' + self.data[2:4]

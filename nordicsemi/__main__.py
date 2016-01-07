@@ -30,10 +30,13 @@
 import logging
 import os
 import click
+import sys
+import traceback
 
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
+from nordicsemi.dfu.dfu_transport_mesh import DfuTransportMesh
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
@@ -205,7 +208,7 @@ def genpkg(zipfile,
            company_id,
            application_id,
            application_version,
-           bootloader_id
+           bootloader_id,
            bootloader,
            dev_revision,
            dev_type,
@@ -329,6 +332,7 @@ def serial(package, port, baudrate, flowcontrol):
         click.echo("- target is not in DFU mode. If using the SDK examples, "
                    "press Button 4 and RESET and release both to enter DFU mode.")
 
+        click.echo("Trace:\r\n{0}".format(traceback.print_exc()))
         return False
 
     click.echo("Device programmed.")

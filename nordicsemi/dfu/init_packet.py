@@ -27,6 +27,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from enum import Enum
+from nordicsemi.exceptions import *
+from nordicsemi.dfu.model import HexType
+from exceptions import KeyError
 import struct
 
 

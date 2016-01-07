@@ -161,6 +161,7 @@ class Package(object):
                                      softdevice_fw,
                                      init_packet_vars)
 
+        self.key_file = None
         if key_file:
             self.dfu_ver = 0.8
             self.key_file = key_file
