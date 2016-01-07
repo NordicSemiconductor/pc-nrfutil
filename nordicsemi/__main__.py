@@ -153,11 +153,11 @@ def dfu():
               help='The application firmware file',
               type=click.STRING)
 @click.option('--company-id',
-            help='Company ID for mesh-application. Must either be a Bluetooth SIG assigned company ID'
-            '(see https://www.bluetooth.com/specifications/assigned-numbers/company-identifiers'
-            'for more information), or a random number between 65535 and 4294967295. If a random number'
-            'is chosen, it is recommended to not use the \"lazy\" approach of selecting an easy number,'
-            'as this increases the risk of namespace collisions for the app-IDs. It is also recommended to'
+            help='Company ID for mesh-application. Must either be a Bluetooth SIG assigned company ID '
+            '(see https://www.bluetooth.com/specifications/assigned-numbers/company-identifiers '
+            'for more information), or a random number between 65535 and 4294967295. If a random number '
+            'is chosen, it is recommended to not use the \"lazy\" approach of selecting an easy number, '
+            'as this increases the risk of namespace collisions for the app-IDs. It is also recommended to '
             'use the same company-ID for all your applications.',
             type=BASED_INT_OR_NONE)
 @click.option('--application-id',
@@ -306,10 +306,18 @@ def update_progress(progress=0, done=False, log_message=""):
               help='Enable flow control, default: disabled',
               type=click.BOOL,
               is_flag=True)
-def serial(package, port, baudrate, flowcontrol):
+@click.option('-m', '--mesh',
+              help='Use mesh serial mode',
+              type=click.BOOL,
+              is_flag=True)
+def serial(package, port, baudrate, flowcontrol, mesh):
     """Program a device with bootloader that support serial DFU"""
-    serial_backend = DfuTransportSerial(port, baudrate, flowcontrol)
-    serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    if mesh:
+        serial_backend = DfuTransportMesh(port, baudrate, flowcontrol)
+        serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    else:
+        serial_backend = DfuTransportSerial(port, baudrate, flowcontrol)
+        serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(package, dfu_transport=serial_backend)
 
     click.echo("Upgrading target on {1} with DFU package {0}. Flow control is {2}."
