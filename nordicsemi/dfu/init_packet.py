@@ -50,10 +50,11 @@ class PacketField(Enum):
     NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16 = 9
     NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS = 10
     NORDIC_PROPRIETARY_OPT_DATA_IS_MESH = 11
-    NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE = 12
-    NORDIC_PROPRIETARY_OPT_DATA_MESH_COMPANY_ID = 13
-    NORDIC_PROPRIETARY_OPT_DATA_MESH_APPLICATION_ID = 14
-    NORDIC_PROPRIETARY_OPT_DATA_MESH_BOOTLOADER_ID = 15
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_START_ADDR = 12
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE = 13
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_COMPANY_ID = 14
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_APPLICATION_ID = 15
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_BOOTLOADER_ID = 16
 
 
 class Packet(object):
@@ -109,32 +110,92 @@ class Packet(object):
 
 
         else:
-            for key in sorted(self.init_packet_fields.keys(), key=lambda x: x.value):
-                if key in [PacketField.DEVICE_TYPE,
-                           PacketField.DEVICE_REVISION,
-                           ]:
-                    format_string += Packet.UNSIGNED_SHORT
+        for key in sorted(self.init_packet_fields.keys(), key=lambda x: x.value):
+            if key in [PacketField.DEVICE_TYPE,
+                       PacketField.DEVICE_REVISION,
+                       ]:
+                format_string += Packet.UNSIGNED_SHORT
 
-                elif key in [PacketField.APP_VERSION]:
-                    format_string += Packet.UNSIGNED_INT
-                elif key in [PacketField.REQUIRED_SOFTDEVICES_ARRAY]:
-                    array_elements = self.init_packet_fields[key]
-                    format_string += Packet.UNSIGNED_SHORT  # Add length field to format packet
+            elif key in [PacketField.APP_VERSION]:
+                format_string += Packet.UNSIGNED_INT
+            elif key in [PacketField.REQUIRED_SOFTDEVICES_ARRAY]:
+                array_elements = self.init_packet_fields[key]
+                format_string += Packet.UNSIGNED_SHORT  # Add length field to format packet
 
-                    for _ in range(len(array_elements)):
-                        format_string += Packet.UNSIGNED_SHORT
-                elif key in [PacketField.OPT_DATA]:
-                    format_string += Packet.UNSIGNED_SHORT  # Add length field to optional data
-                    format_string += "{0}{1}".format(len(self.init_packet_fields[key]), Packet.CHAR_ARRAY)
-                elif key in [PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID]:
-                    format_string += Packet.UNSIGNED_INT  # Add the extended packet id field
-                elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH:
-                    format_string += Packet.UNSIGNED_INT  # Add the firmware length field
-                elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
-                    format_string += "32{0}".format(Packet.CHAR_ARRAY)  # SHA-256 requires 32 bytes
-                elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16:
+                for _ in range(len(array_elements)):
                     format_string += Packet.UNSIGNED_SHORT
-                elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
-                    format_string += "64{0}".format(Packet.CHAR_ARRAY)  # ECDS based on P-256 using SHA-256 requires 64 bytes
+            elif key in [PacketField.OPT_DATA]:
+                format_string += Packet.UNSIGNED_SHORT  # Add length field to optional data
+                format_string += "{0}{1}".format(len(self.init_packet_fields[key]), Packet.CHAR_ARRAY)
+            elif key in [PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID]:
+                format_string += Packet.UNSIGNED_INT  # Add the extended packet id field
+            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH:
+                format_string += Packet.UNSIGNED_INT  # Add the firmware length field
+            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
+                format_string += "32{0}".format(Packet.CHAR_ARRAY)  # SHA-256 requires 32 bytes
+            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16:
+                format_string += Packet.UNSIGNED_SHORT
+            elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
+                format_string += "64{0}".format(Packet.CHAR_ARRAY)  # ECDS based on P-256 using SHA-256 requires 64 bytes
 
         return format_string
+
+
+
+class PacketMesh(object):
+    """
+    Class that implements the INIT packet for the mesh.
+    """
+
+    UNSIGNED_SHORT = "H"
+    UNSIGNED_INT = "I"
+    UNSIGNED_CHAR = "B"
+    CHAR_ARRAY = "s"
+
+    def __init__(self, init_packet_fields):
+        """
+
+            :param init_packet_fields: Dictionary with packet fields
+        """
+        self.init_packet_fields = init_packet_fields
+
+    def generate_packet(self):
+        """
+        Generates a binary packet from provided init_packet_fields provided in constructor.
+        :return str: Returns a string representing the init_packet (in binary)
+
+        """
+        try:
+            packet_elems = [self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE],
+                            self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_START_ADDR],
+                            self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH]]
+
+            format_string = "<BII"
+
+            if PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS in self.init_packet_fields.keys():
+                format_string += "B32s"
+                packet_elems.append(4)
+                packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS])
+
+            dfu_type = self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE]
+
+            if dfu_type is HexType.SOFTDEVICE:
+                format_string += "H"
+                if (self.init_packet_fields[PacketField.REQUIRED_SOFTDEVICES_ARRAY] and
+                    len(self.init_packet_fields[PacketField.REQUIRED_SOFTDEVICES_ARRAY])):
+                    packet_elems.append(self.init_packet_fields[PacketField.REQUIRED_SOFTDEVICES_ARRAY][0])
+                else:
+                    packet_elems.append(0xFFFF) # no SD required
+            elif dfu_type is HexType.BOOTLOADER:
+                format_string += "H"
+                packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_BOOTLOADER_ID])
+            elif dfu_type is HexType.APPLICATION:
+                format_string += "IHI"
+                packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_COMPANY_ID])
+                packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_APPLICATION_ID])
+                packet_elems.append(self.init_packet_fields[PacketField.APP_VERSION])
+        except KeyError, e:
+            raise NordicSemiException("A field required for generating a mesh package was omitted: {0}".format(e.message))
+
+        return struct.pack(format_string, *packet_elems)
+
