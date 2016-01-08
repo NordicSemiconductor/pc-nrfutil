@@ -244,9 +244,6 @@ class DfuTransportMesh(DfuTransport):
     def send_firmware(self, firmware):
         super(DfuTransportMesh, self).send_firmware(firmware)
 
-        def progress_percentage(part, whole):
-            return int(100 * float(part)/float(whole))
-
         self.firmware = firmware
         frames = []
         self._send_event(DfuEvent.PROGRESS_EVENT, progress=0, done=False, log_message="")
@@ -280,7 +277,7 @@ class DfuTransportMesh(DfuTransport):
             self.send_packet(pkt)
             self._send_event(DfuEvent.PROGRESS_EVENT,
                              log_message="",
-                             progress=progress_percentage(count, frames_count),
+                             progress= 100.0 / float(frames_count),
                              done=False)
             time.sleep(DfuTransportMesh.SEND_DATA_PACKET_WAIT_TIME)
 
