@@ -416,11 +416,10 @@ class SerialPacket(object):
 
     def get_type(self):
         temp = '\x00\x00' + self.data[2:4]
-        print len(temp)
         return (struct.unpack("<L", self.data[2:4] + '\x00\x00')[0])
 
     def check_ack(self, ack_data):
-        self.is_acked = ack_data[0] is '\x84' and ack_data[1] is '\x78' and ack_data[2] is self.data[2] and ack_data[3] is self.data[3]
+        self.is_acked = ((ack_data[0] == '\x84') and (ack_data[1] == '\x78'))
         return self.is_acked
 
     def wait_for_ack(self):
