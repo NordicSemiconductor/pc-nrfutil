@@ -255,7 +255,7 @@ class DfuTransportMesh(DfuTransport):
             data_packet += int16_to_bytes(MESH_DFU_PACKET_DATA)
             data_packet += int16_to_bytes(segment)
             data_packet += int32_to_bytes(self.tid)
-            data_packet += get_fw_segment(segment)
+            data_packet += self.get_fw_segment(segment)
             frames.append(data_packet)
 
         # add signature at the end
@@ -273,8 +273,8 @@ class DfuTransportMesh(DfuTransport):
         frames_count = len(frames)
 
         # Send firmware packets
-        for count, pkt in enumerate(frames):
-            self.send_packet(pkt)
+        for (count, pkt) in enumerate(frames):
+            self.send_packet(SerialPacket(self, pkt))
             self._send_event(DfuEvent.PROGRESS_EVENT,
                              log_message="",
                              progress= 100.0 / float(frames_count),

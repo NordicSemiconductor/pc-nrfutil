@@ -102,14 +102,6 @@ class Packet(object):
     def __generate_struct_format_string(self):
         format_string = "<"  # Use little endian format with standard sizes for python,
         # see https://docs.python.org/2/library/struct.html
-
-        if (PacketField.NORDIC_PROPRIETARY_OPT_DATA_IS_MESH in self.init_packet_fields.keys() and
-            self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_IS_MESH]):
-            # ordering is important, and must match the nRF5x side hashing function, so we find and add the
-            # keys by hand.
-
-
-        else:
         for key in sorted(self.init_packet_fields.keys(), key=lambda x: x.value):
             if key in [PacketField.DEVICE_TYPE,
                        PacketField.DEVICE_REVISION,
