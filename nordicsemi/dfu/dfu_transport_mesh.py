@@ -396,7 +396,7 @@ class SerialPacket(object):
 
     def __init__(self, transport, data=''):
         self.data = ''
-        self.data += chr(len(data) + 2)
+        self.data += chr(len(data) + 1)
         self.data += chr(MESH_DFU_OPCODE)
         self.data += data
         self.is_acked = False
