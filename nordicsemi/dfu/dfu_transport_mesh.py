@@ -285,6 +285,9 @@ class DfuTransportMesh(DfuTransport):
             time.sleep(DfuTransportMesh.SEND_DATA_PACKET_WAIT_TIME)
 
 
+        while len(self.pending_packets) > 0:
+            time.sleep(0.01)
+
         self._send_event(DfuEvent.PROGRESS_EVENT, progress=100, done=False, log_message="")
 
     def get_fw_segment(self, segment):
@@ -319,7 +322,7 @@ class DfuTransportMesh(DfuTransport):
         while self.serial_port:
             rx_data = self.receive_packet()
             if rx_data and rx_data[0] in self.packet_handlers:
-                self.packet_handlers[rx_data[0]](rx_data)
+                    self.packet_handlers[rx_data[0]](rx_data)
 
     def send_bytes(self, data):
         with self.write_lock:
