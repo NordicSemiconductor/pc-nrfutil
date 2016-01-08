@@ -250,7 +250,10 @@ class DfuTransportMesh(DfuTransport):
 
         fw_segments = len(firmware) / DfuTransportMesh.DFU_PACKET_MAX_SIZE
 
-        for segment in range(1, 1 + len(firmware) / DfuTransportMesh.DFU_PACKET_MAX_SIZE):
+        if len(firmware) % DfuTransportMesh.DFU_PACKET_MAX_SIZE > 0:
+            fw_segments += 1
+
+        for segment in range(1, 1 + fw_segments):
             data_packet = ''
             data_packet += int16_to_bytes(MESH_DFU_PACKET_DATA)
             data_packet += int16_to_bytes(segment)
@@ -286,7 +289,7 @@ class DfuTransportMesh(DfuTransport):
 
     def get_fw_segment(self, segment):
         i = (segment - 1) * DfuTransportMesh.DFU_PACKET_MAX_SIZE
-        if segment is 1:
+        if segment is 1 and self.info.start_addr != 0xFFFFFFFF:
             # first packet must normalize 16-byte alignment
             return self.firmware[i:i + 16 - (self.info.start_addr % 16)]
         elif i >= len(self.firmware):
