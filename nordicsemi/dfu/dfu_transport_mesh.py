@@ -171,6 +171,7 @@ class DfuTransportMesh(DfuTransport):
         self.info = None
         self.tid = 0
         self.firmware = None
+        self.device_started = False
 
 
     def open(self):
@@ -200,6 +201,13 @@ class DfuTransportMesh(DfuTransport):
 
     def send_start_dfu(self, mode, softdevice_size=None, bootloader_size=None, app_size=None):
         super(DfuTransportMesh, self).send_start_dfu(mode, softdevice_size, bootloader_size, app_size)
+
+        # reset device
+        self.send_bytes('\x01\x0E')
+        while not self.device_started:
+            time.sleep(0.01)
+        time.sleep(0.2)
+
 
     def send_init_packet(self, init_packet):
         # send all init packets with reasonable delay
@@ -340,8 +348,10 @@ class DfuTransportMesh(DfuTransport):
                 self.pending_packets.remove(packet)
 
     def _handle_started(self, data):
-        #don't really care yet
-        pass
+        if data[1] == '\x01' and data[2] == '\x00':
+            self.device_started = True
+        else:
+            raise NordicSemiException("Device did not enter bootloader after reset (State: {0}, HW-error: {1})".format(ord(data[1]), ord(data[2])))
 
     def _handle_dfu_fwid(self, data):
         if self.init_info:
