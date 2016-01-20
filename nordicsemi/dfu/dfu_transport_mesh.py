@@ -285,10 +285,10 @@ class DfuTransportMesh(DfuTransport):
             self.send_packet(SerialPacket(self, pkt))
             temp_progress += 100.0 / float(frames_count)
             if temp_progress > 1.0:
-            self._send_event(DfuEvent.PROGRESS_EVENT,
-                             log_message="",
+                self._send_event(DfuEvent.PROGRESS_EVENT,
+                                 log_message="",
                                  progress= temp_progress,
-                             done=False)
+                                 done=False)
                 temp_progress = 0.0
             time.sleep(self.interval)
 
@@ -328,10 +328,15 @@ class DfuTransportMesh(DfuTransport):
         return None
 
     def receive_thread(self):
-        while self.serial_port:
-            rx_data = self.receive_packet()
-            if rx_data and rx_data[0] in self.packet_handlers:
-                    self.packet_handlers[rx_data[0]](rx_data)
+        try:
+            while self.serial_port:
+                rx_data = self.receive_packet()
+                if rx_data and rx_data[0] in self.packet_handlers:
+                        self.packet_handlers[rx_data[0]](rx_data)
+        except Exception, e:
+            self._send_event(DfuEvent.ERROR_EVENT,
+                log_message = e.message)
+
 
     def send_bytes(self, data):
         with self.write_lock:
@@ -360,9 +365,11 @@ class DfuTransportMesh(DfuTransport):
                 self.pending_packets.remove(packet)
 
     def _handle_started(self, data):
+        if self.device_started:
+            raise NordicSemiException("Device aborted the transfer. Mode: " + str(ord(data[1])) + ", Error: " + str(ord(data[2])))
         if data[1] == '\x01' and data[2] == '\x00':
             self.device_started = True
-        else:
+        elif not self.device_started: # should ignore any startup events after the initial
             raise NordicSemiException("Device did not enter bootloader after reset (State: {0}, HW-error: {1})".format(ord(data[1]), ord(data[2])))
 
     def _handle_dfu_fwid(self, data):
