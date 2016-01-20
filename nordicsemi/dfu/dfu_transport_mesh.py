@@ -148,11 +148,11 @@ class DfuTransportMesh(DfuTransport):
     ACK_PACKET_TIMEOUT = 1.0  # Timeout time for for ACK packet received before reporting timeout through event system
     SEND_INIT_PACKET_WAIT_TIME = 0.1  # Time to wait before communicating with bootloader after init packet is sent
     SEND_START_DFU_WAIT_TIME = 0.2  # Time to wait before communicating with bootloader after start DFU packet is sent
-    SEND_DATA_PACKET_WAIT_TIME = 0.2 # Time between each data packet
+    SEND_DATA_PACKET_WAIT_TIME = 0.5 # Time between each data packet
     RETRY_WAIT_TIME = 0.5 # Time to wait before attempting to retransmit a packet
     DFU_PACKET_MAX_SIZE = 16  # The DFU packet max size
 
-    def __init__(self, com_port, baud_rate=DEFAULT_BAUD_RATE, flow_control=DEFAULT_FLOW_CONTROL, timeout=DEFAULT_SERIAL_PORT_TIMEOUT):
+    def __init__(self, com_port, baud_rate=DEFAULT_BAUD_RATE, flow_control=DEFAULT_FLOW_CONTROL, timeout=DEFAULT_SERIAL_PORT_TIMEOUT, interval=SEND_DATA_PACKET_WAIT_TIME):
         super(DfuTransportMesh, self).__init__()
         self.com_port = com_port
         self.baud_rate = baud_rate
@@ -172,6 +172,7 @@ class DfuTransportMesh(DfuTransport):
         self.tid = 0
         self.firmware = None
         self.device_started = False
+        self.interval = interval
 
 
     def open(self):
@@ -236,7 +237,7 @@ class DfuTransportMesh(DfuTransport):
 
         start_packet = SerialPacket(self, start)
         self.send_packet(start_packet)
-        time.sleep(DfuTransportMesh.SEND_DATA_PACKET_WAIT_TIME)
+        time.sleep(self.interval)
 
     def send_activate_firmware(self):
         super(DfuTransportMesh, self).send_activate_firmware()
@@ -276,13 +277,17 @@ class DfuTransportMesh(DfuTransport):
         frames_count = len(frames)
 
         # Send firmware packets
+        temp_progress = 0.0
         for (count, pkt) in enumerate(frames):
             self.send_packet(SerialPacket(self, pkt))
+            temp_progress += 100.0 / float(frames_count)
+            if temp_progress > 1.0:
             self._send_event(DfuEvent.PROGRESS_EVENT,
                              log_message="",
-                             progress= 100.0 / float(frames_count),
+                                 progress= temp_progress,
                              done=False)
-            time.sleep(DfuTransportMesh.SEND_DATA_PACKET_WAIT_TIME)
+                temp_progress = 0.0
+            time.sleep(self.interval)
 
 
         while len(self.pending_packets) > 0:
@@ -397,7 +402,7 @@ MESH_DFU_OPCODE = 0x78
 class SerialPacket(object):
     """Class representing a single Mesh serial packet"""
 
-    def __init__(self, transport, data=''):
+    def __init__(self, transport, data='', timeout=DfuTransportMesh.RETRY_WAIT_TIME):
         self.data = ''
         self.data += chr(len(data) + 1)
         self.data += chr(MESH_DFU_OPCODE)
@@ -405,6 +410,7 @@ class SerialPacket(object):
         self.is_acked = False
         self.retries = 0
         self.transport = transport
+        self.timeout = timeout
 
     def send(self):
         Thread(target = self.run).start()
@@ -413,7 +419,7 @@ class SerialPacket(object):
         while self.retries < 3 and self.transport.serial_port and not self.is_acked:
             self.transport.send_bytes(self.data)
             self.retries += 1
-            time.sleep(DfuTransportMesh.RETRY_WAIT_TIME)
+            time.sleep(self.timeout)
         if self.retries is 3:
             self.transport.push_timeout()
 

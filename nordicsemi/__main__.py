@@ -306,14 +306,20 @@ def update_progress(progress=0, done=False, log_message=""):
               help='Enable flow control, default: disabled',
               type=click.BOOL,
               is_flag=True)
+@click.option('-i', '--interval',
+              help='Desired interval between data packets in milliseconds. Default: 500. Only applies to Mesh-DFU. '
+                   'Note: It is recommended to keep the interval above 200ms to avoid buffer overflow, and below '
+                   '2 seconds to avoid timeout.',
+              type=click.INT,
+              default=1000 * DfuTransportMesh.SEND_DATA_PACKET_WAIT_TIME)
 @click.option('-m', '--mesh',
               help='Use mesh serial mode',
               type=click.BOOL,
               is_flag=True)
-def serial(package, port, baudrate, flowcontrol, mesh):
+def serial(package, port, baudrate, flowcontrol, interval, mesh):
     """Program a device with bootloader that support serial DFU"""
     if mesh:
-        serial_backend = DfuTransportMesh(port, baudrate, flowcontrol)
+        serial_backend = DfuTransportMesh(port, baudrate, flowcontrol, interval=interval / 1000.0)
         serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     else:
         serial_backend = DfuTransportSerial(port, baudrate, flowcontrol)
