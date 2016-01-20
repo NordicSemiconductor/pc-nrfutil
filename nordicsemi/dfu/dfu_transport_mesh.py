@@ -182,6 +182,8 @@ class DfuTransportMesh(DfuTransport):
             self.serial_port = Serial(port=self.com_port, baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
         except Exception, e:
             raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
+
+        logger.info("Opened com-port")
         Thread(target=self.receive_thread).start()
 
     def close(self):
@@ -205,6 +207,7 @@ class DfuTransportMesh(DfuTransport):
 
         # reset device
         self.send_bytes('\x01\x0E')
+        logger.info("Sent reset-command")
         while not self.device_started:
             time.sleep(0.01)
         time.sleep(0.2)
@@ -308,7 +311,7 @@ class DfuTransportMesh(DfuTransport):
             return self.firmware[i:i + DfuTransportMesh.DFU_PACKET_MAX_SIZE]
 
     def send_packet(self, pkt):
-        logger.debug("PC -> target: {0}".format(pkt))
+        logger.info("PC -> target: {0}".format(pkt))
         self.pending_packets.append(pkt)
         pkt.send()
         pkt.wait_for_ack()
@@ -320,6 +323,7 @@ class DfuTransportMesh(DfuTransport):
                 packet_len = ord(packet_len)
                 rx_count = 0
                 rx_data = self.serial_port.read(packet_len)
+                logger.info("target -> PC: {0}".format(binascii.hexlify(rx_data)))
                 return rx_data
         return None
 
