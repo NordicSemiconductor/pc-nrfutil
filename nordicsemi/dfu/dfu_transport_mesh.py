@@ -68,24 +68,24 @@ class DfuVersion:
 
     def get_number(self, dfu_type):
         if dfu_type == DFU_UPDATE_MODE_SD:
-            if not self.sd:
+            if self.sd is None:
                 raise ValueError("sd can't be None if type is SD")
             return int16_to_bytes(self.sd)
         elif dfu_type == DFU_UPDATE_MODE_BL:
-            if not self.bl_id:
+            if self.bl_id is None:
                 raise ValueError("bl_id can't be None if type is BL")
-            if not self.bl_ver:
+            if self.bl_ver is None:
                 raise ValueError("bl_ver can't be None if type is BL")
             number = ''
             number += chr(self.bl_id)
             number += chr(self.bl_ver)
             return number
         elif dfu_type == DFU_UPDATE_MODE_APP:
-            if not self.company_id:
+            if self.company_id is None:
                 raise ValueError("company_id can't be None if type is APP")
-            if not self.app_id:
+            if self.app_id is None:
                 raise ValueError("app_id can't be None if type is APP")
-            if not self.app_ver:
+            if self.app_ver is None:
                 raise ValueError("app_ver can't be None if type is APP")
             number = ''
             number += int32_to_bytes(self.company_id)
