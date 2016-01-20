@@ -165,8 +165,8 @@ class PacketMesh(object):
             format_string = "<BII"
 
             if PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS in self.init_packet_fields.keys():
-                format_string += "B32s"
-                packet_elems.append(4)
+                format_string += "B64s"
+                packet_elems.append(64)
                 packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS])
 
             dfu_type = self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE]

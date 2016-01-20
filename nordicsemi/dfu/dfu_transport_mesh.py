@@ -124,12 +124,12 @@ class DfuInfoMesh:
         self.dfu_type = ord(data[0])
         self.start_addr = bytes_to_int32(data[1:5])
         self.fw_len = bytes_to_int32(data[5:9])
-        if len(data) > 32:
-            self.sign_len = 32
-            self.signature = data[9:9 + self.sign_len]
+        if len(data) > 64:
+            self.sign_len = ord(data[9])
+            self.signature = data[10:10 + self.sign_len]
         else:
             self.sign_len = 0
-        raw_ver = data[9 + self.sign_len:]
+        raw_ver = data[10 + self.sign_len:]
         self.ver = DfuVersion(
             sd = bytes_to_int32(raw_ver[0:2]),
             bl_id = ord(raw_ver[0]),
@@ -266,12 +266,12 @@ class DfuTransportMesh(DfuTransport):
         for (segment, i) in enumerate(range(0, self.info.sign_len, DfuTransportMesh.DFU_PACKET_MAX_SIZE)):
             sign_packet = ''
             sign_packet += int16_to_bytes(MESH_DFU_PACKET_DATA)
-            sign_packet += int16_to_bytes(segment + fw_segments)
+            sign_packet += int16_to_bytes(segment + fw_segments + 1)
             sign_packet += int32_to_bytes(self.tid)
             if i >= self.info.sign_len:
-                sign_packet += self.info.sign[i:]
+                sign_packet += self.info.signature[i:]
             else:
-                sign_packet += self.info.sign[i:i + DfuTransportMesh.DFU_PACKET_MAX_SIZE]
+                sign_packet += self.info.signature[i:i + DfuTransportMesh.DFU_PACKET_MAX_SIZE]
             frames.append(sign_packet)
 
         frames_count = len(frames)
