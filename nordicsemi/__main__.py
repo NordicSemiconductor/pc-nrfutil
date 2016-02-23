@@ -335,18 +335,22 @@ def serial(package, port, baudrate, flowcontrol, interval, mesh):
             global_bar = bar
             dfu.dfu_send_images()
 
-    except Exception as e:
+    except (Exception, KeyboardInterrupt) as e:
         click.echo("")
-        click.echo("Failed to upgrade target. Error is: {0}".format(e.message))
-        click.echo("")
-        click.echo("Possible causes:")
-        click.echo("- bootloader, SoftDevice or application on target "
-                   "does not match the requirements in the DFU package.")
-        click.echo("- baud rate or flow control is not the same as in the target bootloader.")
-        click.echo("- target is not in DFU mode. If using the SDK examples, "
-                   "press Button 4 and RESET and release both to enter DFU mode.")
+        if e.__class__ is KeyboardInterrupt:
+            click.echo("Aborted by keyboard interrupt.")
+        else:
+            click.echo("Failed to upgrade target. Error is: {0}".format(e.message))
+            click.echo("")
+            click.echo("Possible causes:")
+            click.echo("- bootloader, SoftDevice or application on target "
+                       "does not match the requirements in the DFU package.")
+            click.echo("- baud rate or flow control is not the same as in the target bootloader.")
+            click.echo("- target is not in DFU mode. If using the SDK examples, "
+                       "press Button 4 and RESET and release both to enter DFU mode.")
 
-        click.echo("Trace:\r\n{0}".format(traceback.print_exc()))
+            click.echo("Trace:\r\n{0}".format(traceback.print_exc()))
+        dfu.error_event_handler()
         return False
 
     click.echo("Device programmed.")

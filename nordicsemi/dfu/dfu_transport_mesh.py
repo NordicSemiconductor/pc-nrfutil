@@ -172,8 +172,8 @@ class DfuTransportMesh(DfuTransport):
         self.tid = 0
         self.firmware = None
         self.device_started = False
+        self.rxthread = None
         self.interval = interval
-
 
     def open(self):
         super(DfuTransportMesh, self).open()
@@ -184,7 +184,9 @@ class DfuTransportMesh(DfuTransport):
             raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
 
         logger.info("Opened com-port")
-        Thread(target=self.receive_thread).start()
+        self.rxthread = Thread(target=self.receive_thread)
+        self.rxthread.daemon = True
+        self.rxthread.start()
 
     def close(self):
         super(DfuTransportMesh, self).close()
@@ -208,8 +210,14 @@ class DfuTransportMesh(DfuTransport):
         # reset device
         self.send_bytes('\x01\x0E')
         logger.info("Sent reset-command")
-        while not self.device_started:
-            time.sleep(0.01)
+        step_time = 0.01
+        wait = 1.0
+        while wait > 0 and not self.device_started:
+            time.sleep(step_time)
+            wait -= step_time
+
+        if not self.device_started:
+            raise NordicSemiException("Device did not respond to reset-command, you might have to reset it manually.")
         time.sleep(0.2)
 
 
@@ -329,7 +337,7 @@ class DfuTransportMesh(DfuTransport):
 
     def receive_thread(self):
         try:
-            while self.serial_port:
+            while self.serial_port and self.serial_port.isOpen():
                 rx_data = self.receive_packet()
                 if rx_data and rx_data[0] in self.packet_handlers:
                         self.packet_handlers[rx_data[0]](rx_data)
@@ -422,9 +430,12 @@ class SerialPacket(object):
         self.retries = 0
         self.transport = transport
         self.timeout = timeout
+        self.thread = None
 
     def send(self):
-        Thread(target = self.run).start()
+        self.thread = Thread(target = self.run)
+        self.thread.daemon = True
+        self.thread.start()
 
     def run(self):
         while self.retries < 3 and self.transport.serial_port and not self.is_acked:
