@@ -375,7 +375,7 @@ class DfuTransportMesh(DfuTransport):
     def _handle_started(self, data):
         if self.device_started:
             raise NordicSemiException("Device aborted the transfer. Mode: " + str(ord(data[1])) + ", Error: " + str(ord(data[2])))
-        if data[1] == '\x01' and data[2] == '\x00':
+        if data[1] == '\x01':
             self.device_started = True
         elif not self.device_started: # should ignore any startup events after the initial
             raise NordicSemiException("Device did not enter bootloader after reset (State: {0}, HW-error: {1})".format(ord(data[1]), ord(data[2])))
