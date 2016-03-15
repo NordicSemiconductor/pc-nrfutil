@@ -82,24 +82,35 @@ class Package(object):
     DEFAULT_APP_VERSION = 0xFFFFFFFF
     DEFAULT_SD_REQ = [0xFFFE]
     DEFAULT_DFU_VER = 0.5
+
+    DEFAULT_MESH_APP_ID = 0x0000
+    DEFAULT_MESH_BOOTLOADER_ID = 0xFF00
+
     MANIFEST_FILENAME = "manifest.json"
 
     def __init__(self,
                  dev_type=DEFAULT_DEV_TYPE,
                  dev_rev=DEFAULT_DEV_REV,
+                 company_id = None,
+                 app_id=DEFAULT_MESH_APP_ID,
                  app_version=DEFAULT_APP_VERSION,
+                 bootloader_id=DEFAULT_MESH_BOOTLOADER_ID,
                  sd_req=DEFAULT_SD_REQ,
                  app_fw=None,
                  bootloader_fw=None,
                  softdevice_fw=None,
                  dfu_ver=DEFAULT_DFU_VER,
-                 key_file=None):
+                 key_file=None,
+                 mesh=False):
         """
         Constructor that requires values used for generating a Nordic DFU package.
 
         :param int dev_type: Device type init-packet field
         :param int dev_rev: Device revision init-packet field
+        :param int company_id: Company ID for Mesh init-packet field
+        :param int application_id: Application ID for Mesh init-packet field
         :param int app_version: App version init-packet field
+        :param int bootloader_id: Bootloader ID for mesh init-packet field
         :param list sd_req: Softdevice Requirement init-packet field
         :param str app_fw: Path to application firmware file
         :param str bootloader_fw: Path to bootloader firmware file
@@ -109,6 +120,7 @@ class Package(object):
         :return: None
         """
         self.dfu_ver = dfu_ver
+        self.is_mesh = mesh
 
         init_packet_vars = {}
 
@@ -123,6 +135,14 @@ class Package(object):
 
         if sd_req is not None:
             init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
+
+        if mesh:
+            if company_id is not None:
+                init_packet_vars[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_COMPANY_ID] = company_id
+            if app_id is not None:
+                init_packet_vars[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_APPLICATION_ID] = app_id
+            if bootloader_id is not None:
+                init_packet_vars[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_BOOTLOADER_ID] = bootloader_id
 
         self.firmwares_data = {}
 
@@ -141,9 +161,12 @@ class Package(object):
                                      softdevice_fw,
                                      init_packet_vars)
 
+        self.key_file = None
         if key_file:
             self.dfu_ver = 0.8
             self.key_file = key_file
+        elif mesh:
+            self.dfu_ver = 0.8
 
     def generate_package(self, filename, preserve_work_directory=False):
         """
@@ -181,8 +204,8 @@ class Package(object):
                                      softdevice_size,
                                      bootloader_size)
 
-        for key in self.firmwares_data:
-            firmware = self.firmwares_data[key]
+        for hex_type in self.firmwares_data:
+            firmware = self.firmwares_data[hex_type]
 
             # Normalize the firmware file and store it in the work directory
             firmware[FirmwareKeys.BIN_FILENAME] = \
@@ -192,6 +215,8 @@ class Package(object):
             bin_file_path = os.path.join(work_directory, firmware[FirmwareKeys.BIN_FILENAME])
 
             init_packet_data = firmware[FirmwareKeys.INIT_PACKET_DATA]
+
+            init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_IS_MESH] = self.is_mesh
 
             if self.dfu_ver <= 0.5:
                 firmware_hash = Package.calculate_crc16(bin_file_path)
@@ -210,14 +235,22 @@ class Package(object):
                 firmware_hash = Package.calculate_sha256_hash(bin_file_path)
                 init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = int(Package.calculate_file_size(bin_file_path))
                 init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH] = firmware_hash
-                temp_packet = self._create_init_packet(firmware)
-                signer = Signing()
-                signer.load_key(self.key_file)
-                signature = signer.sign(temp_packet)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
+                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE] = hex_type
+                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_START_ADDR] = 0xFFFFFFFF
+                if self.key_file:
+                    temp_packet = self._create_init_packet(firmware, self.is_mesh)
+                    if self.is_mesh:
+                        # mesh continues the hash for the firmware, instead of hashing it twice.
+                        with open(bin_file_path, 'rb') as fw_file:
+                            temp_packet += fw_file.read()
+                    signer = Signing()
+                    signer.load_key(self.key_file)
+                    signature = signer.sign(temp_packet)
+                    init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
+
 
             # Store the .dat file in the work directory
-            init_packet = self._create_init_packet(firmware)
+            init_packet = self._create_init_packet(firmware, self.is_mesh)
             init_packet_filename = firmware[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")
 
             with open(os.path.join(work_directory, init_packet_filename), 'wb') as init_packet_file:
@@ -315,8 +348,11 @@ class Package(object):
             self.firmwares_data[firmware_type][FirmwareKeys.BL_SIZE] = bl_size
 
     @staticmethod
-    def _create_init_packet(firmware_data):
-        p = Packet(firmware_data[FirmwareKeys.INIT_PACKET_DATA])
+    def _create_init_packet(firmware_data, is_mesh = False):
+        if is_mesh:
+            p = PacketMesh(firmware_data[FirmwareKeys.INIT_PACKET_DATA])
+        else:
+            p = Packet(firmware_data[FirmwareKeys.INIT_PACKET_DATA])
         return p.generate_packet()
 
     @staticmethod

@@ -27,6 +27,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from enum import Enum
+from nordicsemi.exceptions import *
+from nordicsemi.dfu.model import HexType
+from exceptions import KeyError
 import struct
 
 
@@ -46,6 +49,12 @@ class PacketField(Enum):
     NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH = 8
     NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16 = 9
     NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS = 10
+    NORDIC_PROPRIETARY_OPT_DATA_IS_MESH = 11
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_START_ADDR = 12
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE = 13
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_COMPANY_ID = 14
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_APPLICATION_ID = 15
+    NORDIC_PROPRIETARY_OPT_DATA_MESH_BOOTLOADER_ID = 16
 
 
 class Packet(object):
@@ -93,7 +102,6 @@ class Packet(object):
     def __generate_struct_format_string(self):
         format_string = "<"  # Use little endian format with standard sizes for python,
         # see https://docs.python.org/2/library/struct.html
-
         for key in sorted(self.init_packet_fields.keys(), key=lambda x: x.value):
             if key in [PacketField.DEVICE_TYPE,
                        PacketField.DEVICE_REVISION,
@@ -123,3 +131,66 @@ class Packet(object):
                 format_string += "64{0}".format(Packet.CHAR_ARRAY)  # ECDS based on P-256 using SHA-256 requires 64 bytes
 
         return format_string
+
+
+
+class PacketMesh(object):
+    """
+    Class that implements the INIT packet for the mesh.
+    """
+
+    UNSIGNED_SHORT = "H"
+    UNSIGNED_INT = "I"
+    UNSIGNED_CHAR = "B"
+    CHAR_ARRAY = "s"
+
+    def __init__(self, init_packet_fields):
+        """
+
+            :param init_packet_fields: Dictionary with packet fields
+        """
+        self.init_packet_fields = init_packet_fields
+
+    def generate_packet(self):
+        """
+        Generates a binary packet from provided init_packet_fields provided in constructor.
+        :return str: Returns a string representing the init_packet (in binary)
+
+        """
+        try:
+            packet_elems = [self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE],
+                            self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_START_ADDR],
+                            self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH]]
+
+            format_string = "<BII"
+
+            if PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS in self.init_packet_fields.keys():
+                format_string += "B64s"
+                packet_elems.append(64)
+                packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS])
+            else:
+                format_string += "B"
+                packet_elems.append(0)
+
+            dfu_type = self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE]
+
+            if dfu_type is HexType.SOFTDEVICE:
+                format_string += "H"
+                if (self.init_packet_fields[PacketField.REQUIRED_SOFTDEVICES_ARRAY] and
+                    len(self.init_packet_fields[PacketField.REQUIRED_SOFTDEVICES_ARRAY])):
+                    packet_elems.append(self.init_packet_fields[PacketField.REQUIRED_SOFTDEVICES_ARRAY][0])
+                else:
+                    packet_elems.append(0xFFFF) # no SD required
+            elif dfu_type is HexType.BOOTLOADER:
+                format_string += "H"
+                packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_BOOTLOADER_ID])
+            elif dfu_type is HexType.APPLICATION:
+                format_string += "IHI"
+                packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_COMPANY_ID])
+                packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_APPLICATION_ID])
+                packet_elems.append(self.init_packet_fields[PacketField.APP_VERSION])
+        except KeyError, e:
+            raise NordicSemiException("A field required for generating a mesh package was omitted: {0}".format(e.message))
+
+        return struct.pack(format_string, *packet_elems)
+

@@ -90,6 +90,19 @@ class ManifestGenerator(object):
                     init_packet_data.firmware_crc16 = field
                 elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
                     init_packet_data.init_packet_ecds = binascii.hexlify(field)
+                # mesh specific:
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE:
+                    pass #handled below
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_COMPANY_ID:
+                    init_packet_data.company_id = field
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_APPLICATION_ID:
+                    init_packet_data.application_id = field
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_BOOTLOADER_ID:
+                    init_packet_data.bootloader_id = field
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_START_ADDR:
+                    init_packet_data.start_addr = field
+                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_IS_MESH:
+                    pass #redundant in this context
                 else:
                     raise NotImplementedException(
                         "Support for init packet data type {0} not implemented yet.".format(init_packet_data_key))
@@ -126,37 +139,49 @@ class InitPacketData(object):
     def __init__(self,
                  device_type=None,
                  device_revision=None,
+                 company_id=None,
+                 application_id=None,
                  application_version=None,
+                 bootloader_id=None,
                  softdevice_req=None,
                  ext_packet_id=None,
                  firmware_length=None,
                  firmware_hash=None,
                  firmware_crc16=None,
-                 init_packet_ecds=None
+                 init_packet_ecds=None,
+                 start_addr=None
                  ):
         """
         The InitPacketData data model.
 
         :param int device_type:  device type
         :param int device_revision: device revision
+        :param int company_id: company ID for mesh application
+        :param int application_id: application ID for mesh application
         :param int application_version:  application version
+        :param int bootloader_id: bootloader ID for mesh
         :param list softdevice_req: softdevice requirements
         :param int ext_packet_id: packet extension id
         :param int firmware_length: firmware length
         :param str firmware_hash: firmware hash
         :param int firmware_crc16: firmware CRC-16 calculated value
         :param str init_packet_ecds: Init packet signature
+        :param int start_addr: start address for mesh
         :return: InitPacketData
         """
         self.device_type = device_type
         self.device_revision = device_revision
+        self.company_id = company_id
+        self.application_id = application_id
         self.application_version = application_version
+        self.bootloader_id = bootloader_id
         self.softdevice_req = softdevice_req
         self.ext_packet_id = ext_packet_id
         self.firmware_length = firmware_length
         self.firmware_hash = firmware_hash
         self.firmware_crc16 = firmware_crc16
         self.init_packet_ecds = init_packet_ecds
+        self.start_addr = start_addr
 
 
 class Firmware(object):

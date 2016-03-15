@@ -26,6 +26,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import struct
+
 # Nordic libraries
 from nordicsemi.exceptions import NordicSemiException
 
@@ -119,10 +121,10 @@ def int32_to_bytes(value):
 
 def int16_to_bytes(value):
     """
-    Converts a int to a str with 4 bytes
+    Converts a int to a str with 2 bytes
 
     :param value: int value to convert
-    :return: str with 4 bytes
+    :return: str with 2 bytes
     """
 
     ints = [0, 0]
@@ -130,6 +132,12 @@ def int16_to_bytes(value):
     ints[1] = (value & 0xFF00) >> 8
     return ''.join(chr(b) for b in ints)
 
+def bytes_to_int32(value):
+    if len(value) > 4:
+        return None
+    while len(value) < 4:
+        value += '\x00'
+    return struct.unpack("<L", value)[0]
 
 def slip_decode_esc_chars(data):
     """Decode esc characters in a SLIP package.

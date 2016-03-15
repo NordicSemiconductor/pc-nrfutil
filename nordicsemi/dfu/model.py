@@ -34,6 +34,7 @@ class HexType(object):
     BOOTLOADER = 2
     SD_BL = 3
     APPLICATION = 4
+    MESH_BL_INFO = 8
 
 
 class FirmwareKeys(Enum):

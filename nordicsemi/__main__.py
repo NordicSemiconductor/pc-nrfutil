@@ -30,10 +30,13 @@
 import logging
 import os
 import click
+import sys
+import traceback
 
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
+from nordicsemi.dfu.dfu_transport_mesh import DfuTransportMesh
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
@@ -149,10 +152,26 @@ def dfu():
 @click.option('--application',
               help='The application firmware file',
               type=click.STRING)
+@click.option('--company-id',
+            help='Company ID for mesh-application. Must either be a Bluetooth SIG assigned company ID '
+            '(see https://www.bluetooth.com/specifications/assigned-numbers/company-identifiers '
+            'for more information), or a random number between 65535 and 4294967295. If a random number '
+            'is chosen, it is recommended to not use the \"lazy\" approach of selecting an easy number, '
+            'as this increases the risk of namespace collisions for the app-IDs. It is also recommended to '
+            'use the same company-ID for all your applications.',
+            type=BASED_INT_OR_NONE)
+@click.option('--application-id',
+            help='Mesh application ID, default: 0x0000',
+            type=BASED_INT_OR_NONE,
+            default=str(Package.DEFAULT_MESH_APP_ID))
 @click.option('--application-version',
-              help='Application version, default: 0xFFFFFFFF',
-              type=BASED_INT_OR_NONE,
-              default=str(Package.DEFAULT_APP_VERSION))
+            help='Application version, default: 0xFFFFFFFF',
+            type=BASED_INT_OR_NONE,
+            default=str(Package.DEFAULT_APP_VERSION))
+@click.option('--bootloader-id',
+            help='Mesh bootloader id, default: 0xFF00',
+            type=BASED_INT_OR_NONE,
+            default=str(Package.DEFAULT_MESH_BOOTLOADER_ID))
 @click.option('--bootloader',
               help='The bootloader firmware file',
               type=click.STRING)
@@ -180,16 +199,24 @@ def dfu():
 @click.option('--key-file',
               help='Signing key (pem fomat)',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
+@click.option('--mesh',
+              help='Generate a package targeting Mesh-DFU',
+              type=click.BOOL,
+              is_flag=True)
 def genpkg(zipfile,
            application,
+           company_id,
+           application_id,
            application_version,
+           bootloader_id,
            bootloader,
            dev_revision,
            dev_type,
            dfu_ver,
            sd_req,
            softdevice,
-           key_file):
+           key_file,
+           mesh):
     """
     Generate a zipfile package for distribution to Apps supporting Nordic DFU OTA.
     The application, bootloader and softdevice files are converted to .bin if it is a .hex file.
@@ -197,6 +224,12 @@ def genpkg(zipfile,
     http://developer.nordicsemi.com/nRF51_SDK/doc/7.2.0/s110/html/a00065.html
     """
     zipfile_path = zipfile
+
+    if company_id == 'none':
+        company_id = None
+
+    if application_id == 'none':
+        application_id = None
 
     if application_version == 'none':
         application_version = None
@@ -206,6 +239,9 @@ def genpkg(zipfile,
 
     if dev_type == 'none':
         dev_type = None
+
+    if bootloader_id == 'none':
+        bootloader_id = None
 
     sd_req_list = None
 
@@ -225,13 +261,17 @@ def genpkg(zipfile,
 
     package = Package(dev_type,
                       dev_revision,
+                      company_id,
+                      application_id,
                       application_version,
+                      bootloader_id,
                       sd_req_list,
                       application,
                       bootloader,
                       softdevice,
                       dfu_ver,
-                      key_file)
+                      key_file,
+                      mesh)
 
     package.generate_package(zipfile_path)
 
@@ -266,10 +306,24 @@ def update_progress(progress=0, done=False, log_message=""):
               help='Enable flow control, default: disabled',
               type=click.BOOL,
               is_flag=True)
-def serial(package, port, baudrate, flowcontrol):
+@click.option('-i', '--interval',
+              help='Desired interval between data packets in milliseconds. Default: 500. Only applies to Mesh-DFU. '
+                   'Note: It is recommended to keep the interval above 200ms to avoid buffer overflow, and below '
+                   '2 seconds to avoid timeout.',
+              type=click.INT,
+              default=1000 * DfuTransportMesh.SEND_DATA_PACKET_WAIT_TIME)
+@click.option('-m', '--mesh',
+              help='Use mesh serial mode',
+              type=click.BOOL,
+              is_flag=True)
+def serial(package, port, baudrate, flowcontrol, interval, mesh):
     """Program a device with bootloader that support serial DFU"""
-    serial_backend = DfuTransportSerial(port, baudrate, flowcontrol)
-    serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    if mesh:
+        serial_backend = DfuTransportMesh(port, baudrate, flowcontrol, interval=interval / 1000.0)
+        serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    else:
+        serial_backend = DfuTransportSerial(port, baudrate, flowcontrol)
+        serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(package, dfu_transport=serial_backend)
 
     click.echo("Upgrading target on {1} with DFU package {0}. Flow control is {2}."
@@ -292,6 +346,7 @@ def serial(package, port, baudrate, flowcontrol):
         click.echo("- target is not in DFU mode. If using the SDK examples, "
                    "press Button 4 and RESET and release both to enter DFU mode.")
 
+        click.echo("Trace:\r\n{0}".format(traceback.print_exc()))
         return False
 
     click.echo("Device programmed.")
