@@ -79,7 +79,7 @@ class nRFHex(intelhex.IntelHex):
     def address_has_magic_number(self, address):
         try:
             potential_magic_number = self.gets(address, 4)
-            potential_magic_number = unpack('L', potential_magic_number)[0]
+            potential_magic_number = unpack('I', potential_magic_number)[0]
             return nRFHex.info_struct_magic_number == potential_magic_number
         except Exception:
             return False
