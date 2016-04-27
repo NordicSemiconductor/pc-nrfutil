@@ -40,7 +40,6 @@ import hashlib
 from nordicsemi.exceptions import NordicSemiException
 from nordicsemi.dfu.nrfhex import *
 from nordicsemi.dfu.init_packet import *
-from nordicsemi.dfu.manifest import ManifestGenerator, Manifest
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 from nordicsemi.dfu.crc16 import *
 
@@ -49,40 +48,16 @@ from signing import Signing
 
 class Package(object):
     """
-        Packages and unpacks Nordic DFU packages. Nordic DFU packages are zip files that contains firmware and meta-information
-        necessary for utilities to perform a DFU on nRF5X devices.
+        Packages and unpacks Nordic DFU packages. Nordic DFU packages are zip files that contains firmware and
+        meta-information necessary for utilities to perform a DFU on nRF5X devices.
 
-        The internal data model used in Package is a dictionary. The dictionary is expressed like this in
-         json format:
-
-         {
-            "manifest": {
-                "bootloader": {
-                    "bin_file": "asdf.bin",
-                    "dat_file": "asdf.dat",
-                    "init_packet_data": {
-                        "application_version": null,
-                        "device_revision": null,
-                        "device_type": 5,
-                        "firmware_hash": "asdfasdkfjhasdkfjashfkjasfhaskjfhkjsdfhasjkhf",
-                        "softdevice_req": [
-                            17,
-                            18
-                        ]
-                    }
-                }
-        }
-
-        Attributes application, bootloader, softdevice, softdevice_bootloader shall not be put into the manifest if they are null
-
+        The internal data model used in Package is a protocol buffer (https://developers.google.com/protocol-buffers/)
     """
 
     DEFAULT_DEV_TYPE = 0xFFFF
     DEFAULT_DEV_REV = 0xFFFF
     DEFAULT_APP_VERSION = 0xFFFFFFFF
     DEFAULT_SD_REQ = [0xFFFE]
-    DEFAULT_DFU_VER = 0.5
-    MANIFEST_FILENAME = "manifest.json"
 
     def __init__(self,
                  dev_type=DEFAULT_DEV_TYPE,
@@ -92,7 +67,6 @@ class Package(object):
                  app_fw=None,
                  bootloader_fw=None,
                  softdevice_fw=None,
-                 dfu_ver=DEFAULT_DFU_VER,
                  key_file=None):
         """
         Constructor that requires values used for generating a Nordic DFU package.
@@ -104,11 +78,9 @@ class Package(object):
         :param str app_fw: Path to application firmware file
         :param str bootloader_fw: Path to bootloader firmware file
         :param str softdevice_fw: Path to softdevice firmware file
-        :param float dfu_ver: DFU version to use when generating init-packet
         :param str key_file: Path to Signing key file (PEM)
         :return: None
         """
-        self.dfu_ver = dfu_ver
 
         init_packet_vars = {}
 
@@ -142,7 +114,6 @@ class Package(object):
                                      init_packet_vars)
 
         if key_file:
-            self.dfu_ver = 0.8
             self.key_file = key_file
 
     def generate_package(self, filename, preserve_work_directory=False):
@@ -159,27 +130,7 @@ class Package(object):
         work_directory = self.__create_temp_workspace()
 
         if Package._is_bootloader_softdevice_combination(self.firmwares_data):
-            # Removing softdevice and bootloader data from dictionary and adding the combined later
-            softdevice_fw_data = self.firmwares_data.pop(HexType.SOFTDEVICE)
-            bootloader_fw_data = self.firmwares_data.pop(HexType.BOOTLOADER)
-
-            softdevice_fw_name = softdevice_fw_data[FirmwareKeys.FIRMWARE_FILENAME]
-            bootloader_fw_name = bootloader_fw_data[FirmwareKeys.FIRMWARE_FILENAME]
-
-            new_filename = "sd_bl.bin"
-            sd_bl_file_path = os.path.join(work_directory, new_filename)
-
-            nrf_hex = nRFHex(softdevice_fw_name, bootloader_fw_name)
-            nrf_hex.tobinfile(sd_bl_file_path)
-
-            softdevice_size = nrf_hex.size()
-            bootloader_size = nrf_hex.bootloadersize()
-
-            self.__add_firmware_info(HexType.SD_BL,
-                                     sd_bl_file_path,
-                                     softdevice_fw_data[FirmwareKeys.INIT_PACKET_DATA],
-                                     softdevice_size,
-                                     bootloader_size)
+            self.merge_bootloader_and_softdevice_data(work_directory)
 
         for key in self.firmwares_data:
             firmware = self.firmwares_data[key]
@@ -193,28 +144,16 @@ class Package(object):
 
             init_packet_data = firmware[FirmwareKeys.INIT_PACKET_DATA]
 
-            if self.dfu_ver <= 0.5:
-                firmware_hash = Package.calculate_crc16(bin_file_path)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16] = firmware_hash
-            elif self.dfu_ver == 0.6:
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID] = INIT_PACKET_USES_CRC16
-                firmware_hash = Package.calculate_crc16(bin_file_path)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16] = firmware_hash
-            elif self.dfu_ver == 0.7:
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID] = INIT_PACKET_USES_HASH
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = int(Package.calculate_file_size(bin_file_path))
-                firmware_hash = Package.calculate_sha256_hash(bin_file_path)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH] = firmware_hash
-            elif self.dfu_ver == 0.8:
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID] = INIT_PACKET_EXT_USES_ECDS
-                firmware_hash = Package.calculate_sha256_hash(bin_file_path)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = int(Package.calculate_file_size(bin_file_path))
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH] = firmware_hash
-                temp_packet = self._create_init_packet(firmware)
-                signer = Signing()
-                signer.load_key(self.key_file)
-                signature = signer.sign(temp_packet)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
+            init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID] = INIT_PACKET_EXT_USES_ECDS
+            firmware_hash = Package.calculate_sha256_hash(bin_file_path)
+            init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = \
+                int(Package.calculate_file_size(bin_file_path))
+            init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH] = firmware_hash
+            temp_packet = self._create_init_packet(firmware)
+            signer = Signing()
+            signer.load_key(self.key_file)
+            signature = signer.sign(temp_packet)
+            init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
 
             # Store the .dat file in the work directory
             init_packet = self._create_init_packet(firmware)
@@ -226,18 +165,30 @@ class Package(object):
             firmware[FirmwareKeys.DAT_FILENAME] = \
                 init_packet_filename
 
-        # Store the manifest to manifest.json
-        manifest = self.create_manifest()
-
-        with open(os.path.join(work_directory, Package.MANIFEST_FILENAME), "w") as manifest_file:
-            manifest_file.write(manifest)
-
         # Package the work_directory to a zip file
         Package.create_zip_package(work_directory, filename)
 
         # Delete the temporary directory
         if not preserve_work_directory:
             shutil.rmtree(work_directory)
+
+    def merge_bootloader_and_softdevice_data(self, work_directory):
+        # Removing softdevice and bootloader data from dictionary and adding the combined later
+        softdevice_fw_data = self.firmwares_data.pop(HexType.SOFTDEVICE)
+        bootloader_fw_data = self.firmwares_data.pop(HexType.BOOTLOADER)
+        softdevice_fw_name = softdevice_fw_data[FirmwareKeys.FIRMWARE_FILENAME]
+        bootloader_fw_name = bootloader_fw_data[FirmwareKeys.FIRMWARE_FILENAME]
+        new_filename = "sd_bl.bin"
+        sd_bl_file_path = os.path.join(work_directory, new_filename)
+        nrf_hex = nRFHex(softdevice_fw_name, bootloader_fw_name)
+        nrf_hex.tobinfile(sd_bl_file_path)
+        softdevice_size = nrf_hex.size()
+        bootloader_size = nrf_hex.bootloadersize()
+        self.__add_firmware_info(HexType.SD_BL,
+                                 sd_bl_file_path,
+                                 softdevice_fw_data[FirmwareKeys.INIT_PACKET_DATA],
+                                 softdevice_size,
+                                 bootloader_size)
 
     @staticmethod
     def __create_temp_workspace():
@@ -296,7 +247,7 @@ class Package(object):
         return calc_crc16(data_buffer, 0xffff)
 
     def create_manifest(self):
-        manifest = ManifestGenerator(self.dfu_ver, self.firmwares_data)
+        manifest = ManifestGenerator(self.firmwares_data)
         return manifest.generate_manifest()
 
     @staticmethod
@@ -313,6 +264,11 @@ class Package(object):
         if firmware_type == HexType.SD_BL:
             self.firmwares_data[firmware_type][FirmwareKeys.SD_SIZE] = sd_size
             self.firmwares_data[firmware_type][FirmwareKeys.BL_SIZE] = bl_size
+
+    @staticmethod
+    def _create_init_packet(firmware_data):
+        p = Packet(firmware_data[FirmwareKeys.INIT_PACKET_DATA])
+        return p.generate_packet()
 
     @staticmethod
     def _create_init_packet(firmware_data):
