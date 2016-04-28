@@ -193,56 +193,41 @@ class Package(object):
 
             init_packet_data = firmware_data[FirmwareKeys.INIT_PACKET_DATA]
 
-            if self.dfu_ver <= 0.5:
-                firmware_hash = Package.calculate_crc16(bin_file_path)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16] = firmware_hash
-            elif self.dfu_ver == 0.6:
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID] = INIT_PACKET_USES_CRC16
-                firmware_hash = Package.calculate_crc16(bin_file_path)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16] = firmware_hash
-            elif self.dfu_ver == 0.7:
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID] = INIT_PACKET_USES_HASH
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = int(Package.calculate_file_size(bin_file_path))
-                firmware_hash = Package.calculate_sha256_hash(bin_file_path)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH] = firmware_hash
-            elif self.dfu_ver == 0.8:
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID] = INIT_PACKET_EXT_USES_ECDS
-                firmware_hash = Package.calculate_sha256_hash(bin_file_path)
-                bin_length = int(Package.calculate_file_size(bin_file_path))
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = bin_length
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH] = firmware_hash
+            init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID] = INIT_PACKET_EXT_USES_ECDS
+            firmware_hash = Package.calculate_sha256_hash(bin_file_path)
+            bin_length = int(Package.calculate_file_size(bin_file_path))
+            init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = bin_length
+            init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH] = firmware_hash
 
-                extended_init_packet_data = {
-                    'fw_version':   init_packet_data[PacketField.APP_VERSION],
-                    'hw_version':   init_packet_data[PacketField.DEVICE_REVISION],
-                    'sd_req':       init_packet_data[PacketField.REQUIRED_SOFTDEVICES_ARRAY],
-                    'fw_type':      key,
-                    'hash':         firmware_hash,
-                    'hash_type':    'sha256',
-                    'sign_type':    "ECDSA_P256_SHA256",
-                    'sign':         b''
-                }
+            extended_init_packet_data = {
+                'fw_version':   init_packet_data[PacketField.APP_VERSION],
+                'hw_version':   init_packet_data[PacketField.DEVICE_REVISION],
+                'sd_req':       init_packet_data[PacketField.REQUIRED_SOFTDEVICES_ARRAY],
+                'fw_type':      key,
+                'hash':         firmware_hash,
+                'hash_type':    'sha256'
+            }
 
-                if key == HexType.APPLICATION:
-                    extended_init_packet_data['app_size'] = bin_length
-                elif key == HexType.SOFTDEVICE:
-                    extended_init_packet_data['sd_size'] = bin_length
-                elif key == HexType.BOOTLOADER:
-                    extended_init_packet_data['bl_size'] = bin_length
-                elif key == HexType.SD_BL:
-                    extended_init_packet_data['bl_size'] = firmware_data[FirmwareKeys.BL_SIZE]
-                    extended_init_packet_data['sd_size'] = firmware_data[FirmwareKeys.SD_SIZE]
+            if key == HexType.APPLICATION:
+                extended_init_packet_data['app_size'] = bin_length
+            elif key == HexType.SOFTDEVICE:
+                extended_init_packet_data['sd_size'] = bin_length
+            elif key == HexType.BOOTLOADER:
+                extended_init_packet_data['bl_size'] = bin_length
+            elif key == HexType.SD_BL:
+                extended_init_packet_data['bl_size'] = firmware_data[FirmwareKeys.BL_SIZE]
+                extended_init_packet_data['sd_size'] = firmware_data[FirmwareKeys.SD_SIZE]
 
-                temp_packet = self._create_init_packet(firmware_data)
-                pb_temp_packet = self._create_init_packet_pb(extended_init_packet_data)
-                signer = Signing()
-                signer.load_key(self.key_file)
-                signature = signer.sign(temp_packet)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
+            signed_message = PBPacket(extended_init_packet_data)
+            pb_init_packet_bytes = signed_message.get_init_command_bytes()
+            signer = Signing()
+            signer.load_key(self.key_file)
+            signature = signer.sign(pb_init_packet_bytes)
+            signed_message.set_sign(signature)
+            signed_message.set_sign_type(PACKET_SIGN_TYPE_ECDSA)
 
             # Store the .dat file in the work directory
-            init_packet = self._create_init_packet(firmware_data)
-#             init_packet_pb = self._create_init_packet_pb(firmware_data)
+            init_packet = signed_message.get_signed_command_bytes()
             init_packet_filename = firmware_data[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")
 
             with open(os.path.join(work_directory, init_packet_filename), 'wb') as init_packet_file:
@@ -342,11 +327,6 @@ class Package(object):
     @staticmethod
     def _create_init_packet(firmware_data):
         p = Packet(firmware_data[FirmwareKeys.INIT_PACKET_DATA])
-        return p.generate_packet()
-
-    @staticmethod
-    def _create_init_packet_pb(extended_init_data):
-        p = PBPacket(extended_init_data)
         return p.generate_packet()
 
     @staticmethod
