@@ -29,7 +29,7 @@
 from enum import Enum
 
 
-class HexType(object):
+class HexType(Enum):
     SOFTDEVICE = 1
     BOOTLOADER = 2
     SD_BL = 3

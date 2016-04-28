@@ -40,6 +40,7 @@ import hashlib
 from nordicsemi.exceptions import NordicSemiException
 from nordicsemi.dfu.nrfhex import *
 from nordicsemi.dfu.init_packet import *
+from nordicsemi.dfu.init_packet_pb import *
 from nordicsemi.dfu.manifest import ManifestGenerator, Manifest
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 from nordicsemi.dfu.crc16 import *
@@ -181,17 +182,16 @@ class Package(object):
                                      softdevice_size,
                                      bootloader_size)
 
-        for key in self.firmwares_data:
-            firmware = self.firmwares_data[key]
+        for key, firmware_data in self.firmwares_data.iteritems():
 
             # Normalize the firmware file and store it in the work directory
-            firmware[FirmwareKeys.BIN_FILENAME] = \
-                Package.normalize_firmware_to_bin(work_directory, firmware[FirmwareKeys.FIRMWARE_FILENAME])
+            firmware_data[FirmwareKeys.BIN_FILENAME] = \
+                Package.normalize_firmware_to_bin(work_directory, firmware_data[FirmwareKeys.FIRMWARE_FILENAME])
 
             # Calculate the hash for the .bin file located in the work directory
-            bin_file_path = os.path.join(work_directory, firmware[FirmwareKeys.BIN_FILENAME])
+            bin_file_path = os.path.join(work_directory, firmware_data[FirmwareKeys.BIN_FILENAME])
 
-            init_packet_data = firmware[FirmwareKeys.INIT_PACKET_DATA]
+            init_packet_data = firmware_data[FirmwareKeys.INIT_PACKET_DATA]
 
             if self.dfu_ver <= 0.5:
                 firmware_hash = Package.calculate_crc16(bin_file_path)
@@ -208,22 +208,47 @@ class Package(object):
             elif self.dfu_ver == 0.8:
                 init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID] = INIT_PACKET_EXT_USES_ECDS
                 firmware_hash = Package.calculate_sha256_hash(bin_file_path)
-                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = int(Package.calculate_file_size(bin_file_path))
+                bin_length = int(Package.calculate_file_size(bin_file_path))
+                init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH] = bin_length
                 init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH] = firmware_hash
-                temp_packet = self._create_init_packet(firmware)
+
+                extended_init_packet_data = {
+                    'fw_version':   init_packet_data[PacketField.APP_VERSION],
+                    'hw_version':   init_packet_data[PacketField.DEVICE_REVISION],
+                    'sd_req':       init_packet_data[PacketField.REQUIRED_SOFTDEVICES_ARRAY],
+                    'fw_type':      key,
+                    'hash':         firmware_hash,
+                    'hash_type':    'sha256',
+                    'sign_type':    "ECDSA_P256_SHA256",
+                    'sign':         b''
+                }
+
+                if key == HexType.APPLICATION:
+                    extended_init_packet_data['app_size'] = bin_length
+                elif key == HexType.SOFTDEVICE:
+                    extended_init_packet_data['sd_size'] = bin_length
+                elif key == HexType.BOOTLOADER:
+                    extended_init_packet_data['bl_size'] = bin_length
+                elif key == HexType.SD_BL:
+                    extended_init_packet_data['bl_size'] = firmware_data[FirmwareKeys.BL_SIZE]
+                    extended_init_packet_data['sd_size'] = firmware_data[FirmwareKeys.SD_SIZE]
+
+                temp_packet = self._create_init_packet(firmware_data)
+                pb_temp_packet = self._create_init_packet_pb(extended_init_packet_data)
                 signer = Signing()
                 signer.load_key(self.key_file)
                 signature = signer.sign(temp_packet)
                 init_packet_data[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
 
             # Store the .dat file in the work directory
-            init_packet = self._create_init_packet(firmware)
-            init_packet_filename = firmware[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")
+            init_packet = self._create_init_packet(firmware_data)
+#             init_packet_pb = self._create_init_packet_pb(firmware_data)
+            init_packet_filename = firmware_data[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")
 
             with open(os.path.join(work_directory, init_packet_filename), 'wb') as init_packet_file:
                 init_packet_file.write(init_packet)
 
-            firmware[FirmwareKeys.DAT_FILENAME] = \
+            firmware_data[FirmwareKeys.DAT_FILENAME] = \
                 init_packet_filename
 
         # Store the manifest to manifest.json
@@ -317,6 +342,11 @@ class Package(object):
     @staticmethod
     def _create_init_packet(firmware_data):
         p = Packet(firmware_data[FirmwareKeys.INIT_PACKET_DATA])
+        return p.generate_packet()
+
+    @staticmethod
+    def _create_init_packet_pb(extended_init_data):
+        p = PBPacket(extended_init_data)
         return p.generate_packet()
 
     @staticmethod
