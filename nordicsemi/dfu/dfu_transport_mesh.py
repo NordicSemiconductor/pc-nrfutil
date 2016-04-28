@@ -144,7 +144,7 @@ class DfuTransportMesh(DfuTransport):
 
     DEFAULT_BAUD_RATE = 1000000
     DEFAULT_FLOW_CONTROL = True
-    DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
+    DEFAULT_SERIAL_PORT_TIMEOUT = 5.0  # Timeout time on serial port read
     ACK_PACKET_TIMEOUT = 1.0  # Timeout time for for ACK packet received before reporting timeout through event system
     SEND_INIT_PACKET_WAIT_TIME = 0.1  # Time to wait before communicating with bootloader after init packet is sent
     SEND_START_DFU_WAIT_TIME = 0.2  # Time to wait before communicating with bootloader after start DFU packet is sent
