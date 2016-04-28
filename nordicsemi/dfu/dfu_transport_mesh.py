@@ -181,7 +181,14 @@ class DfuTransportMesh(DfuTransport):
         try:
             self.serial_port = Serial(port=self.com_port, baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
         except Exception, e:
+            if self.serial_port:
+                self.serial_port.close()
             raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
+
+        #dodge any glitches caused by interrupted transfers.
+        self.serial_port.write("\x01\x0e")
+        while len(self.serial_port.read()) != 0:
+            pass
 
         logger.info("Opened com-port")
         self.rxthread = Thread(target=self.receive_thread)
