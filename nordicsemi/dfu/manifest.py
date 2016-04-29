@@ -61,6 +61,7 @@ class ManifestGenerator(object):
             else:
                 _firmware = Firmware()
 
+
             # Strip path, add only filename
             _firmware.bin_file = os.path.basename(firmware_dict[FirmwareKeys.BIN_FILENAME])
             _firmware.dat_file = os.path.basename(firmware_dict[FirmwareKeys.DAT_FILENAME])

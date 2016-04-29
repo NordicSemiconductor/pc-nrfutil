@@ -206,39 +206,41 @@ class Package(object):
             bin_file_path = os.path.join(work_directory, firmware_data[FirmwareKeys.BIN_FILENAME])
             firmware_hash = Package.calculate_sha256_hash(bin_file_path)
             bin_length = int(Package.calculate_file_size(bin_file_path))
-            extended_init_packet_data = {
-                'fw_version':   firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.APP_VERSION],
-                'hw_version':   firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.DEVICE_REVISION],
-                'sd_req':       firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.REQUIRED_SOFTDEVICES_ARRAY],
-                'fw_type':      key,
-                'hash':         firmware_hash,
-                'hash_type':    'sha256'
-            }
 
+            sd_size = None
+            bl_size = None
+            app_size = None
             if key == HexType.APPLICATION:
-                extended_init_packet_data['app_size'] = bin_length
+                app_size = bin_length
             elif key == HexType.SOFTDEVICE:
-                extended_init_packet_data['sd_size'] = bin_length
+                sd_size = bin_length
             elif key == HexType.BOOTLOADER:
-                extended_init_packet_data['bl_size'] = bin_length
+                bl_size = bin_length
             elif key == HexType.SD_BL:
-                extended_init_packet_data['bl_size'] = firmware_data[FirmwareKeys.BL_SIZE]
-                extended_init_packet_data['sd_size'] = firmware_data[FirmwareKeys.SD_SIZE]
+                bl_size = firmware_data[FirmwareKeys.BL_SIZE]
+                sd_size = firmware_data[FirmwareKeys.SD_SIZE]
 
-            signed_message = PBPacket(extended_init_packet_data)
-            pb_init_packet_bytes = signed_message.get_init_command_bytes()
+            init_packet = InitPacketPB(
+                            hash_bytes=firmware_hash,
+                            dfu_type=key,
+                            hash_type='sha256',
+                            app_size=app_size,
+                            sd_size=sd_size,
+                            bl_size=bl_size,
+                            fw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.APP_VERSION],
+                            hw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.DEVICE_REVISION],
+                            sd_req=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.REQUIRED_SOFTDEVICES_ARRAY])
+
             signer = Signing()
             signer.load_key(self.key_file)
-            signature = signer.sign(pb_init_packet_bytes)
-            signed_message.set_sign(signature)
-            signed_message.set_sign_type(PACKET_SIGN_TYPE_ECDSA)
+            signature = signer.sign(init_packet.get_init_command_bytes())
+            init_packet.set_signature(signature, PACKET_SIGN_TYPE_ECDSA)
 
             # Store the .dat file in the work directory
-            init_packet = signed_message.get_signed_command_bytes()
             init_packet_filename = firmware_data[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")
 
             with open(os.path.join(work_directory, init_packet_filename), 'wb') as init_packet_file:
-                init_packet_file.write(init_packet)
+                init_packet_file.write(init_packet.get_init_packet_pb_bytes())
 
             firmware_data[FirmwareKeys.DAT_FILENAME] = \
                 init_packet_filename

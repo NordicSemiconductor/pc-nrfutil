@@ -31,85 +31,54 @@ HEX_TYPE_TO_FW_TYPE_MAP = {
 }
 
 
-class PBPacket(object):
-    def __init__(self, init_packet_fields):
-        # Build dictionary structure used to represent the PB data
-        self.signed_command = pb.SignedCommand()
+class InitPacketPB(object):
+    def __init__(self,
+                 hash_bytes,
+                 dfu_type,
+                 fw_version="0xffff",
+                 hw_version="0xffff",
+                 hash_type=pb.SHA256,
+                 sd_size=None,
+                 app_size=None,
+                 bl_size=None,
+                 sd_req=None
+                 ):
+
+        self.packet = pb.Packet()
+        self.signed_command = self.packet.signed_command
         self.init_command = self.signed_command.command.init
 
-        for key, value in init_packet_fields.iteritems():
-            if key == 'fw_version':
-                self._set_fw_version(value)
-            elif key == 'hw_version':
-                self._set_hw_version(value)
-            elif key == 'sd_req':
-                self._set_sd_req(value)
-            elif key == 'hash':
-                self._set_hash(value)
-            elif key == 'hash_type':
-                self._set_hash_type(HASH_TYPE_MAP[value])
-            elif key == 'sd_size':
-                self._set_sd_size(value)
-            elif key == 'app_size':
-                self._set_app_size(value)
-            elif key == 'bl_size':
-                self._set_bl_size(value)
-            elif key == 'fw_type':
-                self._set_fw_type(HEX_TYPE_TO_FW_TYPE_MAP[value])
-
-    def _set_fw_version(self, version):
-        self.init_command.fw_version = version
-
-    def _set_hw_version(self, version):
-        self.init_command.hw_version = version
-
-    def _set_sd_req(self, sd_req_list):
-        self.init_command.sd_req.extend(list(set(sd_req_list)))
-
-    def _set_fw_type(self, fw_type):
-        self.init_command.type = fw_type
-
-    def _set_sd_size(self, sd_size):
-        self.init_command.sd_size = sd_size
-
-    def _set_bl_size(self, bl_size):
-        self.init_command.bl_size = bl_size
-
-    def _set_app_size(self, app_size):
-        self.init_command.app_size = app_size
-
-    def _set_hash_type(self, hash_type):
-        self.init_command.hash.hash_type = hash_type
-
-    def _set_hash(self, hash_bytes):
+        self.init_command.type = HEX_TYPE_TO_FW_TYPE_MAP[dfu_type]
         self.init_command.hash.hash = hash_bytes
+        self.init_command.fw_version = fw_version
+        self.init_command.hw_version = hw_version
+        self.init_command.sd_req.extend(list(set(sd_req)))
+        self.init_command.hash.hash_type = HASH_TYPE_MAP[hash_type]
 
-    def set_sign_type(self, sign_type):
-        self.signed_command.signature_type = SIGN_TYPE_MAP[sign_type]
-
-    def set_sign(self, sign_bytes):
-        self.signed_command.signature = sign_bytes
+        if sd_size:
+            self.init_command.sd_size = sd_size
+        if bl_size:
+            self.init_command.bl_size = bl_size
+        if app_size:
+            self.init_command.app_size = app_size
+        if not sd_req:
+            self.init_command.sd_req = ["0xfffe"]  # Set to default value
 
     def _is_valid(self):
-        return self.signed_command.signature is not None
+        return self.init_command.hash is not None  # TODO NRFFOSDK-6505 add checks for required fields
+
+    def get_init_packet_pb_bytes(self):
+        if self.signed_command.signature is not None:
+            return self.packet.SerializeToString()
+        else:
+            raise RuntimeError("Did not set signature")
 
     def get_init_command_bytes(self):
         return self.init_command.SerializeToString()
 
-    def get_signed_command_bytes(self):
-        return self.signed_command.SerializeToString()
-
-    def generate_init_packet(self):
-        return self.get_init_command_bytes()
+    def set_signature(self, signature, signature_type):
+        self.signed_command.signature = signature
+        self.signed_command.signature_type = SIGN_TYPE_MAP[signature_type]
 
     def __str__(self):
-        return str(self.signed_command)
-
-
-def test_pb_package():
-
-    print "SUCCESS"
-
-
-test_pb_package()
-
+        return str(self.init_command)
