@@ -1,6 +1,4 @@
-from dfu_init_pb2 import *
-from init_packet import PacketField
-from protobuf_to_dict import protobuf_to_dict
+import dfu_cc_pb2 as pb
 from model import HexType
 '''
     Why have this wrapper?
@@ -16,28 +14,28 @@ PACKET_SIGN_TYPE_ECDSA = "ECDSA_P256_SHA256"
 PACKET_SIGN_TYPE_ED25519 = "ED25519"
 
 SIGN_TYPE_MAP = {
-    PACKET_SIGN_TYPE_ED25519: signed_command_t.ED25519,
-    PACKET_SIGN_TYPE_ECDSA: signed_command_t.ECDSA_P256_SHA256
+    PACKET_SIGN_TYPE_ED25519: pb.ED25519,
+    PACKET_SIGN_TYPE_ECDSA: pb.ECDSA_P256_SHA256
 }
 
 HASH_TYPE_MAP = {
-    'sha256': SHA256,
-    'sha512': SHA512,
+    'sha256': pb.SHA256,
+    'sha512': pb.SHA512,
 }
 
 HEX_TYPE_TO_FW_TYPE_MAP = {
-    HexType.APPLICATION:    APPLICATION,
-    HexType.SOFTDEVICE:     SOFTDEVICE,
-    HexType.BOOTLOADER:     BOOTLOADER,
-    HexType.SD_BL:          SOFTDEVICE_BOOTLOADER
+    HexType.APPLICATION:    pb.APPLICATION,
+    HexType.SOFTDEVICE:     pb.SOFTDEVICE,
+    HexType.BOOTLOADER:     pb.BOOTLOADER,
+    HexType.SD_BL:          pb.SOFTDEVICE_BOOTLOADER
 }
 
 
 class PBPacket(object):
     def __init__(self, init_packet_fields):
         # Build dictionary structure used to represent the PB data
-        self.signed_command = signed_command_t()
-        self.init_command = self.signed_command.command.init_command
+        self.signed_command = pb.SignedCommand()
+        self.init_command = self.signed_command.command.init
 
         for key, value in init_packet_fields.iteritems():
             if key == 'fw_version':
@@ -97,9 +95,6 @@ class PBPacket(object):
 
     def get_init_command_bytes(self):
         return self.init_command.SerializeToString()
-
-    def get_init_command_dict(self):
-        return protobuf_to_dict(self.init_command)
 
     def get_signed_command_bytes(self):
         return self.signed_command.SerializeToString()
