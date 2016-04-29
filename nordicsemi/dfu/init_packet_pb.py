@@ -35,9 +35,9 @@ class InitPacketPB(object):
     def __init__(self,
                  hash_bytes,
                  dfu_type,
-                 fw_version="0xffff",
-                 hw_version="0xffff",
-                 hash_type=pb.SHA256,
+                 fw_version=0xffff,
+                 hw_version=0xffff,
+                 hash_type='sha256',
                  sd_size=None,
                  app_size=None,
                  bl_size=None,
@@ -52,6 +52,8 @@ class InitPacketPB(object):
         self.init_command.hash.hash = hash_bytes
         self.init_command.fw_version = fw_version
         self.init_command.hw_version = hw_version
+        if not sd_req:
+            sd_req = [0xfffe]  # Set to default value
         self.init_command.sd_req.extend(list(set(sd_req)))
         self.init_command.hash.hash_type = HASH_TYPE_MAP[hash_type]
 
@@ -61,8 +63,6 @@ class InitPacketPB(object):
             self.init_command.bl_size = bl_size
         if app_size:
             self.init_command.app_size = app_size
-        if not sd_req:
-            self.init_command.sd_req = ["0xfffe"]  # Set to default value
 
     def _is_valid(self):
         return self.init_command.hash is not None  # TODO NRFFOSDK-6505 add checks for required fields
