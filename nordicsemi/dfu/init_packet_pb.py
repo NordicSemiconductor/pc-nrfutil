@@ -64,6 +64,8 @@ class InitPacketPB(object):
         if app_size:
             self.init_command.app_size = app_size
 
+        self.signed_command.command.op_code = pb.INIT
+
     def _is_valid(self):
         return self.init_command.hash is not None  # TODO NRFFOSDK-6505 add checks for required fields
 
