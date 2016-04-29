@@ -33,7 +33,6 @@ import os
 
 # Nordic libraries
 from nordicsemi.exceptions import NotImplementedException
-from nordicsemi.dfu.init_packet import PacketField
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 
 

@@ -33,7 +33,6 @@ import tempfile
 import unittest
 
 from nordicsemi.dfu.signing import Signing
-from nordicsemi.dfu.init_packet import Packet, PacketField
 
 
 class TestSinging(unittest.TestCase):
@@ -62,36 +61,6 @@ class TestSinging(unittest.TestCase):
         signing.load_key(key_file_name)
 
         self.assertEqual(64, len(binascii.hexlify(signing.sk.to_string())))
-
-    def test_sign_and_verify(self):
-        key_file_name = 'key.pem'
-
-        signing = Signing()
-        signing.load_key(key_file_name)
-
-        init_packet_fields = {
-            PacketField.DEVICE_TYPE: 0xFFFF,
-            PacketField.DEVICE_REVISION: 0xFFFF,
-            PacketField.APP_VERSION: 0xFFFFFFFF,
-            PacketField.REQUIRED_SOFTDEVICES_ARRAY: [0xFFFE],
-            PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID: 2,
-            PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH: 1234,
-            PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
-                '\xc9\xd3\xbfi\xf2\x1e\x88\xa01\x1e\r\xd2BSa\x12\xf8BW\x9b\xef&Z$\xbd\x02U\xfdD?u\x9e',
-        }
-        init_packet = Packet(init_packet_fields)
-        init_packet_data = init_packet.generate_packet()
-
-        signature = signing.sign(init_packet_data)
-
-        self.assertTrue(signing.verify(init_packet_data, signature))
-
-        init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
-
-        init_packet = Packet(init_packet_fields)
-        init_packet_data = init_packet.generate_packet()
-
-        self.assertFalse(signing.verify(init_packet_data, signature))
 
     def test_get_vk(self):
         key_file_name = 'key.pem'

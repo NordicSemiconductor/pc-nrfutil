@@ -138,9 +138,6 @@ class TestPackage(unittest.TestCase):
         manifest = self.p.unpack_package(os.path.join(self.work_directory, pkg_name), unpacked_dir)
         self.assertIsNotNone(manifest)
         self.assertEqual(u'bar.bin', manifest.softdevice.bin_file)
-#         self.assertEqual(1, manifest.softdevice.init_packet_data.ext_packet_id)
-        self.assertIsNone(manifest.softdevice.init_packet_data.firmware_crc16)
-        self.assertIsNotNone(manifest.softdevice.init_packet_data.firmware_hash)
 
     def test_unpack_package_c(self):
         self.p = Package(dev_type=1,
@@ -156,11 +153,6 @@ class TestPackage(unittest.TestCase):
         manifest = self.p.unpack_package(os.path.join(self.work_directory, pkg_name), unpacked_dir)
         self.assertIsNotNone(manifest)
         self.assertEqual(u'bar.bin', manifest.softdevice.bin_file)
-        self.assertEqual(2, manifest.softdevice.init_packet_data.ext_packet_id)
-        self.assertIsNone(manifest.softdevice.init_packet_data.firmware_crc16)
-        self.assertIsNotNone(manifest.softdevice.init_packet_data.firmware_hash)
-#         self.assertIsNotNone(manifest.softdevice.init_packet_data.init_packet_ecds)
-        self.assertEqual(manifest.dfu_version, 0.8)
 
 
 if __name__ == '__main__':
