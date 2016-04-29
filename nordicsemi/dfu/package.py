@@ -47,6 +47,13 @@ from nordicsemi.dfu.crc16 import *
 
 from signing import Signing
 
+HexTypeToInitPacketFwTypemap = {
+    HexType.APPLICATION: DFUType.APPLICATION,
+    HexType.BOOTLOADER: DFUType.BOOTLOADER,
+    HexType.SOFTDEVICE: DFUType.SOFTDEVICE,
+    HexType.SD_BL: DFUType.SOFTDEVICE_BOOTLOADER
+}
+
 
 class PacketField(Enum):
     DEVICE_TYPE = 1
@@ -222,8 +229,8 @@ class Package(object):
 
             init_packet = InitPacketPB(
                             hash_bytes=firmware_hash,
-                            dfu_type=key,
-                            hash_type='sha256',
+                            dfu_type=HexTypeToInitPacketFwTypemap[key],
+                            hash_type=HashTypes.SHA256,
                             app_size=app_size,
                             sd_size=sd_size,
                             bl_size=bl_size,
@@ -234,7 +241,7 @@ class Package(object):
             signer = Signing()
             signer.load_key(self.key_file)
             signature = signer.sign(init_packet.get_init_command_bytes())
-            init_packet.set_signature(signature, PACKET_SIGN_TYPE_ECDSA)
+            init_packet.set_signature(signature, SigningTypes.ECDSA_P256_SHA256)
 
             # Store the .dat file in the work directory
             init_packet_filename = firmware_data[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")

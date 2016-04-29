@@ -25,21 +25,17 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-import tempfile
 import unittest
-import shutil
-
-from nordicsemi.dfu.model import HexType
 from nordicsemi.dfu.init_packet_pb import *
 from google.protobuf.message import EncodeError
 import nordicsemi.dfu.dfu_cc_pb2 as pb
 
 
 HASH_BYTES_A = b'123123123123'
-HASH_TYPE = 'sha256'
+HASH_TYPE = HashTypes.SHA256
+DFU_TYPE = DFUType.APPLICATION
 SIGNATURE_BYTES_A = b'234827364872634876234'
-SIGNATURE_TYPE = PACKET_SIGN_TYPE_ECDSA
+SIGNATURE_TYPE = SigningTypes.ECDSA_P256_SHA256
 
 
 class TestPackage(unittest.TestCase):
@@ -50,8 +46,8 @@ class TestPackage(unittest.TestCase):
         pass
 
     def test_init_command(self):
-        init_command_serialized = InitPacketPB(hash_bytes=HASH_BYTES_A,
-                                               dfu_type=HexType.APPLICATION).get_init_command_bytes()
+        init_command_serialized = InitPacketPB(hash_bytes=HASH_BYTES_A, hash_type=HASH_TYPE,
+                                               dfu_type=DFU_TYPE).get_init_command_bytes()
 
         init_command = pb.InitCommand()
         init_command.ParseFromString(init_command_serialized)
@@ -60,7 +56,7 @@ class TestPackage(unittest.TestCase):
 
     def test_init_packet(self):
         failed = False
-        init_packet = InitPacketPB(hash_bytes=HASH_BYTES_A, dfu_type=HexType.APPLICATION)
+        init_packet = InitPacketPB(hash_bytes=HASH_BYTES_A, hash_type=HASH_TYPE, dfu_type=DFU_TYPE)
         try:
             init_packet.get_init_packet_pb_bytes()
         except EncodeError:
