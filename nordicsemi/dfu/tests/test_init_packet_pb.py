@@ -30,12 +30,19 @@ from nordicsemi.dfu.init_packet_pb import *
 from google.protobuf.message import EncodeError
 import nordicsemi.dfu.dfu_cc_pb2 as pb
 
-
 HASH_BYTES_A = b'123123123123'
+HASH_BYTES_B = b'434343434343'
 HASH_TYPE = HashTypes.SHA256
 DFU_TYPE = DFUType.APPLICATION
 SIGNATURE_BYTES_A = b'234827364872634876234'
 SIGNATURE_TYPE = SigningTypes.ECDSA_P256_SHA256
+SD_REQ_A = [1, 2, 3, 4]
+FIRMWARE_VERSION_A = 0xaaaa
+HARDWARE_VERSION_A = 0xbbbb
+ILLEGAL_VERSION = 0xaaaaaaaa1
+SD_SIZE = 0x11
+APP_SIZE = 0x233
+BL_SIZE = 0x324
 
 
 class TestPackage(unittest.TestCase):
@@ -46,17 +53,52 @@ class TestPackage(unittest.TestCase):
         pass
 
     def test_init_command(self):
-        init_command_serialized = InitPacketPB(hash_bytes=HASH_BYTES_A, hash_type=HASH_TYPE,
-                                               dfu_type=DFU_TYPE).get_init_command_bytes()
+        init_command_serialized = InitPacketPB(hash_bytes=HASH_BYTES_B, hash_type=HASH_TYPE,
+                                               dfu_type=DFU_TYPE, sd_req=SD_REQ_A, fw_version=FIRMWARE_VERSION_A,
+                                               hw_version=HARDWARE_VERSION_A, sd_size=SD_SIZE, app_size=APP_SIZE,
+                                               bl_size=BL_SIZE).get_init_command_bytes()
 
         init_command = pb.InitCommand()
         init_command.ParseFromString(init_command_serialized)
 
-        self.assertEqual(init_command.hash.hash, HASH_BYTES_A)
+        self.assertEqual(init_command.hash.hash, HASH_BYTES_B)
+        self.assertEqual(init_command.hash.hash_type, pb.SHA256)
+        self.assertEqual(init_command.type, pb.APPLICATION)
+        self.assertEqual(init_command.fw_version, FIRMWARE_VERSION_A)
+        self.assertEqual(init_command.hw_version, HARDWARE_VERSION_A)
+        self.assertEqual(init_command.app_size, APP_SIZE)
+        self.assertEqual(init_command.sd_size, SD_SIZE)
+        self.assertEqual(init_command.bl_size, BL_SIZE)
+        self.assertEqual(init_command.sd_req, SD_REQ_A)
+
+    def test_init_command_wrong_size(self):
+        def test_size(dfu_type, sd_size, app_size, bl_size, expect_failed):
+            failed = False
+            try:
+                InitPacketPB(hash_bytes=HASH_BYTES_B, hash_type=HASH_TYPE,
+                             dfu_type=dfu_type,
+                             sd_size=sd_size,
+                             app_size=app_size,
+                             bl_size=bl_size)
+            except RuntimeError:
+                failed = True
+
+            self.assertEqual(failed, expect_failed)
+
+        test_size(DFUType.APPLICATION, sd_size=SD_SIZE, app_size=0, bl_size=BL_SIZE, expect_failed=True)
+        test_size(DFUType.APPLICATION, sd_size=SD_SIZE, app_size=APP_SIZE, bl_size=BL_SIZE, expect_failed=False)
+        test_size(DFUType.BOOTLOADER, sd_size=SD_SIZE, app_size=APP_SIZE, bl_size=0, expect_failed=True)
+        test_size(DFUType.BOOTLOADER, sd_size=SD_SIZE, app_size=APP_SIZE, bl_size=BL_SIZE, expect_failed=False)
+        test_size(DFUType.SOFTDEVICE, sd_size=0, app_size=APP_SIZE, bl_size=BL_SIZE, expect_failed=True)
+        test_size(DFUType.SOFTDEVICE, sd_size=SD_SIZE, app_size=APP_SIZE, bl_size=BL_SIZE, expect_failed=False)
+        test_size(DFUType.SOFTDEVICE_BOOTLOADER, sd_size=0, app_size=APP_SIZE, bl_size=BL_SIZE, expect_failed=True)
+        test_size(DFUType.SOFTDEVICE_BOOTLOADER, sd_size=SD_SIZE, app_size=APP_SIZE, bl_size=0, expect_failed=True)
+        test_size(DFUType.SOFTDEVICE_BOOTLOADER, sd_size=SD_SIZE, app_size=APP_SIZE, bl_size=BL_SIZE,
+                  expect_failed=False)
 
     def test_init_packet(self):
         failed = False
-        init_packet = InitPacketPB(hash_bytes=HASH_BYTES_A, hash_type=HASH_TYPE, dfu_type=DFU_TYPE)
+        init_packet = InitPacketPB(hash_bytes=HASH_BYTES_A, hash_type=HASH_TYPE, dfu_type=DFU_TYPE, app_size=APP_SIZE)
         try:
             init_packet.get_init_packet_pb_bytes()
         except EncodeError:
@@ -72,6 +114,7 @@ class TestPackage(unittest.TestCase):
         init_packet.ParseFromString(init_packet_serialized)
         self.assertEqual(init_packet.signed_command.command.init.hash.hash, HASH_BYTES_A)
         self.assertEqual(init_packet.signed_command.command.op_code, pb.INIT)
+
 
 if __name__ == '__main__':
     unittest.main()

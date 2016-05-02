@@ -214,9 +214,9 @@ class Package(object):
             firmware_hash = Package.calculate_sha256_hash(bin_file_path)
             bin_length = int(Package.calculate_file_size(bin_file_path))
 
-            sd_size = None
-            bl_size = None
-            app_size = None
+            sd_size = 0
+            bl_size = 0
+            app_size = 0
             if key == HexType.APPLICATION:
                 app_size = bin_length
             elif key == HexType.SOFTDEVICE:
