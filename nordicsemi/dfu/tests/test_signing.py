@@ -82,8 +82,8 @@ class TestSinging(unittest.TestCase):
 
     def test_get_vk_hex(self):
         key_file_name = 'key.pem'
-        expected_vk_hex = "Verification key Qx: 658da2eddb981f697dae7220d68217abed3fb87005ec8a05b9b56bbbaa17f460\n" \
-                          "Verification key Qy: 909baecdad7226c204b612b662ff4fccbd1b0c90841090d83a59cdad6c981d4c"
+        expected_vk_hex = "Verification key pk: 60f417aabb6bb5b9058aec0570b83fedab1782d62072ae7d691f98dbeda28d654c1d98"\
+                          "6cadcd593ad8901084900c1bbdcc4fff62b612b604c22672adcdae9b90"
 
         signing = Signing()
         signing.load_key(key_file_name)

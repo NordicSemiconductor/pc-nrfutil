@@ -104,8 +104,16 @@ class Signing(object):
         vk = self.sk.get_verifying_key()
         vk_hexlify = binascii.hexlify(vk.to_string())
 
-        vk_hex = "Verification key Qx: {0}\n".format(vk_hexlify[0:64])
-        vk_hex += "Verification key Qy: {0}".format(vk_hexlify[64:128])
+        vk_hexlify_list = []
+        for i in xrange(len(vk_hexlify[0:64])-2, -2, -2):
+            vk_hexlify_list.append(vk_hexlify[i:i+2])
+
+        for i in xrange(len(vk_hexlify)-2, 62, -2):
+            vk_hexlify_list.append(vk_hexlify[i:i+2])
+
+        vk_hexlify_list_str = ''.join(vk_hexlify_list)
+
+        vk_hex = "Verification key pk: {0}".format(vk_hexlify_list_str)
 
         return vk_hex
 
