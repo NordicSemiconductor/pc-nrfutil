@@ -104,14 +104,9 @@ def version():
 @click.option('--show-vk',
               help='Show the verification keys for DFU Signing (hex|code|pem)',
               type=click.STRING)
-@click.option('--code-le',
-              help='Represent all keys shown as code in Little Endian format',
-              type=click.BOOL,
-              is_flag=True)
 def keys(key_file,
          gen_key,
-         show_vk,
-         code_le
+         show_vk
          ):
     """
     This set of commands support creation of signing key (private) and showing the verification key (public)
@@ -136,7 +131,7 @@ def keys(key_file,
             raise nRFException("No key file to load at: %s" % key_file)
 
         signer.load_key(key_file)
-        click.echo(signer.get_vk(show_vk, code_le))
+        click.echo(signer.get_vk(show_vk))
 
 
 @cli.group()

@@ -76,7 +76,7 @@ class Signing(object):
 
         return True
 
-    def get_vk(self, output_type, code_le=False):
+    def get_vk(self, output_type):
         """
         Get verification key (as hex, code or pem)
         """
@@ -88,7 +88,7 @@ class Signing(object):
         elif output_type == 'hex':
             return self.get_vk_hex()
         elif output_type == 'code':
-            return self.get_vk_code(code_le)
+            return self.get_vk_code()
         elif output_type == 'pem':
             return self.get_vk_pem()
         else:
@@ -109,7 +109,7 @@ class Signing(object):
 
         return vk_hex
 
-    def get_vk_code(self, code_le=False):
+    def get_vk_code(self):
         """
         Get the verification key as code
         """
@@ -122,28 +122,15 @@ class Signing(object):
         vk_x_separated = ""
         vk_x_str = vk_hex[0:64]
         for i in xrange(0, len(vk_x_str), 2):
-            if code_le:
-                vk_x_separated = "0x" + vk_x_str[i:i+2] + ", " + vk_x_separated
-            else:
-                vk_x_separated += "0x" + vk_x_str[i:i+2] + ", "
-
-        if not code_le:
-            vk_x_separated = vk_x_separated[:-2]
+            vk_x_separated = "0x" + vk_x_str[i:i+2] + ", " + vk_x_separated
 
         vk_y_separated = ""
         vk_y_str = vk_hex[64:128]
         for i in xrange(0, len(vk_y_str), 2):
-            if code_le:
-                vk_y_separated = "0x" + vk_y_str[i:i+2] + ", " + vk_y_separated
-            else:
-                vk_y_separated += "0x" + vk_y_str[i:i+2] + ", "
+            vk_y_separated = "0x" + vk_y_str[i:i+2] + ", " + vk_y_separated
         vk_y_separated = vk_y_separated[:-2]
 
-        if code_le:
-            vk_code = "static uint8_t pk[] = {{ {0} }};".format(vk_x_separated+vk_y_separated)
-        else:
-            vk_code = "static uint8_t Qx[] = {{ {0} }};\n".format(vk_x_separated)
-            vk_code += "static uint8_t Qy[] = {{ {0} }};".format(vk_y_separated)
+        vk_code = "static uint8_t pk[] = {{ {0} }};".format(vk_x_separated+vk_y_separated)
 
         return vk_code
 
