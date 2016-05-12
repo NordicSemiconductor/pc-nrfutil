@@ -94,6 +94,41 @@ class Signing(object):
         else:
             raise InvalidArgumentException("Invalid argument. Can't get key")
 
+    def get_sk(self, output_type):
+        """
+        Get verification key (as hex, code or pem)
+        """
+        if self.sk is None:
+            raise IllegalStateException("Can't get key. No key created/loaded")
+
+        if output_type is None:
+            raise InvalidArgumentException("Invalid output type for signature.")
+        elif output_type == 'hex':
+            return self.get_sk_hex()
+        elif output_type == 'code':
+            return self.get_sk_code()
+        else:
+            raise InvalidArgumentException("Invalid argument. Can't get key")
+
+    def get_sk_hex(self):
+        """
+        Get the verification key as hex
+        """
+        if self.sk is None:
+            raise IllegalStateException("Can't get key. No key created/loaded")
+
+        sk_hexlify = binascii.hexlify(self.sk.to_string())
+
+        sk_hexlify_list = []
+        for i in xrange(len(sk_hexlify)-2, -2, -2):
+            sk_hexlify_list.append(sk_hexlify[i:i+2])
+
+        sk_hexlify_list_str = ''.join(sk_hexlify_list)
+
+        vk_hex = "Signing key sk: {0}".format(sk_hexlify_list_str)
+
+        return vk_hex
+
     def get_vk_hex(self):
         """
         Get the verification key as hex
@@ -116,6 +151,25 @@ class Signing(object):
         vk_hex = "Verification key pk: {0}".format(vk_hexlify_list_str)
 
         return vk_hex
+
+    def get_sk_code(self):
+        """
+        Get the verification key as code
+        """
+        if self.sk is None:
+            raise IllegalStateException("Can't get key. No key created/loaded")
+
+        sk_hex = binascii.hexlify(self.sk.to_string())
+
+        sk_x_separated = ""
+        for i in xrange(0, len(sk_hex), 2):
+            sk_x_separated = "0x" + sk_hex[i:i+2] + ", " + sk_x_separated
+
+        sk_x_separated = sk_x_separated[:-2]
+
+        sk_code = "static const uint8_t sk[] = {{ {0} }};".format(sk_x_separated)
+
+        return sk_code + "\nstatic const nrf_crypto_key_t crypto_key_sk = { .p_le_data = sk, .len = sizeof(sk) };"
 
     def get_vk_code(self):
         """

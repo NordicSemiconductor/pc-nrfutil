@@ -104,16 +104,20 @@ def version():
 @click.option('--show-vk',
               help='Show the verification keys for DFU Signing (hex|code|pem)',
               type=click.STRING)
+@click.option('--show-sk',
+              help='Show the signsng keys for DFU Signing (hex|code)',
+              type=click.STRING)
 def keys(key_file,
          gen_key,
-         show_vk
+         show_vk,
+         show_sk
          ):
     """
     This set of commands support creation of signing key (private) and showing the verification key (public)
     from a previously loaded signing key. Signing key is stored in PEM format
     """
-    if not gen_key and show_vk is None:
-        raise nRFException("Use either gen-key or show-vk.")
+    if not gen_key and show_vk is None and show_sk is None:
+        raise nRFException("Use either gen-key, show-vk or show-sk.")
 
     signer = Signing()
 
@@ -132,6 +136,14 @@ def keys(key_file,
 
         signer.load_key(key_file)
         click.echo(signer.get_vk(show_vk))
+
+    elif show_sk:
+        if not os.path.isfile(key_file):
+            raise nRFException("No key file to load at: %s" % key_file)
+
+        signer.load_key(key_file)
+        click.echo(signer.get_sk(show_sk))
+
 
 
 @cli.group()

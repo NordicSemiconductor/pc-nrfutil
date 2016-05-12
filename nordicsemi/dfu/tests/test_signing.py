@@ -92,6 +92,20 @@ class TestSinging(unittest.TestCase):
 
         self.assertEqual(expected_vk_hex, vk_hex)
 
+    def test_get_sk_hex(self):
+        key_file_name = 'key.pem'
+        expected_vk_hex = "Verification key pk: 60f417aabb6bb5b9058aec0570b83fedab1782d62072ae7d691f98dbeda28d654c1d98"\
+                          "6cadcd593ad8901084900c1bbdcc4fff62b612b604c22672adcdae9b90"
+
+        signing = Signing()
+        signing.load_key(key_file_name)
+
+        sk_hex = signing.get_sk_hex()
+
+        self.assertEqual(expected_vk_hex, sk_hex)
+
+
+
     def test_get_vk_code(self):
         key_file_name = 'key.pem'
 
