@@ -138,9 +138,9 @@ class Signing(object):
             vk_y_separated = "0x" + vk_y_str[i:i+2] + ", " + vk_y_separated
         vk_y_separated = vk_y_separated[:-2]
 
-        vk_code = "static uint8_t pk[] = {{ {0} }};".format(vk_x_separated+vk_y_separated)
+        vk_code = "static const uint8_t pk[] = {{ {0} }};".format(vk_x_separated+vk_y_separated)
 
-        return vk_code
+        return vk_code + "\nstatic const nrf_crypto_key_t crypto_key_pk = { .p_le_data = pk, .len = sizeof(pk) };"
 
     def get_vk_pem(self):
         """
