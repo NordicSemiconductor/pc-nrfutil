@@ -56,7 +56,7 @@ class Signing(object):
 
         # Sign the init-packet
         signature = self.sk.sign(init_packet_data, hashfunc=hashlib.sha256, sigencode=sigencode_string)
-        return signature
+        return signature[31::-1] + signature[63:31:-1]
 
     def verify(self, init_packet, signature):
         """
