@@ -78,13 +78,13 @@ class Signing(object):
 
     def get_vk(self, output_type):
         """
-        Get verification key (as hex, code or pem)
+        Get public key (as hex, code or pem)
         """
         if self.sk is None:
             raise IllegalStateException("Can't get key. No key created/loaded")
 
         if output_type is None:
-            raise InvalidArgumentException("Invalid output type for signature.")
+            raise InvalidArgumentException("Invalid output type for public key.")
         elif output_type == 'hex':
             return self.get_vk_hex()
         elif output_type == 'code':
@@ -96,13 +96,13 @@ class Signing(object):
 
     def get_sk(self, output_type):
         """
-        Get verification key (as hex, code or pem)
+        Get private key (as hex, code or pem)
         """
         if self.sk is None:
             raise IllegalStateException("Can't get key. No key created/loaded")
 
         if output_type is None:
-            raise InvalidArgumentException("Invalid output type for signature.")
+            raise InvalidArgumentException("Invalid output type for private key.")
         elif output_type == 'hex':
             return self.get_sk_hex()
         elif output_type == 'code':
@@ -125,7 +125,7 @@ class Signing(object):
 
         sk_hexlify_list_str = ''.join(sk_hexlify_list)
 
-        vk_hex = "Signing key sk: {0}".format(sk_hexlify_list_str)
+        vk_hex = "Private (signing) key sk:\n{0}".format(sk_hexlify_list_str)
 
         return vk_hex
 
@@ -148,7 +148,7 @@ class Signing(object):
 
         vk_hexlify_list_str = ''.join(vk_hexlify_list)
 
-        vk_hex = "Verification key pk: {0}".format(vk_hexlify_list_str)
+        vk_hex = "Public (verification) key pk:\n{0}".format(vk_hexlify_list_str)
 
         return vk_hex
 
@@ -169,7 +169,7 @@ class Signing(object):
 
         sk_code = "static const uint8_t sk[] = {{ {0} }};".format(sk_x_separated)
 
-        return sk_code + "\nstatic const nrf_crypto_key_t crypto_key_sk = { .p_le_data = sk, .len = sizeof(sk) };"
+        return sk_code + "\nstatic const nrf_crypto_key_t crypto_key_sk = { .p_le_data = (uint8_t *) sk, .len = sizeof(sk) };"
 
     def get_vk_code(self):
         """
@@ -194,7 +194,7 @@ class Signing(object):
 
         vk_code = "static const uint8_t pk[] = {{ {0} }};".format(vk_x_separated+vk_y_separated)
 
-        return vk_code + "\nstatic const nrf_crypto_key_t crypto_key_pk = { .p_le_data = pk, .len = sizeof(pk) };"
+        return vk_code + "\nstatic const nrf_crypto_key_t crypto_key_pk = { .p_le_data = (uint8_t *) pk, .len = sizeof(pk) };"
 
     def get_vk_pem(self):
         """

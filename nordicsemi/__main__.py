@@ -91,71 +91,82 @@ def cli(verbose):
 
 @cli.command()
 def version():
-    """Displays nrf utility version."""
+    """Display nrf utility version."""
     click.echo("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
 
-
-@cli.command(short_help='Generate keys for signing or generate public keys')
-@click.argument('key_file', required=True)
-@click.option('--gen-key',
-              help='generate signing key and store at given path (pem-file)',
-              type=click.BOOL,
-              is_flag=True)
-@click.option('--show-vk',
-              help='Show the verification keys for DFU Signing (hex|code|pem)',
-              type=click.STRING)
-@click.option('--show-sk',
-              help='Show the signsng keys for DFU Signing (hex|code)',
-              type=click.STRING)
-def keys(key_file,
-         gen_key,
-         show_vk,
-         show_sk
-         ):
+@cli.group(short_help='Generate and display private and public keys')
+#@click.argument('key_file', required=True, type=click.Path())
+def keys():
     """
-    This set of commands support creation of signing key (private) and showing the verification key (public)
-    from a previously loaded signing key. Signing key is stored in PEM format
-    """
-    if not gen_key and show_vk is None and show_sk is None:
-        raise nRFException("Use either gen-key, show-vk or show-sk.")
-
-    signer = Signing()
-
-    if gen_key:
-        if os.path.exists(key_file):
-            if not query_func("File found at %s. Do you want to overwrite the file?" % key_file):
-                click.echo('Key generation aborted')
-                return
-
-        signer.gen_key(key_file)
-        click.echo("Generated key at: %s" % key_file)
-
-    elif show_vk:
-        if not os.path.isfile(key_file):
-            raise nRFException("No key file to load at: %s" % key_file)
-
-        signer.load_key(key_file)
-        click.echo(signer.get_vk(show_vk))
-
-    elif show_sk:
-        if not os.path.isfile(key_file):
-            raise nRFException("No key file to load at: %s" % key_file)
-
-        signer.load_key(key_file)
-        click.echo(signer.get_sk(show_sk))
-
-
-
-@cli.group()
-def dfu():
-    """
-    This set of commands support Nordic DFU OTA package generation for distribution to
-    applications and serial DFU.
+    This set of commands support creating and displaying a private (signing) key, 
+    as well as displaying the public (verification) key derived from a private key.
+    Private keys are stored in PEM format.
     """
     pass
 
 
-@dfu.command(short_help='Generate a package for distribution to Apps supporting Nordic DFU OTA')
+@keys.command(short_help='Generate a private (signing) key and store it in a file in PEM format')
+@click.argument('key_file', required=True, type=click.Path())
+              
+def generate(key_file):
+    signer = Signing()
+    
+    if os.path.exists(key_file):
+        if not query_func("File found at %s. Do you want to overwrite the file?" % key_file):
+            click.echo('Key generation aborted')
+            return
+
+    signer.gen_key(key_file)
+    click.echo("Generated private key and stored it in: %s" % key_file)
+
+@keys.command(short_help='Display a private key stored in a file in PEM format, or a public key derived from it')
+@click.argument('key_file', required=True, type=click.Path())
+@click.option('--key',
+              help='(pk|sk) Display the public key (pk) or the private key (sk)',
+              type=click.STRING)
+@click.option('--format',
+              help='(hex|code|pem) Display the key in hexadecimal (hex), C code (code) or PEM (pem) format',
+              type=click.STRING)
+
+def display(key_file, key, format):
+    signer = Signing()
+
+    if not os.path.isfile(key_file):
+        raise nRFException("File not found: %s" % key_file)
+
+    signer.load_key(key_file)
+
+    if not key:
+        click.echo("Please specify a key with --key (pk|sk)")
+        return
+    if key != "pk" and key != "sk":
+        click.echo("Invalid key type. Valid types are (pk|sk)")
+        return
+
+    if not format:
+        click.echo("Please specify a format with --format (hex|code|pem)")
+        return
+    if format != "hex" and format != "code" and format != "pem":
+        click.echo("Invalid format. Valid formats are (hex|code|pem)")
+        return
+
+
+    if key == "pk":
+        click.echo(signer.get_vk(format))
+    elif key == "sk": 
+        click.echo("wARNING: security risk. Do not share the private key.")
+        click.echo(signer.get_sk(format))
+
+
+@cli.group(short_help='Device Firmware Upgrade')
+def dfu():
+    """
+    This set of commands support Nordic DFU OTA package generation for both over-the-air and serial device firmware upgrade.
+    """
+    pass
+
+
+@dfu.command(short_help='Generate a firmware update package for Nordic DFU OTA')
 @click.argument('zipfile',
                 required=True,
                 type=click.Path())
@@ -191,7 +202,7 @@ def dfu():
               help='The SoftDevice firmware file',
               type=click.STRING)
 @click.option('--key-file',
-              help='Signing key (pem fomat)',
+              help='Private (signing) key (PEM fomat)',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 def genpkg(zipfile,
            application,
@@ -207,7 +218,7 @@ def genpkg(zipfile,
     Generate a zipfile package for distribution to Apps supporting Nordic DFU OTA.
     The application, bootloader and softdevice files are converted to .bin if it is a .hex file.
     For more information on the generated init packet see:
-    http://developer.nordicsemi.com/nRF51_SDK/doc/7.2.0/s110/html/a00065.html
+    http://developer.nordicsemi.com/nRF5_SDK/doc/
     """
     zipfile_path = zipfile
 
@@ -261,7 +272,7 @@ def update_progress(progress=0, done=False, log_message=""):
         global_bar.update(max(1, progress))
 
 
-@dfu.command(short_help="Program a device with bootloader that support serial DFU")
+@dfu.command(short_help="Program a device with bootloader that supports serial DFU")
 @click.option('-pkg', '--package',
               help='DFU package filename',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
