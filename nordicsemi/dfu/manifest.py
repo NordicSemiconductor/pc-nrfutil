@@ -33,7 +33,6 @@ import os
 
 # Nordic libraries
 from nordicsemi.exceptions import NotImplementedException
-from nordicsemi.dfu.init_packet import PacketField
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 
 
@@ -51,7 +50,6 @@ class ManifestGenerator(object):
 
     def generate_manifest(self):
         self.manifest = Manifest()
-        self.manifest.dfu_version = self.dfu_version
 
         for key in self.firmwares_data:
             firmware_dict = self.firmwares_data[key]
@@ -63,38 +61,10 @@ class ManifestGenerator(object):
             else:
                 _firmware = Firmware()
 
+
             # Strip path, add only filename
             _firmware.bin_file = os.path.basename(firmware_dict[FirmwareKeys.BIN_FILENAME])
             _firmware.dat_file = os.path.basename(firmware_dict[FirmwareKeys.DAT_FILENAME])
-
-            init_packet_data = InitPacketData()
-
-            for init_packet_data_key in firmware_dict[FirmwareKeys.INIT_PACKET_DATA]:
-                field = firmware_dict[FirmwareKeys.INIT_PACKET_DATA][init_packet_data_key]
-
-                if init_packet_data_key == PacketField.APP_VERSION:
-                    init_packet_data.application_version = field
-                elif init_packet_data_key == PacketField.DEVICE_TYPE:
-                    init_packet_data.device_type = field
-                elif init_packet_data_key == PacketField.DEVICE_REVISION:
-                    init_packet_data.device_revision = field
-                elif init_packet_data_key == PacketField.REQUIRED_SOFTDEVICES_ARRAY:
-                    init_packet_data.softdevice_req = field
-                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID:
-                    init_packet_data.ext_packet_id = field
-                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH:
-                    init_packet_data.firmware_length = field
-                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
-                    init_packet_data.firmware_hash = binascii.hexlify(field)
-                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16:
-                    init_packet_data.firmware_crc16 = field
-                elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
-                    init_packet_data.init_packet_ecds = binascii.hexlify(field)
-                else:
-                    raise NotImplementedException(
-                        "Support for init packet data type {0} not implemented yet.".format(init_packet_data_key))
-
-                _firmware.init_packet_data = init_packet_data
 
             if key == HexType.APPLICATION:
                 self.manifest.application = _firmware

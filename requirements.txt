@@ -3,3 +3,4 @@
     click
     ecdsa >= 0.13
     behave
+    protobuf

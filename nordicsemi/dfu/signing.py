@@ -56,7 +56,7 @@ class Signing(object):
 
         # Sign the init-packet
         signature = self.sk.sign(init_packet_data, hashfunc=hashlib.sha256, sigencode=sigencode_string)
-        return signature
+        return signature[31::-1] + signature[63:31:-1]
 
     def verify(self, init_packet, signature):
         """
@@ -78,13 +78,13 @@ class Signing(object):
 
     def get_vk(self, output_type):
         """
-        Get verification key (as hex, code or pem)
+        Get public key (as hex, code or pem)
         """
         if self.sk is None:
             raise IllegalStateException("Can't get key. No key created/loaded")
 
         if output_type is None:
-            raise InvalidArgumentException("Invalid output type for signature.")
+            raise InvalidArgumentException("Invalid output type for public key.")
         elif output_type == 'hex':
             return self.get_vk_hex()
         elif output_type == 'code':
@@ -93,6 +93,41 @@ class Signing(object):
             return self.get_vk_pem()
         else:
             raise InvalidArgumentException("Invalid argument. Can't get key")
+
+    def get_sk(self, output_type):
+        """
+        Get private key (as hex, code or pem)
+        """
+        if self.sk is None:
+            raise IllegalStateException("Can't get key. No key created/loaded")
+
+        if output_type is None:
+            raise InvalidArgumentException("Invalid output type for private key.")
+        elif output_type == 'hex':
+            return self.get_sk_hex()
+        elif output_type == 'code':
+            return self.get_sk_code()
+        else:
+            raise InvalidArgumentException("Invalid argument. Can't get key")
+
+    def get_sk_hex(self):
+        """
+        Get the verification key as hex
+        """
+        if self.sk is None:
+            raise IllegalStateException("Can't get key. No key created/loaded")
+
+        sk_hexlify = binascii.hexlify(self.sk.to_string())
+
+        sk_hexlify_list = []
+        for i in xrange(len(sk_hexlify)-2, -2, -2):
+            sk_hexlify_list.append(sk_hexlify[i:i+2])
+
+        sk_hexlify_list_str = ''.join(sk_hexlify_list)
+
+        vk_hex = "Private (signing) key sk:\n{0}".format(sk_hexlify_list_str)
+
+        return vk_hex
 
     def get_vk_hex(self):
         """
@@ -104,10 +139,37 @@ class Signing(object):
         vk = self.sk.get_verifying_key()
         vk_hexlify = binascii.hexlify(vk.to_string())
 
-        vk_hex = "Verification key Qx: {0}\n".format(vk_hexlify[0:64])
-        vk_hex += "Verification key Qy: {0}".format(vk_hexlify[64:128])
+        vk_hexlify_list = []
+        for i in xrange(len(vk_hexlify[0:64])-2, -2, -2):
+            vk_hexlify_list.append(vk_hexlify[i:i+2])
+
+        for i in xrange(len(vk_hexlify)-2, 62, -2):
+            vk_hexlify_list.append(vk_hexlify[i:i+2])
+
+        vk_hexlify_list_str = ''.join(vk_hexlify_list)
+
+        vk_hex = "Public (verification) key pk:\n{0}".format(vk_hexlify_list_str)
 
         return vk_hex
+
+    def get_sk_code(self):
+        """
+        Get the verification key as code
+        """
+        if self.sk is None:
+            raise IllegalStateException("Can't get key. No key created/loaded")
+
+        sk_hex = binascii.hexlify(self.sk.to_string())
+
+        sk_x_separated = ""
+        for i in xrange(0, len(sk_hex), 2):
+            sk_x_separated = "0x" + sk_hex[i:i+2] + ", " + sk_x_separated
+
+        sk_x_separated = sk_x_separated[:-2]
+
+        sk_code = "static const uint8_t sk[] = {{ {0} }};".format(sk_x_separated)
+
+        return sk_code + "\nstatic const nrf_crypto_key_t crypto_key_sk = { .p_le_data = (uint8_t *) sk, .len = sizeof(sk) };"
 
     def get_vk_code(self):
         """
@@ -122,19 +184,17 @@ class Signing(object):
         vk_x_separated = ""
         vk_x_str = vk_hex[0:64]
         for i in xrange(0, len(vk_x_str), 2):
-            vk_x_separated += "0x" + vk_x_str[i:i+2] + ", "
-        vk_x_separated = vk_x_separated[:-2]
+            vk_x_separated = "0x" + vk_x_str[i:i+2] + ", " + vk_x_separated
 
         vk_y_separated = ""
         vk_y_str = vk_hex[64:128]
         for i in xrange(0, len(vk_y_str), 2):
-            vk_y_separated += "0x" + vk_y_str[i:i+2] + ", "
+            vk_y_separated = "0x" + vk_y_str[i:i+2] + ", " + vk_y_separated
         vk_y_separated = vk_y_separated[:-2]
 
-        vk_code = "static uint8_t Qx[] = {{ {0} }};\n".format(vk_x_separated)
-        vk_code += "static uint8_t Qy[] = {{ {0} }};".format(vk_y_separated)
+        vk_code = "static const uint8_t pk[] = {{ {0} }};".format(vk_x_separated+vk_y_separated)
 
-        return vk_code
+        return vk_code + "\nstatic const nrf_crypto_key_t crypto_key_pk = { .p_le_data = (uint8_t *) pk, .len = sizeof(pk) };"
 
     def get_vk_pem(self):
         """
