@@ -37,14 +37,12 @@ from nordicsemi.dfu.model import HexType, FirmwareKeys
 
 
 class ManifestGenerator(object):
-    def __init__(self, dfu_version, firmwares_data):
+    def __init__(self, firmwares_data):
         """
         The Manifest Generator constructor. Needs a data structure to generate a manifest from.
 
-        :type float dfu_version: The dfu version number to state in manifest
         :type dict firmwares_data: The firmwares data structure describing the Nordic DFU package
         """
-        self.dfu_version = dfu_version
         self.firmwares_data = firmwares_data
         self.manifest = None
 
@@ -178,8 +176,7 @@ class Manifest:
                  application=None,
                  bootloader=None,
                  softdevice=None,
-                 softdevice_bootloader=None,
-                 dfu_version=None):
+                 softdevice_bootloader=None):
         """
         The Manifest data model.
 
@@ -195,7 +192,6 @@ class Manifest:
         self.softdevice = Firmware(**softdevice) if softdevice else None
         self.bootloader = Firmware(**bootloader) if bootloader else None
         self.application = Firmware(**application) if application else None
-        self.dfu_version = dfu_version
 
     @staticmethod
     def from_json(data):

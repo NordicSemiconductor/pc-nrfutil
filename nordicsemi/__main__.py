@@ -188,10 +188,6 @@ def dfu():
               help='Device type, default: 0xFFFF',
               type=BASED_INT_OR_NONE,
               default=str(Package.DEFAULT_DEV_TYPE))
-@click.option('--dfu-ver',
-              help='DFU packet version to use, default: 0.5',
-              type=click.FLOAT,
-              default=Package.DEFAULT_DFU_VER)
 @click.option('--sd-req',
               help='SoftDevice requirement. A list of SoftDevice versions (1 or more)'
                    'of which one is required to be present on the target device.'
@@ -210,7 +206,6 @@ def genpkg(zipfile,
            bootloader,
            dev_revision,
            dev_type,
-           dfu_ver,
            sd_req,
            softdevice,
            key_file):
@@ -244,9 +239,6 @@ def genpkg(zipfile,
             raise nRFException("Could not parse value for --sd-req. "
                                "Hex values should be prefixed with 0x.")
 
-    if key_file and dfu_ver < 0.8:
-        click.echo("Key file was given, setting DFU version to 0.8")
-
     package = Package(dev_type,
                       dev_revision,
                       application_version,
@@ -254,7 +246,6 @@ def genpkg(zipfile,
                       application,
                       bootloader,
                       softdevice,
-                      dfu_ver,
                       key_file)
 
     package.generate_package(zipfile_path)

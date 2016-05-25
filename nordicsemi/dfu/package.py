@@ -114,7 +114,6 @@ class Package(object):
                  app_fw=None,
                  bootloader_fw=None,
                  softdevice_fw=None,
-                 dfu_ver=DEFAULT_DFU_VER,
                  key_file=None):
         """
         Constructor that requires values used for generating a Nordic DFU package.
@@ -126,11 +125,9 @@ class Package(object):
         :param str app_fw: Path to application firmware file
         :param str bootloader_fw: Path to bootloader firmware file
         :param str softdevice_fw: Path to softdevice firmware file
-        :param float dfu_ver: DFU version to use when generating init-packet
         :param str key_file: Path to Signing key file (PEM)
         :return: None
         """
-        self.dfu_ver = dfu_ver
 
         init_packet_vars = {}
 
@@ -164,7 +161,6 @@ class Package(object):
                                      init_packet_vars)
 
         if key_file:
-            self.dfu_ver = 0.8
             self.key_file = key_file
 
     def generate_package(self, filename, preserve_work_directory=False):
@@ -324,7 +320,7 @@ class Package(object):
         return calc_crc16(data_buffer, 0xffff)
 
     def create_manifest(self):
-        manifest = ManifestGenerator(self.dfu_ver, self.firmwares_data)
+        manifest = ManifestGenerator(self.firmwares_data)
         return manifest.generate_manifest()
 
     @staticmethod
