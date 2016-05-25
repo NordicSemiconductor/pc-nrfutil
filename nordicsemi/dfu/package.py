@@ -298,7 +298,9 @@ class Package(object):
                 else:
                     break
 
-        return digest.digest()
+        # return hash in little endian
+        sha256 = digest.digest()
+        return sha256[31::-1]
 
     @staticmethod
     def calculate_crc16(firmware_filename):
