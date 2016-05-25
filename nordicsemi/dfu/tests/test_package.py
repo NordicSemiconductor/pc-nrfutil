@@ -49,7 +49,8 @@ class TestPackage(unittest.TestCase):
             dev_rev=2,
             app_version=100,
             sd_req=[0x1000, 0xfffe],
-            app_fw="firmwares/bar.hex"
+            app_fw="firmwares/bar.hex",
+            key_file="key.pem"
         )
 
         pkg_name = "mypackage.zip"
@@ -81,7 +82,9 @@ class TestPackage(unittest.TestCase):
                          app_version=100,
                          sd_req=[0x1000, 0xfffe],
                          softdevice_fw="firmwares/foo.hex",
-                         bootloader_fw="firmwares/bar.hex")
+                         bootloader_fw="firmwares/bar.hex",
+                         key_file="key.pem")
+
 
         pkg_name = "mypackage.zip"
 
@@ -110,7 +113,7 @@ class TestPackage(unittest.TestCase):
                          app_version=100,
                          sd_req=[0x1000, 0xffff],
                          softdevice_fw="firmwares/bar.hex",
-                         dfu_ver=0.6)
+                         key_file="key.pem")
         pkg_name = os.path.join(self.work_directory, "mypackage.zip")
         self.p.generate_package(pkg_name, preserve_work_directory=False)
 
@@ -118,8 +121,8 @@ class TestPackage(unittest.TestCase):
         manifest = self.p.unpack_package(os.path.join(self.work_directory, pkg_name), unpacked_dir)
         self.assertIsNotNone(manifest)
         self.assertEqual(u'bar.bin', manifest.softdevice.bin_file)
-        self.assertEqual(0, manifest.softdevice.init_packet_data.ext_packet_id)
-        self.assertIsNotNone(manifest.softdevice.init_packet_data.firmware_crc16)
+#         self.assertEqual(0, manifest.softdevice.init_packet_data.ext_packet_id)
+#         self.assertIsNotNone(manifest.softdevice.init_packet_data.firmware_crc16)
 
     def test_unpack_package_b(self):
         self.p = Package(dev_type=1,
@@ -127,7 +130,7 @@ class TestPackage(unittest.TestCase):
                          app_version=100,
                          sd_req=[0x1000, 0xffff],
                          softdevice_fw="firmwares/bar.hex",
-                         dfu_ver=0.7)
+                         key_file="key.pem")
         pkg_name = os.path.join(self.work_directory, "mypackage.zip")
         self.p.generate_package(pkg_name, preserve_work_directory=False)
 
@@ -135,9 +138,6 @@ class TestPackage(unittest.TestCase):
         manifest = self.p.unpack_package(os.path.join(self.work_directory, pkg_name), unpacked_dir)
         self.assertIsNotNone(manifest)
         self.assertEqual(u'bar.bin', manifest.softdevice.bin_file)
-        self.assertEqual(1, manifest.softdevice.init_packet_data.ext_packet_id)
-        self.assertIsNone(manifest.softdevice.init_packet_data.firmware_crc16)
-        self.assertIsNotNone(manifest.softdevice.init_packet_data.firmware_hash)
 
     def test_unpack_package_c(self):
         self.p = Package(dev_type=1,
@@ -153,11 +153,6 @@ class TestPackage(unittest.TestCase):
         manifest = self.p.unpack_package(os.path.join(self.work_directory, pkg_name), unpacked_dir)
         self.assertIsNotNone(manifest)
         self.assertEqual(u'bar.bin', manifest.softdevice.bin_file)
-        self.assertEqual(2, manifest.softdevice.init_packet_data.ext_packet_id)
-        self.assertIsNone(manifest.softdevice.init_packet_data.firmware_crc16)
-        self.assertIsNotNone(manifest.softdevice.init_packet_data.firmware_hash)
-        self.assertIsNotNone(manifest.softdevice.init_packet_data.init_packet_ecds)
-        self.assertEqual(manifest.dfu_version, 0.8)
 
 
 if __name__ == '__main__':

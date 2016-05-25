@@ -33,7 +33,6 @@ import tempfile
 import unittest
 
 from nordicsemi.dfu.signing import Signing
-from nordicsemi.dfu.init_packet import Packet, PacketField
 
 
 class TestSinging(unittest.TestCase):
@@ -63,36 +62,6 @@ class TestSinging(unittest.TestCase):
 
         self.assertEqual(64, len(binascii.hexlify(signing.sk.to_string())))
 
-    def test_sign_and_verify(self):
-        key_file_name = 'key.pem'
-
-        signing = Signing()
-        signing.load_key(key_file_name)
-
-        init_packet_fields = {
-            PacketField.DEVICE_TYPE: 0xFFFF,
-            PacketField.DEVICE_REVISION: 0xFFFF,
-            PacketField.APP_VERSION: 0xFFFFFFFF,
-            PacketField.REQUIRED_SOFTDEVICES_ARRAY: [0xFFFE],
-            PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID: 2,
-            PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH: 1234,
-            PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
-                '\xc9\xd3\xbfi\xf2\x1e\x88\xa01\x1e\r\xd2BSa\x12\xf8BW\x9b\xef&Z$\xbd\x02U\xfdD?u\x9e',
-        }
-        init_packet = Packet(init_packet_fields)
-        init_packet_data = init_packet.generate_packet()
-
-        signature = signing.sign(init_packet_data)
-
-        self.assertTrue(signing.verify(init_packet_data, signature))
-
-        init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS] = signature
-
-        init_packet = Packet(init_packet_fields)
-        init_packet_data = init_packet.generate_packet()
-
-        self.assertFalse(signing.verify(init_packet_data, signature))
-
     def test_get_vk(self):
         key_file_name = 'key.pem'
 
@@ -113,8 +82,8 @@ class TestSinging(unittest.TestCase):
 
     def test_get_vk_hex(self):
         key_file_name = 'key.pem'
-        expected_vk_hex = "Verification key Qx: 658da2eddb981f697dae7220d68217abed3fb87005ec8a05b9b56bbbaa17f460\n" \
-                          "Verification key Qy: 909baecdad7226c204b612b662ff4fccbd1b0c90841090d83a59cdad6c981d4c"
+        expected_vk_hex = "Verification key pk: 60f417aabb6bb5b9058aec0570b83fedab1782d62072ae7d691f98dbeda28d654c1d98"\
+                          "6cadcd593ad8901084900c1bbdcc4fff62b612b604c22672adcdae9b90"
 
         signing = Signing()
         signing.load_key(key_file_name)
@@ -123,15 +92,30 @@ class TestSinging(unittest.TestCase):
 
         self.assertEqual(expected_vk_hex, vk_hex)
 
+    def test_get_sk_hex(self):
+        key_file_name = 'key.pem'
+        expected_vk_hex = "Verification key pk: 60f417aabb6bb5b9058aec0570b83fedab1782d62072ae7d691f98dbeda28d654c1d98"\
+                          "6cadcd593ad8901084900c1bbdcc4fff62b612b604c22672adcdae9b90"
+
+        signing = Signing()
+        signing.load_key(key_file_name)
+
+        sk_hex = signing.get_sk_hex()
+
+        self.assertEqual(expected_vk_hex, sk_hex)
+
+
+
     def test_get_vk_code(self):
         key_file_name = 'key.pem'
 
-        expected_vk_code = "static uint8_t Qx[] = { 0x65, 0x8d, 0xa2, 0xed, 0xdb, 0x98, 0x1f, 0x69, 0x7d, " \
-                           "0xae, 0x72, 0x20, 0xd6, 0x82, 0x17, 0xab, 0xed, 0x3f, 0xb8, 0x70, 0x05, 0xec, " \
-                           "0x8a, 0x05, 0xb9, 0xb5, 0x6b, 0xbb, 0xaa, 0x17, 0xf4, 0x60 };\n" \
-                           "static uint8_t Qy[] = { 0x90, 0x9b, 0xae, 0xcd, 0xad, 0x72, 0x26, 0xc2, 0x04, " \
-                           "0xb6, 0x12, 0xb6, 0x62, 0xff, 0x4f, 0xcc, 0xbd, 0x1b, 0x0c, 0x90, 0x84, 0x10, " \
-                           "0x90, 0xd8, 0x3a, 0x59, 0xcd, 0xad, 0x6c, 0x98, 0x1d, 0x4c };"
+        expected_vk_code = "static const uint8_t pk[] = { 0x60, 0xf4, 0x17, 0xaa, 0xbb, 0x6b, 0xb5, 0xb9, 0x05, " \
+                           "0x8a, 0xec, 0x05, 0x70, 0xb8, 0x3f, 0xed, 0xab, 0x17, 0x82, 0xd6, 0x20, 0x72, " \
+                           "0xae, 0x7d, 0x69, 0x1f, 0x98, 0xdb, 0xed, 0xa2, 0x8d, 0x65, 0x4c, 0x1d, 0x98, " \
+                           "0x6c, 0xad, 0xcd, 0x59, 0x3a, 0xd8, 0x90, 0x10, 0x84, 0x90, 0x0c, 0x1b, 0xbd, " \
+                           "0xcc, 0x4f, 0xff, 0x62, 0xb6, 0x12, 0xb6, 0x04, 0xc2, 0x26, 0x72, 0xad, 0xcd, " \
+                           "0xae, 0x9b, 0x90 };\n"\
+                           "static const nrf_crypto_key_t crypto_key_pk = { .p_le_data = pk, .len = sizeof(pk) };"
 
         signing = Signing()
         signing.load_key(key_file_name)

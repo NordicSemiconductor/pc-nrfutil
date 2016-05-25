@@ -34,7 +34,7 @@ import unittest
 import sys
 from nordicsemi.dfu.dfu_transport import DfuEvent
 from nordicsemi.dfu import crc16
-from nordicsemi.dfu.init_packet import PacketField, Packet
+from nordicsemi.dfu.package import PacketField
 from nordicsemi.dfu.model import HexType
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 
