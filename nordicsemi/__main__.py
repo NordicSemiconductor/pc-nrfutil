@@ -80,7 +80,7 @@ TEXT_OR_NONE = TextOrNoneParamType()
 
 @click.group()
 @click.option('--verbose',
-              help='Show verbose information',
+              help='Show verbose information.',
               is_flag=True)
 def cli(verbose):
     if verbose:
@@ -91,21 +91,21 @@ def cli(verbose):
 
 @cli.command()
 def version():
-    """Display nrf utility version."""
+    """Display nrfutil version."""
     click.echo("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
 
-@cli.group(short_help='Generate and display private and public keys')
+@cli.group(short_help='Generate and display private and public keys.')
 #@click.argument('key_file', required=True, type=click.Path())
 def keys():
     """
-    This set of commands support creating and displaying a private (signing) key, 
+    This set of commands supports creating and displaying a private (signing) key
     as well as displaying the public (verification) key derived from a private key.
     Private keys are stored in PEM format.
     """
     pass
 
 
-@keys.command(short_help='Generate a private (signing) key and store it in a file in PEM format')
+@keys.command(short_help='Generate a private key and store it in a file in PEM format.')
 @click.argument('key_file', required=True, type=click.Path())
               
 def generate(key_file):
@@ -113,19 +113,19 @@ def generate(key_file):
     
     if os.path.exists(key_file):
         if not query_func("File found at %s. Do you want to overwrite the file?" % key_file):
-            click.echo('Key generation aborted')
+            click.echo('Key generation aborted.')
             return
 
     signer.gen_key(key_file)
     click.echo("Generated private key and stored it in: %s" % key_file)
 
-@keys.command(short_help='Display a private key stored in a file in PEM format, or a public key derived from it')
+@keys.command(short_help='Display the private key that is stored in a file in PEM format or a public key derived from it.')
 @click.argument('key_file', required=True, type=click.Path())
 @click.option('--key',
-              help='(pk|sk) Display the public key (pk) or the private key (sk)',
+              help='(pk|sk) Display the public key (pk) or the private key (sk).',
               type=click.STRING)
 @click.option('--format',
-              help='(hex|code|pem) Display the key in hexadecimal (hex), C code (code) or PEM (pem) format',
+              help='(hex|code|pem) Display the key in hexadecimal format (hex), C code (code), or PEM (pem) format.',
               type=click.STRING)
 
 def display(key_file, key, format):
@@ -137,68 +137,68 @@ def display(key_file, key, format):
     signer.load_key(key_file)
 
     if not key:
-        click.echo("Please specify a key with --key (pk|sk)")
+        click.echo("You must specify a key with --key (pk|sk).")
         return
     if key != "pk" and key != "sk":
-        click.echo("Invalid key type. Valid types are (pk|sk)")
+        click.echo("Invalid key type. Valid types are (pk|sk).")
         return
 
     if not format:
-        click.echo("Please specify a format with --format (hex|code|pem)")
+        click.echo("You must specify a format with --format (hex|code|pem).")
         return
     if format != "hex" and format != "code" and format != "pem":
-        click.echo("Invalid format. Valid formats are (hex|code|pem)")
+        click.echo("Invalid format. Valid formats are (hex|code|pem).")
         return
 
 
     if key == "pk":
         click.echo(signer.get_vk(format))
     elif key == "sk": 
-        click.echo("wARNING: security risk. Do not share the private key.")
+        click.echo("WARNING: Security risk! Do not share the private key.")
         click.echo(signer.get_sk(format))
 
 
-@cli.group(short_help='Device Firmware Upgrade')
+@cli.group(short_help='Perform a Device Firmware Update.')
 def dfu():
     """
-    This set of commands support Nordic DFU OTA package generation for both over-the-air and serial device firmware upgrade.
+    This set of commands supports Nordic DFU package generation for both over-the-air and serial device firmware updates.
     """
     pass
 
 
-@dfu.command(short_help='Generate a firmware update package for Nordic DFU OTA')
+@dfu.command(short_help='Generate a firmware package for over-the-air firmware updates.')
 @click.argument('zipfile',
                 required=True,
                 type=click.Path())
 @click.option('--application',
-              help='The application firmware file',
+              help='The application firmware file.',
               type=click.STRING)
 @click.option('--application-version',
-              help='Application version, default: 0xFFFFFFFF',
+              help='The application version. Default: 0xFFFFFFFF',
               type=BASED_INT_OR_NONE,
               default=str(Package.DEFAULT_APP_VERSION))
 @click.option('--bootloader',
-              help='The bootloader firmware file',
+              help='The bootloader firmware file.',
               type=click.STRING)
 @click.option('--dev-revision',
-              help='Device revision, default: 0xFFFF',
+              help='The device revision. Default: 0xFFFF',
               type=BASED_INT_OR_NONE,
               default=str(Package.DEFAULT_DEV_REV))
 @click.option('--dev-type',
-              help='Device type, default: 0xFFFF',
+              help='The device type. Default: 0xFFFF',
               type=BASED_INT_OR_NONE,
               default=str(Package.DEFAULT_DEV_TYPE))
 @click.option('--sd-req',
-              help='SoftDevice requirement. A list of SoftDevice versions (1 or more)'
-                   'of which one is required to be present on the target device.'
-                   'Example: --sd-req 0x4F,0x5A. Default: 0xFFFE.',
+              help='The SoftDevice requirement. A list of SoftDevice versions (1 or more) '
+                   'of which one must be present on the target device. '
+                   'Example: --sd-req 0x4F,0x5A. Default: 0xFFFE',
               type=TEXT_OR_NONE,
               default=str(Package.DEFAULT_SD_REQ[0]))
 @click.option('--softdevice',
-              help='The SoftDevice firmware file',
+              help='The SoftDevice firmware file.',
               type=click.STRING)
 @click.option('--key-file',
-              help='Private (signing) key (PEM fomat)',
+              help='The private (signing) key in PEM fomat.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 def genpkg(zipfile,
            application,
@@ -210,9 +210,9 @@ def genpkg(zipfile,
            softdevice,
            key_file):
     """
-    Generate a zipfile package for distribution to Apps supporting Nordic DFU OTA.
-    The application, bootloader and softdevice files are converted to .bin if it is a .hex file.
-    For more information on the generated init packet see:
+    Generate a zip package for distribution to apps that support Nordic DFU OTA.
+    The application, bootloader, and SoftDevice files are converted to .bin if supplied as .hex files.
+    For more information on the generated package, see:
     http://developer.nordicsemi.com/nRF5_SDK/doc/
     """
     zipfile_path = zipfile
@@ -263,31 +263,31 @@ def update_progress(progress=0, done=False, log_message=""):
         global_bar.update(max(1, progress))
 
 
-@dfu.command(short_help="Program a device with bootloader that supports serial DFU")
+@dfu.command(short_help="Program a device that supports serial DFU.")
 @click.option('-pkg', '--package',
-              help='DFU package filename',
+              help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
               required=True)
 @click.option('-p', '--port',
-              help='Serial port COM Port to which the device is connected',
+              help='Serial port COM port to which the device is connected.',
               type=click.STRING,
               required=True)
 @click.option('-b', '--baudrate',
-              help='Desired baud rate 38400/96000/115200/230400/250000/460800/921600/1000000 (default: 38400). '
-                   'Note: Physical serial ports (e.g. COM1) typically do not support baud rates > 115200',
+              help='Desired baud rate: 38400/96000/115200/230400/250000/460800/921600/1000000. Default: 38400. '
+                   'Note: Physical serial ports (for example, COM1) typically do not support baud rates > 115200.',
               type=click.INT,
               default=DfuTransportSerial.DEFAULT_BAUD_RATE)
 @click.option('-fc', '--flowcontrol',
-              help='Enable flow control, default: disabled',
+              help='Enable flow control. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
 def serial(package, port, baudrate, flowcontrol):
-    """Program a device with bootloader that support serial DFU"""
+    """Perform a Device Firmware Update on a device with a bootloader that supports serial DFU."""
     serial_backend = DfuTransportSerial(port, baudrate, flowcontrol)
     serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(package, dfu_transport=serial_backend)
 
-    click.echo("Upgrading target on {1} with DFU package {0}. Flow control is {2}."
+    click.echo("Updating target on {1} with DFU package {0}. Flow control is {2}."
                .format(package, port, "enabled" if flowcontrol else "disabled"))
 
     try:
@@ -298,13 +298,13 @@ def serial(package, port, baudrate, flowcontrol):
 
     except Exception as e:
         click.echo("")
-        click.echo("Failed to upgrade target. Error is: {0}".format(e.message))
+        click.echo("Failed to update the target. Error is: {0}".format(e.message))
         click.echo("")
         click.echo("Possible causes:")
-        click.echo("- bootloader, SoftDevice or application on target "
+        click.echo("- The bootloader, SoftDevice, or application on target "
                    "does not match the requirements in the DFU package.")
-        click.echo("- baud rate or flow control is not the same as in the target bootloader.")
-        click.echo("- target is not in DFU mode. If using the SDK examples, "
+        click.echo("- The baud rate or flow control is not the same as in the target bootloader.")
+        click.echo("- The target is not in DFU mode. If using the SDK examples, "
                    "press Button 4 and RESET and release both to enter DFU mode.")
 
         return False
