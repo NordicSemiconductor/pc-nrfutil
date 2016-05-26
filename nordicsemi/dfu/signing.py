@@ -107,6 +107,8 @@ class Signing(object):
             return self.get_sk_hex()
         elif output_type == 'code':
             return self.get_sk_code()
+        elif output_type == 'pem':
+            return self.sk.to_pem()
         else:
             raise InvalidArgumentException("Invalid argument. Can't get key")
 

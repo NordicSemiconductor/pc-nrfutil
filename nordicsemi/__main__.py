@@ -154,7 +154,7 @@ def display(key_file, key, format):
     if key == "pk":
         click.echo(signer.get_vk(format))
     elif key == "sk": 
-        click.echo("WARNING: Security risk! Do not share the private key.")
+        click.echo("\nWARNING: Security risk! Do not share the private key.\n")
         click.echo(signer.get_sk(format))
 
 
