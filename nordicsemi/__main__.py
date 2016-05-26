@@ -158,7 +158,7 @@ def display(key_file, key, format):
         click.echo(signer.get_sk(format))
 
 
-@cli.group(short_help='Perform a Device Firmware Update.')
+@cli.group(short_help='Generate a Device Firmware Update package or perform DFU over a serial line.')
 def dfu():
     """
     This set of commands supports Nordic DFU package generation for both over-the-air and serial device firmware updates.
