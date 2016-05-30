@@ -158,15 +158,15 @@ def display(key_file, key, format):
         click.echo(signer.get_sk(format))
 
 
-@cli.group(short_help='Generate a Device Firmware Update package or perform DFU over a serial line.')
-def dfu():
+@cli.group(short_help='Generate a Device Firmware Update package.')
+def pkg():
     """
-    This set of commands supports Nordic DFU package generation for both over-the-air and serial device firmware updates.
+    This set of commands supports Nordic DFU package generation.
     """
     pass
 
 
-@dfu.command(short_help='Generate a firmware package for over-the-air firmware updates.')
+@pkg.command(short_help='Generate a firmware package for over-the-air firmware updates.')
 @click.argument('zipfile',
                 required=True,
                 type=click.Path())
@@ -200,7 +200,7 @@ def dfu():
 @click.option('--key-file',
               help='The private (signing) key in PEM fomat.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
-def genpkg(zipfile,
+def generate(zipfile,
            application,
            application_version,
            bootloader,
@@ -262,8 +262,15 @@ def update_progress(progress=0, done=False, log_message=""):
     if global_bar:
         global_bar.update(max(1, progress))
 
+@cli.group(short_help='Perform a Device Firmware Update over a BLE or serial transport.')
+def dfu():
+    """
+    This set of commands supports Device Firmware Upgrade procedures over both BLE and serial transports.
+    """
+    pass
 
-@dfu.command(short_help="Program a device that supports serial DFU.")
+
+@dfu.command(short_help="Update the firmware on a device over a serial connection.")
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
@@ -313,6 +320,18 @@ def serial(package, port, baudrate, flowcontrol):
 
     return True
 
+@dfu.command(short_help="Update the firmware on a device over a BLE connection.")
+@click.option('-pkg', '--package',
+              help='Filename of the DFU package.',
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
+              required=True)
+@click.option('-p', '--port',
+              help='Serial port COM port to which the connectivity IC is connected.',
+              type=click.STRING,
+              required=True)
+def ble(package, port):
+    """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
+    return True
 
 if __name__ == '__main__':
     cli()

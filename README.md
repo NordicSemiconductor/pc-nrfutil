@@ -56,17 +56,21 @@ nrfutil --help
 ### Commands
 There are several commands that you can use to perform different tasks related to DFU:
 
-#### dfu
-This set of commands allow you to both generate a package for over-the-air DFU or perform an actual update over a serial line.
-##### genpkg
+#### pkg
+This set of commands allow you to generate a package for Device Firmware Update.
+#
+#### generate
 Generate a package (.zip file) that you can later use with a mobile application or any other means to update the firmware of an nRF5x IC over the air. This command takes several options that you can list using:
 ```
-nrfutil dfu genpkg --help
+nrfutil pkg generate --help
 ```
 Below is an example of the generation of a package from an application's ```app.hex``` file:
 ```
-nrfutil dfu genpkg --application app.hex --key-file key.pem app_dfu_package.zip
+nrfutil pkg generate --application app.hex --key-file key.pem app_dfu_package.zip
 ```
+#### dfu
+This set of commands allow you to perform an actual firmware update over a serial or BLE connection.
+#
 ##### serial
 Perform a full DFU procedure over a serial (UART) line. This command takes several options that you can list using:
 ```
