@@ -28,18 +28,22 @@
 
 # Python standard library
 import os
-import tempfile
+import time
 import shutil
 import logging
-from time import time, sleep
-from datetime import datetime, timedelta
+import tempfile
+
+
+
+
+# TODO temporary include
+import sys
+sys.path.append(os.getcwd())
 
 # Nordic libraries
-from nordicsemi.exceptions import *
-from nordicsemi.dfu.package import Package
-from nordicsemi.dfu.dfu_transport import DfuEvent
-from nordicsemi.dfu.model import HexType
-from nordicsemi.dfu.manifest import SoftdeviceBootloaderFirmware
+from nordicsemi.dfu.package         import Package
+from nordicsemi.dfu.dfu_transport   import DfuEvent
+from nordicsemi.dfu.manifest        import SoftdeviceBootloaderFirmware
 
 logger = logging.getLogger(__name__)
 
@@ -57,19 +61,11 @@ class Dfu(object):
         @type dfu_transport: nordicsemi.dfu.dfu_transport.DfuTransport
         @return
         """
-        self.zip_file_path = zip_file_path
-        self.ready_to_send = True
-        self.response_opcode_received = None
+        self.temp_dir           = tempfile.mkdtemp(prefix="nrf_dfu_")
+        self.unpacked_zip_path  = os.path.join(self.temp_dir, 'unpacked_zip')
+        self.manifest           = Package.unpack_package(zip_file_path, self.unpacked_zip_path)
 
-        self.temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_")
-        self.unpacked_zip_path = os.path.join(self.temp_dir, 'unpacked_zip')
-        self.manifest = Package.unpack_package(self.zip_file_path, self.unpacked_zip_path)
-
-        if dfu_transport:
-            self.dfu_transport = dfu_transport
-
-        self.dfu_transport.register_events_callback(DfuEvent.TIMEOUT_EVENT, self.timeout_event_handler)
-        self.dfu_transport.register_events_callback(DfuEvent.ERROR_EVENT, self.error_event_handler)
+        self.dfu_transport      = dfu_transport
 
     def __del__(self):
         """
@@ -78,142 +74,26 @@ class Dfu(object):
         """
         shutil.rmtree(self.temp_dir)
 
-    def error_event_handler(self, log_message=""):
-        """
-        Event handler for errors, closes the transport backend.
-        :param str log_message: The log message for the error.
-        :return:
-        """
-        if self.dfu_transport.is_open():
-            self.dfu_transport.close()
 
-        logger.error(log_message)
-
-    def timeout_event_handler(self, log_message):
-        """
-        Event handler for timeouts, closes the transport backend.
-        :param log_message: The log message for the timeout.
-        :return:
-        """
-        if self.dfu_transport.is_open():
-            self.dfu_transport.close()
-
-        logger.error(log_message)
-
-    @staticmethod
-    def _read_file(file_path):
-        """
-        Reads a file and returns the content as a string.
-
-        :param str file_path: The path to the file to read.
-        :return str: Content of the file.
-        """
-        buffer_size = 4096
-
-        file_content = ""
-
-        with open(file_path, 'rb') as binary_file:
-            while True:
-                data = binary_file.read(buffer_size)
-
-                if data:
-                    file_content += data
-                else:
-                    break
-
-        return file_content
-
-    def _wait_while_opening_transport(self):
-        timeout = 10
-        start_time = datetime.now()
-
-        while not self.dfu_transport.is_open():
-            timed_out = datetime.now() - start_time > timedelta(0, timeout)
-
-            if timed_out:
-                log_message = "Failed to open transport backend"
-                raise NordicSemiException(log_message)
-
-            sleep(0.1)
-
-
-    def _dfu_send_image(self, program_mode, firmware_manifest):
-        """
-        Does DFU for one image. Reads the firmware image and init file.
-        Opens the transport backend, calls setup, send and finalize and closes the backend again.
-        @param program_mode: What type of firmware the DFU is
-        @type program_mode: nordicsemi.dfu.model.HexType
-        @param firmware_manifest: The manifest for the firmware image
-        @type firmware_manifest: nordicsemi.dfu.manifest.Firmware
-        @return:
-        """
-
-        if firmware_manifest is None:
-            raise MissingArgumentException("firmware_manifest must be provided.")
-
-        if self.dfu_transport.is_open():
-            raise IllegalStateException("Transport is already open.")
-
+    def _dfu_send_image(self, manifest):
         self.dfu_transport.open()
-        self._wait_while_opening_transport()
 
-        softdevice_size = 0
-        bootloader_size = 0
-        application_size = 0
+        dat_file_path = os.path.join(self.unpacked_zip_path, manifest.dat_file)
+        bin_file_path = os.path.join(self.unpacked_zip_path, manifest.bin_file)
 
-        bin_file_path = os.path.join(self.unpacked_zip_path, firmware_manifest.bin_file)
-        firmware = self._read_file(bin_file_path)
-
-        dat_file_path = os.path.join(self.unpacked_zip_path, firmware_manifest.dat_file)
-        init_packet = self._read_file(dat_file_path)
-
-        if program_mode == HexType.SD_BL:
-            if not isinstance(firmware_manifest, SoftdeviceBootloaderFirmware):
-                raise NordicSemiException("Wrong type of manifest")
-            softdevice_size = firmware_manifest.sd_size
-            bootloader_size = firmware_manifest.bl_size
-            firmware_size = len(firmware)
-            if softdevice_size + bootloader_size != firmware_size:
-                raise NordicSemiException(
-                    "Size of bootloader ({} bytes) and softdevice ({} bytes)"
-                    " is not equal to firmware provided ({} bytes)".format(
-                    bootloader_size, softdevice_size, firmware_size))
-
-        elif program_mode == HexType.SOFTDEVICE:
-            softdevice_size = len(firmware)
-
-        elif program_mode == HexType.BOOTLOADER:
-            bootloader_size = len(firmware)
-
-        elif program_mode == HexType.APPLICATION:
-            application_size = len(firmware)
-
-        start_time = time()
-        logger.info("Starting DFU upgrade of type %s, SoftDevice size: %s, bootloader size: %s, application size: %s",
-                    program_mode,
-                    softdevice_size,
-                    bootloader_size,
-                    application_size)
-
-        logger.info("Sending DFU start packet, afterwards we wait for the flash on "
-                    "target to be initialized before continuing.")
-        self.dfu_transport.send_start_dfu(program_mode, softdevice_size, bootloader_size,
-                                          application_size)
+        start_time = time.time()
 
         logger.info("Sending DFU init packet")
-        self.dfu_transport.send_init_packet(init_packet)
+        self.dfu_transport.send_init_packet(dat_file_path)
 
         logger.info("Sending firmware file")
-        self.dfu_transport.send_firmware(firmware)
+        self.dfu_transport.send_firmware(bin_file_path)
 
-        self.dfu_transport.send_validate_firmware()
-
-        self.dfu_transport.send_activate_firmware()
-
-        end_time = time()
+        end_time = time.time()
         logger.info("DFU upgrade took {0}s".format(end_time - start_time))
 
         self.dfu_transport.close()
+
 
     def dfu_send_images(self):
         """
@@ -221,13 +101,22 @@ class Dfu(object):
         :return:
         """
         if self.manifest.softdevice_bootloader:
-            self._dfu_send_image(HexType.SD_BL, self.manifest.softdevice_bootloader)
+            self._dfu_send_image(self.manifest.softdevice_bootloader)
 
         if self.manifest.softdevice:
-            self._dfu_send_image(HexType.SOFTDEVICE, self.manifest.softdevice)
+            self._dfu_send_image(self.manifest.softdevice)
 
         if self.manifest.bootloader:
-            self._dfu_send_image(HexType.BOOTLOADER, self.manifest.bootloader)
+            self._dfu_send_image(self.manifest.bootloader)
 
         if self.manifest.application:
-            self._dfu_send_image(HexType.APPLICATION, self.manifest.application)
+            self._dfu_send_image(self.manifest.application)
+
+
+from nordicsemi.dfu.dfu_transport_ble import DfuTransportBle
+ZIP_S132_PATH   = os.path.join(r'C:\Users\woja.NVLSI\Documents\verification\test\system_tests\test_secure_dfu\zips\s132_2.0.0.zip')
+
+if __name__ == "__main__":
+    dfu_transport   = DfuTransportBle('COM68', target_device_name='DfuTarg')
+    dfu             = Dfu(zip_file_path = ZIP_S132_PATH, dfu_transport = dfu_transport)
+    dfu.dfu_send_images()
