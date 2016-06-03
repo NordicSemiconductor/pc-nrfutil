@@ -34,12 +34,6 @@ import logging
 import tempfile
 
 
-
-
-# TODO temporary include
-import sys
-sys.path.append(os.getcwd())
-
 # Nordic libraries
 from nordicsemi.dfu.package         import Package
 from nordicsemi.dfu.dfu_transport   import DfuEvent
@@ -75,11 +69,11 @@ class Dfu(object):
         shutil.rmtree(self.temp_dir)
 
 
-    def _dfu_send_image(self, manifest):
+    def _dfu_send_image(self, firmware):
         self.dfu_transport.open()
 
-        dat_file_path = os.path.join(self.unpacked_zip_path, manifest.dat_file)
-        bin_file_path = os.path.join(self.unpacked_zip_path, manifest.bin_file)
+        dat_file_path = os.path.join(self.unpacked_zip_path, firmware.dat_file)
+        bin_file_path = os.path.join(self.unpacked_zip_path, firmware.bin_file)
 
         start_time = time.time()
 
@@ -112,11 +106,3 @@ class Dfu(object):
         if self.manifest.application:
             self._dfu_send_image(self.manifest.application)
 
-
-from nordicsemi.dfu.dfu_transport_ble import DfuTransportBle
-ZIP_S132_PATH   = os.path.join(r'C:\Users\woja.NVLSI\Documents\verification\test\system_tests\test_secure_dfu\zips\s132_2.0.0.zip')
-
-if __name__ == "__main__":
-    dfu_transport   = DfuTransportBle('COM68', target_device_name='DfuTarg')
-    dfu             = Dfu(zip_file_path = ZIP_S132_PATH, dfu_transport = dfu_transport)
-    dfu.dfu_send_images()

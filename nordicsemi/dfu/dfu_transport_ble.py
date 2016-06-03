@@ -44,11 +44,7 @@ from nordicsemi.exceptions              import NordicSemiException, IllegalState
 from nordicsemi.dfu.dfu_transport       import DfuTransport, DfuEvent
 
 
-logging.basicConfig()
 logger  = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-hdlr    = logging.FileHandler('myapp.log')
-logger.addHandler(hdlr) 
 
 
 CCCD_UUID = 0x2902
@@ -288,7 +284,7 @@ class BleAdapter(object):
     def __init__(self, serial_port, baud_rate):
         # Setup Connection Params
         self.conn_params                    = ble_driver.ble_gap_conn_params_t()
-        self.conn_params.min_conn_interval  = util.msec_to_units(7.5,   util.UNIT_1_25_MS)
+        self.conn_params.min_conn_interval  = util.msec_to_units(15,    util.UNIT_1_25_MS)
         self.conn_params.max_conn_interval  = util.msec_to_units(30,    util.UNIT_1_25_MS)
         self.conn_params.conn_sup_timeout   = util.msec_to_units(4000,  util.UNIT_10_MS)
         self.conn_params.slave_latency      = 0
@@ -538,7 +534,7 @@ class DfuTransportBle(DfuTransport):
 
         super(DfuTransportBle, self).open()
         self.ble_adapter = BleAdapter(serial_port=self.serial_port, baud_rate=self.baud_rate)
-        self.ble_adapter.add_ble_evt_handler(self.__ble_evt_handler)
+        self.ble_adapter.add_ble_evt_handler(self._ble_evt_handler)
         self.ble_adapter.vs_uuid_add(DfuTransportBle.DFU_SERV_UUID)
 
         self.ble_adapter.set_conn_targets(target_device_name=self.target_device_name,
@@ -566,19 +562,19 @@ class DfuTransportBle(DfuTransport):
 
 
     def send_init_packet(self, init_packet):
-        response    = self.__read_command_info()
+        response    = self._read_command_info()
         with open(init_packet, 'rb') as f:
             data    = f.read()
             if len(data) > response['max_size']:
                 raise Exception('Init command too long')
 
-            self.__create_command(len(data))
-            self.__stream_data(data=data)
-            self.__execute()
+            self._create_command(len(data))
+            self._stream_data(data=data)
+            self._execute()
 
 
     def send_firmware(self, firmware):
-        response    = self.__read_data_info()
+        response    = self._read_data_info()
         object_size = response['max_size']
         hex_size    = os.path.getsize(firmware)
 
@@ -586,74 +582,75 @@ class DfuTransportBle(DfuTransport):
             crc = 0
             for i in range(0, hex_size, object_size):
                 data    = f.read(object_size)
-                self.__create_data(len(data))
-                crc     = self.__stream_data(data=data, crc=crc, offset=i)
-                self.__execute()
+                self._create_data(len(data))
+                crc     = self._stream_data(data=data, crc=crc, offset=i)
+                self._execute()
+                logger.info("Done 0x{:X} of 0x{:X}".format(i+len(data), hex_size))
+                self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=float(100*len(data))/hex_size)
 
 
-    def __create_command(self, size):
-        self.__create_object(0x01, size)
+    def _create_command(self, size):
+        self._create_object(0x01, size)
 
 
-    def __create_data(self, size):
-        self.__create_object(0x02, size)
+    def _create_data(self, size):
+        self._create_object(0x02, size)
 
 
-    def __create_object(self, object_type, size):
-        self.__write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type] + map(ord, struct.pack('<L', size)))
-        self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
+    def _create_object(self, object_type, size):
+        self._write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type] + map(ord, struct.pack('<L', size)))
+        self._get_response(DfuTransportBle.OP_CODE['CreateObject'])
 
 
-    def __calculate_checksum(self):
-        self.__write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
+    def _calculate_checksum(self):
+        self._write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
 
-        result                              = self.__get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+        result                              = self._get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
         (result['offset'], result['crc'])   = struct.unpack('<II', bytearray(result.pop('args')))
 
         return result
 
 
-    def __execute(self):
-        self.__write_control_point([DfuTransportBle.OP_CODE['Execute']])
-        self.__get_response(executed_operation=DfuTransportBle.OP_CODE['Execute'])
+    def _execute(self):
+        self._write_control_point([DfuTransportBle.OP_CODE['Execute']])
+        self._get_response(executed_operation=DfuTransportBle.OP_CODE['Execute'])
 
 
-    def __read_command_info(self):
-        return self.__read_object_info(0x01)
+    def _read_command_info(self):
+        return self._read_object_info(0x01)
 
 
-    def __read_data_info(self):
-        return self.__read_object_info(0x02)
+    def _read_data_info(self):
+        return self._read_object_info(0x02)
 
 
-    def __read_object_info(self, request_type):
-        self.__write_control_point([DfuTransportBle.OP_CODE['ReadObjectInfo'], request_type])
-        result  = self.__get_response(DfuTransportBle.OP_CODE['ReadObjectInfo'])
+    def _read_object_info(self, request_type):
+        self._write_control_point([DfuTransportBle.OP_CODE['ReadObjectInfo'], request_type])
+        result  = self._get_response(DfuTransportBle.OP_CODE['ReadObjectInfo'])
 
         (result['max_size'], result['offset'], result['crc']) = struct.unpack('<III',
                                                                               bytearray(result.pop('args')))
         return result
 
 
-    def __stream_data(self, data, crc=0, offset=0):
+    def _stream_data(self, data, crc=0, offset=0):
         for i in range(0, len(data), DfuTransportBle.DATA_PACKET_SIZE):
             to_transmit     = data[i:i + DfuTransportBle.DATA_PACKET_SIZE]
-            self.__write_data_point(map(ord, to_transmit))
+            self._write_data_point(map(ord, to_transmit))
             crc     = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
 
-        response = self.__calculate_checksum()
-        logger.debug("CRC Expected: {} Recieved: {}".format(crc, response['crc']))
-        logger.debug("Offset Expected: {} Recieved: {}".format(offset, response['offset']))
+        response = self._calculate_checksum()
         if (crc != response['crc']):
             raise Exception('Failed crc validation. Expected: {} Recieved: {}.'.format(crc, response['crc']))
+
         if (offset != response['offset']):
             raise Exception('Failed offset validation. Expected: {} Recieved: {}.'.format(offset, response['offset']))
 
         return crc
 
 
-    def __write_data_point(self, data): 
+    def _write_data_point(self, data): 
         logger.debug("Write to Data Point {}".format(data))
 
         handle = self.ble_adapter.db_discovery.get_char_value_handle_from_uuid(DfuTransportBle.DFU_CHAR_UUID['DataPoint'])
@@ -664,8 +661,8 @@ class DfuTransportBle(DfuTransport):
         self.ble_adapter.wait_for_event('tx_complete')
 
 
-    def __write_control_point(self, data):
-        logger.debug("Write to Control Point {}".format(data))
+    def _write_control_point(self, data):
+        logger.info("Write to Control Point {}".format(data))
 
         handle = self.ble_adapter.db_discovery.get_char_value_handle_from_uuid(DfuTransportBle.DFU_CHAR_UUID['ControlPoint'])
         if handle == 0:
@@ -675,7 +672,7 @@ class DfuTransportBle(DfuTransport):
         self.ble_adapter.wait_for_event('gattc_write_rsp')
 
 
-    def __get_response(self, executed_operation):
+    def _get_response(self, executed_operation):
         def get_dict_key(dictionary, value):
             return next((key for key, val in dictionary.items() if val == value), None)
         try:
@@ -698,7 +695,7 @@ class DfuTransportBle(DfuTransport):
             return {'args'  : resp[3:]}
 
 
-    def __ble_evt_handler(self, ble_event):
+    def _ble_evt_handler(self, ble_event):
         if ble_event.header.evt_id == ble_driver.BLE_GATTC_EVT_HVX:
             if ble_event.evt.gattc_evt.gatt_status != ble_driver.NRF_SUCCESS:
                 raise Exception('Error. Handle value notification failed.\n' \

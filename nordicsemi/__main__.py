@@ -33,6 +33,7 @@ import click
 
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent
+from nordicsemi.dfu.dfu_transport_ble import DfuTransportBle
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
@@ -260,7 +261,7 @@ global_bar = None
 def update_progress(progress=0, done=False, log_message=""):
     del done, log_message  # Unused parameters
     if global_bar:
-        global_bar.update(max(1, progress))
+        global_bar.update(progress)
 
 @cli.group(short_help='Perform a Device Firmware Update over a BLE or serial transport.')
 def dfu():
@@ -329,8 +330,34 @@ def serial(package, port, baudrate, flowcontrol):
               help='Serial port COM port to which the connectivity IC is connected.',
               type=click.STRING,
               required=True)
-def ble(package, port):
+@click.option('-n', '--name',
+              help='Device name.',
+              type=click.STRING)
+@click.option('-a', '--address',
+              help='Device address.',
+              type=click.STRING)
+def ble(package, port, name, address):
     """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
+    if name is None and address is None:
+        name = 'DfuTarg'
+
+    ble_backend = DfuTransportBle(str(port), target_device_name=name, target_device_addr=address)
+    ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    dfu         = Dfu(zip_file_path = package, dfu_transport = ble_backend)
+    try:
+        with click.progressbar(length=100) as bar:
+            global global_bar
+            global_bar = bar
+            dfu.dfu_send_images()
+
+    except Exception as e:
+        click.echo("")
+        click.echo("Failed to update the target. Error is: {0}".format(e.message))
+        click.echo("")
+
+        return False
+
+    click.echo("Device programmed.")
     return True
 
 if __name__ == '__main__':
