@@ -72,16 +72,17 @@ class Dfu(object):
     def _dfu_send_image(self, firmware):
         self.dfu_transport.open()
 
-        dat_file_path = os.path.join(self.unpacked_zip_path, firmware.dat_file)
-        bin_file_path = os.path.join(self.unpacked_zip_path, firmware.bin_file)
-
         start_time = time.time()
 
         logger.info("Sending DFU init packet")
-        self.dfu_transport.send_init_packet(dat_file_path)
+        with open(os.path.join(self.unpacked_zip_path, firmware.dat_file), 'rb') as f:
+            data    = f.read()
+            self.dfu_transport.send_init_packet(data)
 
         logger.info("Sending firmware file")
-        self.dfu_transport.send_firmware(bin_file_path)
+        with open(os.path.join(self.unpacked_zip_path, firmware.bin_file), 'rb') as f:
+            data    = f.read()
+            self.dfu_transport.send_firmware(data)
 
         end_time = time.time()
         logger.info("DFU upgrade took {0}s".format(end_time - start_time))
@@ -106,3 +107,23 @@ class Dfu(object):
         if self.manifest.application:
             self._dfu_send_image(self.manifest.application)
 
+    def dfu_get_total_size(self):
+        total_size = 0
+
+        if self.manifest.softdevice_bootloader:
+            total_size += os.path.getsize(os.path.join(self.unpacked_zip_path,
+                                                       self.manifest.softdevice_bootloader.bin_file))
+
+        if self.manifest.softdevice:
+            total_size += os.path.getsize(os.path.join(self.unpacked_zip_path,
+                                                       self.manifest.softdevice.bin_file))
+
+        if self.manifest.bootloader:
+            total_size += os.path.getsize(os.path.join(self.unpacked_zip_path,
+                                                       self.manifest.bootloader.bin_file))
+
+        if self.manifest.application:
+            total_size += os.path.getsize(os.path.join(self.unpacked_zip_path,
+                                                       self.manifest.application.bin_file))
+
+        return total_size

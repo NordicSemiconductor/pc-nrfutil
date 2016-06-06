@@ -185,12 +185,14 @@ class DbDiscovery(object):
         if err_code != ble_driver.NRF_SUCCESS:
             raise Exception("Failed characteristic discovery. Error code 0x{:02X}".format(err_code))
 
+
     def discover_serv(self, start_handle):
         err_code = ble_driver.sd_ble_gattc_primary_services_discover(self.connection_handle,
                                                                      start_handle,
                                                                      None)
         if err_code != ble_driver.NRF_SUCCESS:
             raise Exception("Failed primary services discovery. Error code 0x{:02X}".format(err_code))
+
 
     def on_service_discovery_response(self, gattc_event):
         if gattc_event.gatt_status == ble_driver.BLE_GATT_STATUS_ATTERR_ATTRIBUTE_NOT_FOUND:
@@ -428,10 +430,12 @@ class BleAdapter(object):
             finally:
                 return parsed_data
 
-        if self.connection_is_in_progress: return
+        if self.connection_is_in_progress:
+            return
         address_list    = util.uint8_array_to_list(gap_event.params.adv_report.peer_addr.addr, 6)
         adv_data_list   = util.uint8_array_to_list(gap_event.params.adv_report.data, 
                                                    gap_event.params.adv_report.dlen)
+        address_list.reverse()
 
         dev_name = parse_adv_report(ble_driver.BLE_GAP_AD_TYPE_COMPLETE_LOCAL_NAME, adv_data_list)
         if not dev_name:
@@ -487,11 +491,12 @@ class DfuTransportBle(DfuTransport):
 
     DATA_PACKET_SIZE    = 20
     DEFAULT_TIMEOUT     = 20
+    RETRIES_NUMBER      = 3
 
-    DFU_SERV_UUID = [0x23, 0xD1, 0xBC, 0xEA, 0x5F, 0x78, 0x23, 0x15,
-                     0xDE, 0xEF, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00]
+    SERV_UUID = [0x23, 0xD1, 0xBC, 0xEA, 0x5F, 0x78, 0x23, 0x15,
+                 0xDE, 0xEF, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00]
 
-    DFU_CHAR_UUID = {
+    CHAR_UUID = {
         'ControlPoint'          : 0x1531,
         'DataPoint'             : 0x1532,
     }
@@ -529,14 +534,14 @@ class DfuTransportBle(DfuTransport):
 
 
     def open(self):
-        if self.ble_adapter:
-            raise Exception('Already opened')
+        assert self.ble_adapter == None, 'BLE Adapter is already opened'
 
         super(DfuTransportBle, self).open()
         self.ble_adapter = BleAdapter(serial_port=self.serial_port, baud_rate=self.baud_rate)
         self.ble_adapter.add_ble_evt_handler(self._ble_evt_handler)
-        self.ble_adapter.vs_uuid_add(DfuTransportBle.DFU_SERV_UUID)
+        self.ble_adapter.vs_uuid_add(DfuTransportBle.SERV_UUID)
 
+        # Connect to the target
         self.ble_adapter.set_conn_targets(target_device_name=self.target_device_name,
                                           target_device_addr=self.target_device_addr)
         self.ble_adapter.start_scan()
@@ -545,48 +550,54 @@ class DfuTransportBle(DfuTransport):
         self.ble_adapter.db_discovery.start_service_discovery()
 
         # Enable control point
-        handle = self.ble_adapter.db_discovery.get_cccd_handle_from_uuid(DfuTransportBle.DFU_CHAR_UUID['ControlPoint'])
+        handle = self.ble_adapter.db_discovery.get_cccd_handle_from_uuid(DfuTransportBle.CHAR_UUID['ControlPoint'])
         if handle == 0:
-            raise Exception('Characteristic not found')
+            raise Exception('Control Point CCCD not found')
         self.ble_adapter.enable_notification(handle)
         self.ble_adapter.wait_for_event('gattc_write_rsp')
 
 
     def close(self):
-        if self.ble_adapter == None:
-            raise Exception('Already closed')
-
+        assert self.ble_adapter != None, 'BLE Adapter is already closed'
         super(DfuTransportBle, self).close()
         self.ble_adapter.close()
         self.ble_adapter = None
 
 
     def send_init_packet(self, init_packet):
-        response    = self._read_command_info()
-        with open(init_packet, 'rb') as f:
-            data    = f.read()
-            if len(data) > response['max_size']:
-                raise Exception('Init command too long')
+        response = self._read_command_info()
+        assert len(init_packet) <= response['max_size'], 'Init command is too long'
 
-            self._create_command(len(data))
-            self._stream_data(data=data)
-            self._execute()
+        for r in range(DfuTransportBle.RETRIES_NUMBER):
+            try:
+                self._create_command(len(init_packet))
+                self._stream_data(data=init_packet)
+                self._execute()
+            except:
+                pass
+            break
+        else:
+            raise Exception("Failed to send init packet")
 
 
     def send_firmware(self, firmware):
         response    = self._read_data_info()
         object_size = response['max_size']
-        hex_size    = os.path.getsize(firmware)
 
-        with open(firmware, 'rb') as f:
-            crc = 0
-            for i in range(0, hex_size, object_size):
-                data    = f.read(object_size)
-                self._create_data(len(data))
-                crc     = self._stream_data(data=data, crc=crc, offset=i)
-                self._execute()
-                logger.info("Done 0x{:X} of 0x{:X}".format(i+len(data), hex_size))
-                self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=float(100*len(data))/hex_size)
+        crc = 0
+        for i in range(0, len(firmware), object_size):
+            data = firmware[i:i+object_size]
+            for r in range(DfuTransportBle.RETRIES_NUMBER):
+                try:
+                    self._create_data(len(data))
+                    crc = self._stream_data(data=data, crc=crc, offset=i)
+                    self._execute()
+                except:
+                    pass
+                break
+            else:
+                raise Exception("Failed to send firmware")
+            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
 
 
     def _create_command(self, size):
@@ -598,22 +609,23 @@ class DfuTransportBle(DfuTransport):
 
 
     def _create_object(self, object_type, size):
-        self._write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type] + map(ord, struct.pack('<L', size)))
+        self._write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
+                                + map(ord, struct.pack('<L', size)))
         self._get_response(DfuTransportBle.OP_CODE['CreateObject'])
 
 
     def _calculate_checksum(self):
         self._write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
+        response = self._get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+        result   = dict()
 
-        result                              = self._get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
-        (result['offset'], result['crc'])   = struct.unpack('<II', bytearray(result.pop('args')))
-
+        (result['offset'], result['crc']) = struct.unpack('<II', bytearray(response))
         return result
 
 
     def _execute(self):
         self._write_control_point([DfuTransportBle.OP_CODE['Execute']])
-        self._get_response(executed_operation=DfuTransportBle.OP_CODE['Execute'])
+        self._get_response(DfuTransportBle.OP_CODE['Execute'])
 
 
     def _read_command_info(self):
@@ -626,10 +638,10 @@ class DfuTransportBle(DfuTransport):
 
     def _read_object_info(self, request_type):
         self._write_control_point([DfuTransportBle.OP_CODE['ReadObjectInfo'], request_type])
-        result  = self._get_response(DfuTransportBle.OP_CODE['ReadObjectInfo'])
+        response = self._get_response(DfuTransportBle.OP_CODE['ReadObjectInfo'])
+        result   = dict()
 
-        (result['max_size'], result['offset'], result['crc']) = struct.unpack('<III',
-                                                                              bytearray(result.pop('args')))
+        (result['max_size'], result['offset'], result['crc']) = struct.unpack('<III', bytearray(response))
         return result
 
 
@@ -642,10 +654,12 @@ class DfuTransportBle(DfuTransport):
 
         response = self._calculate_checksum()
         if (crc != response['crc']):
-            raise Exception('Failed crc validation. Expected: {} Recieved: {}.'.format(crc, response['crc']))
+            raise Exception('Failed CRC validation.\n'\
+                          + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
 
         if (offset != response['offset']):
-            raise Exception('Failed offset validation. Expected: {} Recieved: {}.'.format(offset, response['offset']))
+            raise Exception('Failed offset validation.\n'\
+                          + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
 
         return crc
 
@@ -653,9 +667,9 @@ class DfuTransportBle(DfuTransport):
     def _write_data_point(self, data): 
         logger.debug("Write to Data Point {}".format(data))
 
-        handle = self.ble_adapter.db_discovery.get_char_value_handle_from_uuid(DfuTransportBle.DFU_CHAR_UUID['DataPoint'])
+        handle = self.ble_adapter.db_discovery.get_char_value_handle_from_uuid(DfuTransportBle.CHAR_UUID['DataPoint'])
         if handle == 0:
-            raise Exception('Invalid Handle')
+            raise Exception('Data Point characteristic not found')
 
         self.ble_adapter._gattc_write_cmd(data, handle)
         self.ble_adapter.wait_for_event('tx_complete')
@@ -664,44 +678,44 @@ class DfuTransportBle(DfuTransport):
     def _write_control_point(self, data):
         logger.info("Write to Control Point {}".format(data))
 
-        handle = self.ble_adapter.db_discovery.get_char_value_handle_from_uuid(DfuTransportBle.DFU_CHAR_UUID['ControlPoint'])
+        handle = self.ble_adapter.db_discovery.get_char_value_handle_from_uuid(DfuTransportBle.CHAR_UUID['ControlPoint'])
         if handle == 0:
-            raise Exception('Invalid Handle')
+            raise Exception('Control Point characteristic not found')
 
         self.ble_adapter._gattc_write(data, handle)
         self.ble_adapter.wait_for_event('gattc_write_rsp')
 
 
-    def _get_response(self, executed_operation):
+    def _get_response(self, operation):
         def get_dict_key(dictionary, value):
             return next((key for key, val in dictionary.items() if val == value), None)
+
         try:
             resp = self.notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
-
         except Queue.Empty:
-            raise Exception('Timeout: operation - {}'.format(get_dict_key(DfuTransportBle.OP_CODE, executed_operation)))
+            raise Exception('Timeout: operation - {}'.format(get_dict_key(DfuTransportBle.OP_CODE,
+                                                                          operation)))
 
-        else:
-            if resp[0] != DfuTransportBle.OP_CODE['Response']:
-                raise Exception('Unexpected DfuTransportBle.OP_CODE 0x{:02X}'.format(resp[0]))
+        if resp[0] != DfuTransportBle.OP_CODE['Response']:
+            raise Exception('No Response: 0x{:02X}'.format(resp[0]))
 
-            if resp[1] != executed_operation:
-                raise Exception('Unexpected executed operation code.\n' \
-                              + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(executed_operation, resp[1]))
+        if resp[1] != operation:
+            raise Exception('Unexpected Executed OP_CODE.\n' \
+                          + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
 
-            if resp[2] != DfuTransportBle.RES_CODE['Success']:
-                raise Exception('Invalid response code {}'.format(get_dict_key(DfuTransportBle.RES_CODE, resp[2])))
+        if resp[2] != DfuTransportBle.RES_CODE['Success']:
+            raise Exception('Response Code {}'.format(get_dict_key(DfuTransportBle.RES_CODE, resp[2])))
 
-            return {'args'  : resp[3:]}
+        return resp[3:]
 
 
     def _ble_evt_handler(self, ble_event):
         if ble_event.header.evt_id == ble_driver.BLE_GATTC_EVT_HVX:
-            if ble_event.evt.gattc_evt.gatt_status != ble_driver.NRF_SUCCESS:
-                raise Exception('Error. Handle value notification failed.\n' \
-                              + 'Gatt status error code 0x{:X}'.format(ble_event.evt.gattc_evt.gatt_status))
+            gattc_evt = ble_event.evt.gattc_evt
+            if gattc_evt.gatt_status != ble_driver.NRF_SUCCESS:
+                raise Exception('Gatt status error code 0x{:X}'.format(gattc_evt.gatt_status))
 
-            a = util.uint8_array_to_list(ble_event.evt.gattc_evt.params.hvx.data,
-                                         ble_event.evt.gattc_evt.params.hvx.len)
-            self.notifications_q.put(a)
-            logger.debug("HVX Notification {}".format(a))
+            notification = util.uint8_array_to_list(gattc_evt.params.hvx.data,
+                                                    gattc_evt.params.hvx.len)
+            self.notifications_q.put(notification)
+            logger.debug("HVX Notification {}".format(notification))

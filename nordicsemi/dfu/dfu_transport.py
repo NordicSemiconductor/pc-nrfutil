@@ -77,9 +77,8 @@ class DfuTransport(object):
         Send init_packet to device.
 
         This call will block until init_packet is sent and transfer of packet is complete.
-        If timeout or errors occurs exception is thrown.
 
-        :param str init_packet: Init packet as a str.
+        :param init_packet: Init packet as a str.
         :return:
         """
         pass
@@ -91,9 +90,8 @@ class DfuTransport(object):
         Start sending firmware to device.
 
         This call will block until transfer of firmware is complete.
-        If timeout or errors occurs exception is thrown.
 
-        :param str firmware:
+        :param firmware:
         :return:
         """
         pass
@@ -119,7 +117,7 @@ class DfuTransport(object):
         If callbacks throws exceptions event propagation will stop and this method be part of the track trace.
 
         :param DfuEvent event_type:
-        :param args: Arguments to callback function
+        :param kwargs: Arguments to callback function
         :return:
         """
         if event_type in self.callbacks.keys():

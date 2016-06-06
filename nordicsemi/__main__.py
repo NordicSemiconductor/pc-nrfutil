@@ -341,11 +341,13 @@ def ble(package, port, name, address):
     if name is None and address is None:
         name = 'DfuTarg'
 
-    ble_backend = DfuTransportBle(str(port), target_device_name=name, target_device_addr=address)
+    ble_backend = DfuTransportBle(serial_port=str(port),
+                                  target_device_name=str(name),
+                                  target_device_addr=str(address))
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu         = Dfu(zip_file_path = package, dfu_transport = ble_backend)
+    dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend)
     try:
-        with click.progressbar(length=100) as bar:
+        with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
             global global_bar
             global_bar = bar
             dfu.dfu_send_images()
