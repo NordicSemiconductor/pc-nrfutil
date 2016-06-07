@@ -41,7 +41,6 @@ import platform
 
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
-from setuptools_behave import behave_test
 
 from nordicsemi import version
 
@@ -109,7 +108,6 @@ setup(
     ],
     cmdclass={
         'test': NoseTestCommand
-        # 'bdd_test': behave_test
     },
     entry_points='''
       [console_scripts]
