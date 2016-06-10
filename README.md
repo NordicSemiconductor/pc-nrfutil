@@ -13,11 +13,13 @@ There are 2 different and incompatible DFU package formats:
 * legacy: used a simple structure and no security
 * modern: uses Google's protocol buffers for serialization and can be cryptographically signed
 
-The DFU package format transitioned from legacy to modern in SDK 11.1. Depending on the SDK version
+**IMPORTANT NOTE**: SDK 12.0 is yet to be released, the master branch contains pre-release code.
+
+The DFU package format transitioned from legacy to modern in SDK 12.0. Depending on the SDK version
 that you are using you will need to select a release of this tool compatible with it:
 
 * Version 0.5.0 generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
-* Version 1.0.0 and later generate modern firmware packages compatible with **nRF SDK 11.1 and newer**
+* Version 1.0.0 and later generate modern firmware packages compatible with **nRF SDK 12.0 and newer**
 
 Prerequisites
 -------------
