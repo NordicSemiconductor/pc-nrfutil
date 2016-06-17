@@ -171,7 +171,6 @@ class DfuTransportMesh(DfuTransport):
         self.info = None
         self.tid = 0
         self.firmware = None
-        self.device_started = False
         self.rxthread = None
         self.interval = interval
 
@@ -185,19 +184,16 @@ class DfuTransportMesh(DfuTransport):
                 self.serial_port.close()
             raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
 
-        #dodge any glitches caused by interrupted transfers.
-        self.serial_port.write("\x01\x0e")
-        while len(self.serial_port.read()) != 0:
-            pass
-
         logger.info("Opened com-port")
         self.rxthread = Thread(target=self.receive_thread)
         self.rxthread.daemon = True
         self.rxthread.start()
 
     def close(self):
-        super(DfuTransportMesh, self).close()
-        self.serial_port.close()
+        try:
+            self.serial_port.close()
+        except Exception, e:
+            pass
 
     def is_open(self):
         super(DfuTransportMesh, self).is_open()
@@ -214,18 +210,11 @@ class DfuTransportMesh(DfuTransport):
     def send_start_dfu(self, mode, softdevice_size=None, bootloader_size=None, app_size=None):
         super(DfuTransportMesh, self).send_start_dfu(mode, softdevice_size, bootloader_size, app_size)
 
-        # reset device
-        self.send_bytes('\x01\x0E')
-        logger.info("Sent reset-command")
-        step_time = 0.01
-        wait = 1.0
-        while wait > 0 and not self.device_started:
-            time.sleep(step_time)
-            wait -= step_time
+        # send echo for testing
+        echo_packet = SerialPacket(self, '\xAA\xBB\xCC\xDD', opcode=0x02)
+        self.send_packet(echo_packet)
+        echo_packet.wait_for_ack()
 
-        if not self.device_started:
-            raise NordicSemiException("Device did not respond to reset-command, you might have to reset it manually.")
-        time.sleep(0.2)
 
 
     def send_init_packet(self, init_packet):
@@ -240,6 +229,10 @@ class DfuTransportMesh(DfuTransport):
         ready += int32_to_bytes(self.tid)
         ready += self.info.ver.get_number(self.info.dfu_type)
 
+        ready_packet = SerialPacket(self, ready)
+        self.send_packet(ready_packet)
+        time.sleep(DfuTransportMesh.SEND_START_DFU_WAIT_TIME)
+        # send twice to allow the application to catch the TID.
         ready_packet = SerialPacket(self, ready)
         self.send_packet(ready_packet)
         time.sleep(DfuTransportMesh.SEND_START_DFU_WAIT_TIME)
@@ -326,7 +319,6 @@ class DfuTransportMesh(DfuTransport):
             return self.firmware[i:i + DfuTransportMesh.DFU_PACKET_MAX_SIZE]
 
     def send_packet(self, pkt):
-        logger.info("PC -> target: {0}".format(pkt))
         self.pending_packets.append(pkt)
         pkt.send()
         pkt.wait_for_ack()
@@ -336,15 +328,14 @@ class DfuTransportMesh(DfuTransport):
             packet_len = self.serial_port.read(1)
             if packet_len:
                 packet_len = ord(packet_len)
-                rx_count = 0
                 rx_data = self.serial_port.read(packet_len)
-                logger.info("target -> PC: {0}".format(binascii.hexlify(rx_data)))
+                logger.info("target -> PC: " + format(packet_len, '02x') + binascii.hexlify(rx_data))
                 return rx_data
         return None
 
     def receive_thread(self):
         try:
-            while self.serial_port and self.serial_port.isOpen():
+            while self.is_open():
                 rx_data = self.receive_packet()
                 if rx_data and rx_data[0] in self.packet_handlers:
                         self.packet_handlers[rx_data[0]](rx_data)
@@ -355,6 +346,7 @@ class DfuTransportMesh(DfuTransport):
 
     def send_bytes(self, data):
         with self.write_lock:
+            logger.info("PC -> target: " + binascii.hexlify(data))
             self.serial_port.write(data)
 
     def push_timeout(self):
@@ -372,7 +364,10 @@ class DfuTransportMesh(DfuTransport):
             _handle_dfu_data_req(data[2:])
 
     def _handle_echo(self, data):
-        print "Received echo response: {0}".format(data[1:])
+        for packet in self.pending_packets:
+            if packet.get_opcode() == 0x02:
+                packet.is_acked = True
+                self.pending_packets.remove(packet)
 
     def _handle_ack(self, data):
         for packet in self.pending_packets:
@@ -380,12 +375,7 @@ class DfuTransportMesh(DfuTransport):
                 self.pending_packets.remove(packet)
 
     def _handle_started(self, data):
-        if self.device_started:
-            raise NordicSemiException("Device aborted the transfer. Mode: " + str(ord(data[1])) + ", Error: " + str(ord(data[2])))
-        if data[1] == '\x01':
-            self.device_started = True
-        elif not self.device_started: # should ignore any startup events after the initial
-            raise NordicSemiException("Device did not enter bootloader after reset (State: {0}, HW-error: {1})".format(ord(data[1]), ord(data[2])))
+        pass
 
     def _handle_dfu_fwid(self, data):
         if self.init_info:
@@ -427,11 +417,12 @@ MESH_DFU_OPCODE = 0x78
 
 class SerialPacket(object):
     """Class representing a single Mesh serial packet"""
+    MAX_RETRIES = 5
 
-    def __init__(self, transport, data='', timeout=DfuTransportMesh.RETRY_WAIT_TIME):
+    def __init__(self, transport, data='', opcode=MESH_DFU_OPCODE, timeout=DfuTransportMesh.RETRY_WAIT_TIME):
         self.data = ''
         self.data += chr(len(data) + 1)
-        self.data += chr(MESH_DFU_OPCODE)
+        self.data += chr(opcode)
         self.data += data
         self.is_acked = False
         self.retries = 0
@@ -445,19 +436,26 @@ class SerialPacket(object):
         self.thread.start()
 
     def run(self):
-        while self.retries < 3 and self.transport.serial_port and not self.is_acked:
-            self.transport.send_bytes(self.data)
+        while self.retries < SerialPacket.MAX_RETRIES and self.transport.serial_port and not self.is_acked:
+            try:
+                self.transport.send_bytes(self.data)
+            except:
+                pass
             self.retries += 1
             time.sleep(self.timeout)
-        if self.retries is 3:
+        if self.retries is SerialPacket.MAX_RETRIES:
+            print("Unacked packet: " + str(self))
             self.transport.push_timeout()
+
+    def get_opcode(self):
+        return ord(self.data[1])
 
     def get_type(self):
         temp = '\x00\x00' + self.data[2:4]
         return (struct.unpack("<L", self.data[2:4] + '\x00\x00')[0])
 
     def check_ack(self, ack_data):
-        self.is_acked = ((ack_data[0] == '\x84') and (ack_data[1] == '\x78'))
+        self.is_acked = ((ack_data[0] == '\x84') and (ack_data[1] == self.data[1]) and (ack_data[2] == '\x00'))
         return self.is_acked
 
     def wait_for_ack(self):
