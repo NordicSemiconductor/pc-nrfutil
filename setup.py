@@ -117,7 +117,6 @@ setup(
     ],
     cmdclass={
         'test': NoseTestCommand
-        # 'bdd_test': behave_test
     },
     entry_points='''
       [console_scripts]
