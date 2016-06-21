@@ -4,3 +4,4 @@
     ecdsa >= 0.13
     behave
     protobuf
+    pc_ble_driver_py
