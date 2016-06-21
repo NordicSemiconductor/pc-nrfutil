@@ -107,6 +107,7 @@ class Dfu(object):
         if self.manifest.application:
             self._dfu_send_image(self.manifest.application)
 
+
     def dfu_get_total_size(self):
         total_size = 0
 
