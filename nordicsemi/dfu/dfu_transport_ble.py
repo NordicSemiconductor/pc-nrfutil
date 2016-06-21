@@ -35,12 +35,21 @@ import logging
 import binascii
 
 from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent
+from nordicsemi.exceptions          import NordicSemiException, IllegalStateException
 from pc_ble_driver_py.ble_driver    import BLEDriver, BLEDriverObserver, BLEUUID, BLEAdvData, BLEGapConnParams, NordicSemiException
 from pc_ble_driver_py.ble_adapter   import BLEAdapter, BLEAdapterObserver, EvtSync
 
-logging.basicConfig()
 logger  = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
+
+
+class ValidationException(NordicSemiException):
+    """"
+    Exception used when validation failed
+    """
+    pass
+
+
 
 class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     SERV_UUID   = BLEUUID([0x8E, 0xC9, 0x00, 0x00, 0xF3, 0x15, 0x4F, 0x60,
@@ -120,11 +129,6 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
 
 
-class ValidationError(NordicSemiException):
-    pass
-
-
-
 class DfuTransportBle(DfuTransport):
 
     DATA_PACKET_SIZE    = 20
@@ -164,7 +168,8 @@ class DfuTransportBle(DfuTransport):
 
 
     def open(self):
-        assert self.dfu_adapter == None, 'DFU Adapter is already opened'
+        if self.dfu_adapter:
+            IllegalStateException('DFU Adapter is already opened')
 
         super(DfuTransportBle, self).open()
         driver           = BLEDriver(serial_port   = self.serial_port,
@@ -177,7 +182,8 @@ class DfuTransportBle(DfuTransport):
 
 
     def close(self):
-        assert self.dfu_adapter != None, 'DFU Adapter is already closed'
+        if not self.dfu_adapter:
+            IllegalStateException('DFU Adapter is already closed')
         super(DfuTransportBle, self).close()
         self.dfu_adapter.close()
         self.dfu_adapter = None
