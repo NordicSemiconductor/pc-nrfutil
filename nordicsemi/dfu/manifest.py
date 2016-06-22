@@ -101,9 +101,8 @@ class ManifestGenerator(object):
 
 class InitPacketData(object):
     def __init__(self,
-                 device_type=None,
-                 device_revision=None,
-                 application_version=None,
+                 hw_version=None,
+                 fw_version=None,
                  softdevice_req=None,
                  ext_packet_id=None,
                  firmware_length=None,
@@ -114,9 +113,8 @@ class InitPacketData(object):
         """
         The InitPacketData data model.
 
-        :param int device_type:  device type
-        :param int device_revision: device revision
-        :param int application_version:  application version
+        :param int hw_version:  hardware version
+        :param int fw_version:  application or bootloader version
         :param list softdevice_req: softdevice requirements
         :param int ext_packet_id: packet extension id
         :param int firmware_length: firmware length
@@ -125,15 +123,9 @@ class InitPacketData(object):
         :param str init_packet_ecds: Init packet signature
         :return: InitPacketData
         """
-        self.device_type = device_type
-        self.device_revision = device_revision
-        self.application_version = application_version
+        self.hw_version = hw_version
+        self.fw_version = fw_version
         self.softdevice_req = softdevice_req
-        self.ext_packet_id = ext_packet_id
-        self.firmware_length = firmware_length
-        self.firmware_hash = firmware_hash
-        self.firmware_crc16 = firmware_crc16
-        self.init_packet_ecds = init_packet_ecds
 
 
 class Firmware(object):
@@ -153,7 +145,7 @@ class Firmware(object):
         self.bin_file = bin_file
 
         if init_packet_data:
-            self.init_packet_data = InitPacketData(**init_packet_data)
+            self.info_read_only_metadata = InitPacketData(**init_packet_data)
 
 
 class SoftdeviceBootloaderFirmware(Firmware):
@@ -176,8 +168,8 @@ class SoftdeviceBootloaderFirmware(Firmware):
             bin_file,
             dat_file,
             init_packet_data)
-        self.sd_size = sd_size
-        self.bl_size = bl_size
+        self.info_read_only_sd_size = sd_size
+        self.info_read_only_bl_size = bl_size
 
 
 class Manifest:

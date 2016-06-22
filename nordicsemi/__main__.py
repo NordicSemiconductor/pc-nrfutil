@@ -190,14 +190,14 @@ def pkg():
 @click.option('--bootloader',
               help='The bootloader firmware file.',
               type=click.STRING)
-@click.option('--dev-revision',
-              help='The device revision. Default: 0xFFFF',
+@click.option('--bootloader-version',
+              help='The bootloader version. Default: 0xFFFFFFFF',
+              type=BASED_INT_OR_NONE,
+              default=str(Package.DEFAULT_BL_VERSION))
+@click.option('--hw-version',
+              help='The hardware version. Default: 0xFFFFFFFF',
               type=BASED_INT_OR_NONE,
               default=str(Package.DEFAULT_DEV_REV))
-@click.option('--dev-type',
-              help='The device type. Default: 0xFFFF',
-              type=BASED_INT_OR_NONE,
-              default=str(Package.DEFAULT_DEV_TYPE))
 @click.option('--sd-req',
               help='The SoftDevice requirement. A list of SoftDevice versions (1 or more) '
                    'of which one must be present on the target device. '
@@ -214,8 +214,8 @@ def generate(zipfile,
            application,
            application_version,
            bootloader,
-           dev_revision,
-           dev_type,
+           bootloader_version,
+           hw_version,
            sd_req,
            softdevice,
            key_file):
@@ -230,11 +230,11 @@ def generate(zipfile,
     if application_version == 'none':
         application_version = None
 
-    if dev_revision == 'none':
-        dev_revision = None
+    if bootloader_version == 'none':
+        bootloader_version = None
 
-    if dev_type == 'none':
-        dev_type = None
+    if hw_version == 'none':
+        hw_version = None
 
     sd_req_list = None
 
@@ -249,9 +249,9 @@ def generate(zipfile,
             raise nRFException("Could not parse value for --sd-req. "
                                "Hex values should be prefixed with 0x.")
 
-    package = Package(dev_type,
-                      dev_revision,
+    package = Package(hw_version,
                       application_version,
+                      bootloader_version,
                       sd_req_list,
                       application,
                       bootloader,
