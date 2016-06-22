@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -34,7 +35,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-#!/usr/bin/env python
 
 """
 Setup script for nrfutil.
@@ -81,6 +81,9 @@ dll_excludes = [
 build_dir = os.environ.get("NRFUTIL_BUILD_DIR", "./{}".format(version.NRFUTIL_VERSION))
 description = """A Python package that includes the nrfutil utility and the nordicsemi library"""
 
+common_requirements=[]
+with open('requirements.txt') as f:
+    common_requirements = f.readlines()
 
 class NoseTestCommand(TestCommand):
     def finalize_options(self):
@@ -92,19 +95,17 @@ class NoseTestCommand(TestCommand):
         import nose
         nose.run_exit(argv=['nosetests', '--with-xunit', '--xunit-file=test-reports/unittests.xml'])
 
-common_requirements=[]
-
 setup(
     name="nrfutil",
     version=version.NRFUTIL_VERSION,
-    license="Nordic Semicondictor proprietary license",
+    license="Modified BSD License",
+    author = "Nordic Semiconductor ASA",
     url="https://github.com/NordicSemiconductor/pc-nrfutil",
     description="Nordic Semiconductor nrfutil utility and Python library",
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
     include_package_data=False,
     install_requires=common_requirements,
-    setup_requires=common_requirements,
     zipfile=None,
     tests_require=[
         "nose >= 1.3.4",
@@ -112,8 +113,23 @@ setup(
     ],
     zip_safe=False,
     classifiers=[
-        "Programming Language :: Python :: 2.7",
+        'Development Status :: 4 - Beta',
+
+        'Intended Audience :: Developers',
+        
+        'Operating System :: MacOS',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: POSIX :: Linux',
+
+        'Topic :: System :: Networking',
+        'Topic :: System :: Hardware :: Hardware Drivers',
+        'Topic :: Software Development :: Embedded Systems',
+        
+        'License :: Other/Proprietary License',
+
+        'Programming Language :: Python :: 2.7',
     ],
+    keywords = 'nordic nrf51 nrf52 ble bluetooth dfu ota softdevice serialization nrfutil pc-nrfutil',
     cmdclass={
         'test': NoseTestCommand
     },

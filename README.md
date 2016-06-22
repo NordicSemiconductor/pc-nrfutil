@@ -74,14 +74,23 @@ Generate a package (.zip file) that you can later use with a mobile application 
 ```
 nrfutil pkg generate --help
 ```
-Below is an example of the generation of a package from an application's ```app.hex``` file:
+Below is an example of the generation of a package from an application's `app.hex` file:
 ```
 nrfutil pkg generate --application app.hex --key-file key.pem app_dfu_package.zip
 ```
 #### dfu
 This set of commands allow you to perform an actual firmware update over a serial or BLE connection.
 
-###### serial
+##### ble
+Perform a full DFU procedure over a BLE connection. This command takes several options that you can list using:
+```
+nrfutil dfu ble --help
+```
+
+##### serial
+
+**Note**: DFU over a serial line is currently disabled
+
 Perform a full DFU procedure over a serial (UART) line. This command takes several options that you can list using:
 ```
 nrfutil dfu serial --help
@@ -96,7 +105,7 @@ This set of commands allow you to generate and display cryptographic keys used t
 
 ##### generate
 Generate a private (signing) key and store it in a file in PEM format.
-The following will generate a private key and store it in a file named ```private.pem```:
+The following will generate a private key and store it in a file named `private.pem`:
 ```
 nrfutil keys generate private.pem
 ```
