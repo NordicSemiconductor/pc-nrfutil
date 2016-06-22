@@ -99,29 +99,19 @@ class ManifestGenerator(object):
                           separators=(',', ': '))
 
 
-class InitPacketData(object):
+class FWMetaData(object):
     def __init__(self,
                  hw_version=None,
                  fw_version=None,
                  softdevice_req=None,
-                 ext_packet_id=None,
-                 firmware_length=None,
-                 firmware_hash=None,
-                 firmware_crc16=None,
-                 init_packet_ecds=None
                  ):
         """
-        The InitPacketData data model.
+        The FWMetaData data model.
 
         :param int hw_version:  hardware version
         :param int fw_version:  application or bootloader version
         :param list softdevice_req: softdevice requirements
-        :param int ext_packet_id: packet extension id
-        :param int firmware_length: firmware length
-        :param str firmware_hash: firmware hash
-        :param int firmware_crc16: firmware CRC-16 calculated value
-        :param str init_packet_ecds: Init packet signature
-        :return: InitPacketData
+        :return:FWMetaData 
         """
         self.hw_version = hw_version
         self.fw_version = fw_version
@@ -168,8 +158,8 @@ class SoftdeviceBootloaderFirmware(Firmware):
             bin_file,
             dat_file,
             init_packet_data)
-        self.info_read_only_sd_size = sd_size
-        self.info_read_only_bl_size = bl_size
+        self.info_read_only_metadata.sd_size = sd_size
+        self.info_read_only_metadata.bl_size = bl_size
 
 
 class Manifest:
