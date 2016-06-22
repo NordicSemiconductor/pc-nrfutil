@@ -198,7 +198,7 @@ def pkg():
 @click.option('--hw-version',
               help='The hardware version. Default: 0xFFFFFFFF',
               type=BASED_INT_OR_NONE,
-              default=str(Package.DEFAULT_DEV_REV))
+              default=str(Package.DEFAULT_HW_VERSION))
 @click.option('--sd-req',
               help='The SoftDevice requirement. A list of SoftDevice versions (1 or more) '
                    'of which one must be present on the target device. '
