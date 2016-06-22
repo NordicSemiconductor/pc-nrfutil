@@ -44,7 +44,7 @@ import logging
 import binascii
 
 from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent
-from nordicsemi.exceptions          import NordicSemiException, IllegalStateException
+from pc_ble_driver_py.exceptions    import NordicSemiException, IllegalStateException
 from pc_ble_driver_py.ble_driver    import BLEDriver, BLEDriverObserver, BLEUUID, BLEAdvData, BLEGapConnParams, NordicSemiException
 from pc_ble_driver_py.ble_adapter   import BLEAdapter, BLEAdapterObserver, EvtSync
 
@@ -216,7 +216,7 @@ class DfuTransportBle(DfuTransport):
                     self.__stream_data(data     = init_packet[response['offset']:],
                                        crc      = expected_crc,
                                        offset   = response['offset'])
-                except ValidationError:
+                except ValidationException:
                     return False
 
             self.__execute()
@@ -233,7 +233,7 @@ class DfuTransportBle(DfuTransport):
                 self.__create_command(len(init_packet))
                 self.__stream_data(data=init_packet)
                 self.__execute()
-            except ValidationError:
+            except ValidationException:
                 pass
             break
         else:
@@ -263,7 +263,7 @@ class DfuTransportBle(DfuTransport):
                                                              crc    = response['crc'],
                                                              offset = response['offset'])
                     response['offset'] += len(to_send)
-                except ValidationError:
+                except ValidationException:
                     # Remove corrupted data.
                     response['offset'] -= remainder
                     response['crc']     = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
@@ -282,7 +282,7 @@ class DfuTransportBle(DfuTransport):
                     self.__create_data(len(data))
                     response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
                     self.__execute()
-                except ValidationError:
+                except ValidationException:
                     pass
                 break
             else:

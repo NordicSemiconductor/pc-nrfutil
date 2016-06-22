@@ -36,7 +36,7 @@
 #
 
 # Nordic libraries
-from nordicsemi.exceptions import NordicSemiException
+from pc_ble_driver_py.exceptions import NordicSemiException
 
 
 # TODO: Create query function that maps query-result strings with functions

@@ -36,9 +36,12 @@
 #
 
 """nrfutil command line tool."""
-import logging
 import os
+import sys
 import click
+import logging
+import subprocess
+sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent
@@ -48,10 +51,8 @@ from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
 from nordicsemi.dfu.util import query_func
-
-
-class nRFException(Exception):
-    pass
+from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
+from pc_ble_driver_py.ble_driver import BLEDriver
 
 
 def int_as_text_to_int(value):
@@ -62,7 +63,7 @@ def int_as_text_to_int(value):
             return int(value, 8)
         return int(value, 10)
     except ValueError:
-        raise nRFException('%s is not a valid integer' % value)
+        raise NordicSemiException('%s is not a valid integer' % value)
 
 
 class BasedIntOrNoneParamType(click.ParamType):
@@ -73,7 +74,7 @@ class BasedIntOrNoneParamType(click.ParamType):
             if value.lower() == 'none':
                 return 'none'
             return int_as_text_to_int(value)
-        except nRFException:
+        except NordicSemiException:
             self.fail('%s is not a valid integer' % value, param, ctx)
 
 BASED_INT_OR_NONE = BasedIntOrNoneParamType()
@@ -142,7 +143,7 @@ def display(key_file, key, format):
     signer = Signing()
 
     if not os.path.isfile(key_file):
-        raise nRFException("File not found: %s" % key_file)
+        raise NordicSemiException("File not found: %s" % key_file)
 
     signer.load_key(key_file)
 
@@ -246,8 +247,8 @@ def generate(zipfile,
             sd_req_list = sd_req.split(',')
             sd_req_list = map(int_as_text_to_int, sd_req_list)
         except ValueError:
-            raise nRFException("Could not parse value for --sd-req. "
-                               "Hex values should be prefixed with 0x.")
+            raise NordicSemiException("Could not parse value for --sd-req. "
+                                      "Hex values should be prefixed with 0x.")
 
     package = Package(hw_version,
                       application_version,
@@ -265,10 +266,7 @@ def generate(zipfile,
 
 
 global_bar = None
-
-
-def update_progress(progress=0, done=False, log_message=""):
-    del done, log_message  # Unused parameters
+def update_progress(progress=0):
     if global_bar:
         global_bar.update(progress)
 
@@ -300,35 +298,29 @@ def dfu():
               is_flag=True)
 def serial(package, port, baudrate, flowcontrol):
     """Perform a Device Firmware Update on a device with a bootloader that supports serial DFU."""
-    serial_backend = DfuTransportSerial(port, baudrate, flowcontrol)
-    serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu = Dfu(package, dfu_transport=serial_backend)
+    raise NotImplementedException('Serial transport currently is not supported')
 
-    click.echo("Updating target on {1} with DFU package {0}. Flow control is {2}."
-               .format(package, port, "enabled" if flowcontrol else "disabled"))
 
-    try:
-        with click.progressbar(length=100) as bar:
-            global global_bar
-            global_bar = bar
-            dfu.dfu_send_images()
+def enumerate_ports():
+    descs   = BLEDriver.enum_serial_ports()
+    click.echo('Please select connectivity serial port:')
+    choices = ['{}: {}'.format(d.port, d.serial_number) for d in descs]
+    for i, choice in enumerate(choices):
+        click.echo('\t{} : {}'.format(i, choice))
+    click.echo(' ')
 
-    except Exception as e:
-        click.echo("")
-        click.echo("Failed to update the target. Error is: {0}".format(e.message))
-        click.echo("")
-        click.echo("Possible causes:")
-        click.echo("- The bootloader, SoftDevice, or application on target "
-                   "does not match the requirements in the DFU package.")
-        click.echo("- The baud rate or flow control is not the same as in the target bootloader.")
-        click.echo("- The target is not in DFU mode. If using the SDK examples, "
-                   "press Button 4 and RESET and release both to enter DFU mode.")
+    while True:
+        try:
+            i = int(raw_input('Enter your choice: '))
+            if ((i >= 0) and (i < len(choices))):
+                return descs[i].port
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            click.echo("Failed to update the target. Error is: {0}".format(e.message))
+            pass
+        click.echo('\tTry again...')
 
-        return False
-
-    click.echo("Device programmed.")
-
-    return True
 
 @dfu.command(short_help="Update the firmware on a device over a BLE connection.")
 @click.option('-pkg', '--package',
@@ -338,7 +330,7 @@ def serial(package, port, baudrate, flowcontrol):
 @click.option('-p', '--port',
               help='Serial port COM port to which the connectivity IC is connected.',
               type=click.STRING,
-              required=True)
+              default=enumerate_ports)
 @click.option('-n', '--name',
               help='Device name.',
               type=click.STRING)
@@ -349,12 +341,14 @@ def ble(package, port, name, address):
     """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
     if name is None and address is None:
         name = 'DfuTarg'
+        click.echo("No target selected. Default device name: {} is used.".format(name))
 
     ble_backend = DfuTransportBle(serial_port=str(port),
                                   target_device_name=str(name),
                                   target_device_addr=str(address))
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend)
+
     try:
         with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
             global global_bar

@@ -41,7 +41,7 @@ import binascii
 import os
 
 # Nordic libraries
-from nordicsemi.exceptions import NotImplementedException
+from pc_ble_driver_py.exceptions import NotImplementedException
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 
 

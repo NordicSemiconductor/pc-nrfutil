@@ -47,7 +47,7 @@ from serial import Serial
 # Nordic Semiconductor imports
 from nordicsemi.dfu.util import slip_parts_to_four_bytes, slip_encode_esc_chars, int16_to_bytes, int32_to_bytes
 from nordicsemi.dfu import crc16
-from nordicsemi.exceptions import NordicSemiException
+from pc_ble_driver_py.exceptions import NordicSemiException
 from nordicsemi.dfu.dfu_transport import DfuTransport, DfuEvent
 
 
