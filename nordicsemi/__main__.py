@@ -304,21 +304,11 @@ def serial(package, port, baudrate, flowcontrol):
 def enumerate_ports():
     descs   = BLEDriver.enum_serial_ports()
     click.echo('Please select connectivity serial port:')
-    choices = ['{}: {}'.format(d.port, d.serial_number) for d in descs]
-    for i, choice in enumerate(choices):
-        click.echo('\t{} : {}'.format(i, choice))
-    click.echo(' ')
+    for i, choice in enumerate(descs):
+        click.echo('\t{} : {} - {}'.format(i, choice.port, choice.serial_number))
 
-    while True:
-        try:
-            i = int(raw_input('Enter your choice: '))
-            if ((i >= 0) and (i < len(choices))):
-                return descs[i].port
-        except KeyboardInterrupt:
-            raise
-        except Exception as e:
-            click.echo('\tTry again...')
-            pass
+    index = click.prompt('Enter your choice: ', type=click.IntRange(0, len(descs)))
+    return descs[index].port
 
 
 @dfu.command(short_help="Update the firmware on a device over a BLE connection.")
