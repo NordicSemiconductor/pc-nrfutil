@@ -94,9 +94,9 @@ Perform a full DFU procedure over a BLE connection. This command takes several o
 ```
 nrfutil dfu ble --help
 ```
-Below is an example of the execution of a DFU procedure of the file generated above over COM3, where the remote BLE device to be upgraded is called "MyDevice":
+Below is an example of the execution of a DFU procedure of the file generated above over BLE using a connectivity IC connected to COM3, where the remote BLE device to be upgraded is called "MyDevice":
 ```
-nrfutil dfu serial -pkg app_dfu_package.zip -p COM3 -n "MyDevice"
+nrfutil dfu ble -pkg app_dfu_package.zip -p COM3 -n "MyDevice"
 ```
 
 ##### serial

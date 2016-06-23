@@ -1,7 +1,0 @@
-pyserial >= 2.7
-enum34 >= 1.0.4
-click
-ecdsa >= 0.13
-behave
-protobuf
-pc_ble_driver_py >= 0.4.0
