@@ -167,9 +167,15 @@ class DfuTransportBle(DfuTransport):
         'ExtendedError'         : 0x0B,
     }
 
-    def __init__(self, serial_port, target_device_name=None, target_device_addr=None, baud_rate=115200):
+    def __init__(self,
+                 serial_port,
+                 target_device_name=None,
+                 target_device_addr=None,
+                 flash_connectivity=False,
+                 baud_rate=115200):
         super(DfuTransportBle, self).__init__()
         self.baud_rate          = baud_rate
+        self.flash_connectivity = flash_connectivity
         self.serial_port        = serial_port
         self.target_device_name = target_device_name
         self.target_device_addr = target_device_addr
@@ -181,8 +187,9 @@ class DfuTransportBle(DfuTransport):
             IllegalStateException('DFU Adapter is already opened')
 
         super(DfuTransportBle, self).open()
-        driver           = BLEDriver(serial_port   = self.serial_port,
-                                     baud_rate     = self.baud_rate)
+        driver           = BLEDriver(serial_port    = self.serial_port,
+                                     baud_rate      = self.baud_rate,
+                                     auto_flash     = self.flash_connectivity)
         adapter          = BLEAdapter(driver)
         self.dfu_adapter = DFUAdapter(adapter            = adapter,
                                       target_device_name = self.target_device_name,

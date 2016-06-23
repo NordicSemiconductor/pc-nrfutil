@@ -337,7 +337,11 @@ def enumerate_ports():
 @click.option('-a', '--address',
               help='Device address.',
               type=click.STRING)
-def ble(package, port, name, address):
+@click.option('-f', '--flash_connectivity',
+              help='Flash connectivity automatically. Default: disabled.',
+              type=click.BOOL,
+              is_flag=True)
+def ble(package, port, name, address, flash_connectivity):
     """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
     if name is None and address is None:
         name = 'DfuTarg'
@@ -345,7 +349,8 @@ def ble(package, port, name, address):
 
     ble_backend = DfuTransportBle(serial_port=str(port),
                                   target_device_name=str(name),
-                                  target_device_addr=str(address))
+                                  target_device_addr=str(address),
+                                  flash_connectivity=flash_connectivity)
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend)
 
