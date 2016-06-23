@@ -1,47 +1,58 @@
-# Copyright (c) 2015, Nordic Semiconductor
+#
+# Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
 #
-# * Redistributions of source code must retain the above copyright notice, this
+#   1. Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
+#   2. Redistributions in binary form must reproduce the above copyright notice, this
+#   list of conditions and the following disclaimer in the documentation and/or
+#   other materials provided with the distribution.
 #
-# * Neither the name of Nordic Semiconductor ASA nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
+#   3. Neither the name of Nordic Semiconductor ASA nor the names of other
+#   contributors to this software may be used to endorse or promote products
+#   derived from this software without specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#   4. This software must only be used in or with a processor manufactured by Nordic
+#   Semiconductor ASA, or in or with a processor manufactured by a third party that
+#   is used in combination with a processor manufactured by Nordic Semiconductor.
+#
+#   5. Any software provided in binary or object form under this license must not be
+#   reverse engineered, decompiled, modified and/or disassembled.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
 
 """nrfutil command line tool."""
-import logging
 import os
+import sys
 import click
+import logging
+import subprocess
+sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent
+from nordicsemi.dfu.dfu_transport_ble import DfuTransportBle
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
 from nordicsemi.dfu.util import query_func
-
-
-class nRFException(Exception):
-    pass
+from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
+from pc_ble_driver_py.ble_driver import BLEDriver
 
 
 def int_as_text_to_int(value):
@@ -52,7 +63,7 @@ def int_as_text_to_int(value):
             return int(value, 8)
         return int(value, 10)
     except ValueError:
-        raise nRFException('%s is not a valid integer' % value)
+        raise NordicSemiException('%s is not a valid integer' % value)
 
 
 class BasedIntOrNoneParamType(click.ParamType):
@@ -63,7 +74,7 @@ class BasedIntOrNoneParamType(click.ParamType):
             if value.lower() == 'none':
                 return 'none'
             return int_as_text_to_int(value)
-        except nRFException:
+        except NordicSemiException:
             self.fail('%s is not a valid integer' % value, param, ctx)
 
 BASED_INT_OR_NONE = BasedIntOrNoneParamType()
@@ -132,7 +143,7 @@ def display(key_file, key, format):
     signer = Signing()
 
     if not os.path.isfile(key_file):
-        raise nRFException("File not found: %s" % key_file)
+        raise NordicSemiException("File not found: %s" % key_file)
 
     signer.load_key(key_file)
 
@@ -158,15 +169,15 @@ def display(key_file, key, format):
         click.echo(signer.get_sk(format))
 
 
-@cli.group(short_help='Generate a Device Firmware Update package or perform DFU over a serial line.')
-def dfu():
+@cli.group(short_help='Generate a Device Firmware Update package.')
+def pkg():
     """
-    This set of commands supports Nordic DFU package generation for both over-the-air and serial device firmware updates.
+    This set of commands supports Nordic DFU package generation.
     """
     pass
 
 
-@dfu.command(short_help='Generate a firmware package for over-the-air firmware updates.')
+@pkg.command(short_help='Generate a firmware package for over-the-air firmware updates.')
 @click.argument('zipfile',
                 required=True,
                 type=click.Path())
@@ -180,14 +191,14 @@ def dfu():
 @click.option('--bootloader',
               help='The bootloader firmware file.',
               type=click.STRING)
-@click.option('--dev-revision',
-              help='The device revision. Default: 0xFFFF',
+@click.option('--bootloader-version',
+              help='The bootloader version. Default: 0xFFFFFFFF',
               type=BASED_INT_OR_NONE,
-              default=str(Package.DEFAULT_DEV_REV))
-@click.option('--dev-type',
-              help='The device type. Default: 0xFFFF',
+              default=str(Package.DEFAULT_BL_VERSION))
+@click.option('--hw-version',
+              help='The hardware version. Default: 0xFFFFFFFF',
               type=BASED_INT_OR_NONE,
-              default=str(Package.DEFAULT_DEV_TYPE))
+              default=str(Package.DEFAULT_HW_VERSION))
 @click.option('--sd-req',
               help='The SoftDevice requirement. A list of SoftDevice versions (1 or more) '
                    'of which one must be present on the target device. '
@@ -200,12 +211,12 @@ def dfu():
 @click.option('--key-file',
               help='The private (signing) key in PEM fomat.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
-def genpkg(zipfile,
+def generate(zipfile,
            application,
            application_version,
            bootloader,
-           dev_revision,
-           dev_type,
+           bootloader_version,
+           hw_version,
            sd_req,
            softdevice,
            key_file):
@@ -220,11 +231,11 @@ def genpkg(zipfile,
     if application_version == 'none':
         application_version = None
 
-    if dev_revision == 'none':
-        dev_revision = None
+    if bootloader_version == 'none':
+        bootloader_version = None
 
-    if dev_type == 'none':
-        dev_type = None
+    if hw_version == 'none':
+        hw_version = None
 
     sd_req_list = None
 
@@ -236,12 +247,12 @@ def genpkg(zipfile,
             sd_req_list = sd_req.split(',')
             sd_req_list = map(int_as_text_to_int, sd_req_list)
         except ValueError:
-            raise nRFException("Could not parse value for --sd-req. "
-                               "Hex values should be prefixed with 0x.")
+            raise NordicSemiException("Could not parse value for --sd-req. "
+                                      "Hex values should be prefixed with 0x.")
 
-    package = Package(dev_type,
-                      dev_revision,
+    package = Package(hw_version,
                       application_version,
+                      bootloader_version,
                       sd_req_list,
                       application,
                       bootloader,
@@ -255,15 +266,19 @@ def genpkg(zipfile,
 
 
 global_bar = None
-
-
-def update_progress(progress=0, done=False, log_message=""):
-    del done, log_message  # Unused parameters
+def update_progress(progress=0):
     if global_bar:
-        global_bar.update(max(1, progress))
+        global_bar.update(progress)
+
+@cli.group(short_help='Perform a Device Firmware Update over a BLE or serial transport.')
+def dfu():
+    """
+    This set of commands supports Device Firmware Upgrade procedures over both BLE and serial transports.
+    """
+    pass
 
 
-@dfu.command(short_help="Program a device that supports serial DFU.")
+@dfu.command(short_help="Update the firmware on a device over a serial connection.")
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
@@ -283,15 +298,53 @@ def update_progress(progress=0, done=False, log_message=""):
               is_flag=True)
 def serial(package, port, baudrate, flowcontrol):
     """Perform a Device Firmware Update on a device with a bootloader that supports serial DFU."""
-    serial_backend = DfuTransportSerial(port, baudrate, flowcontrol)
-    serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu = Dfu(package, dfu_transport=serial_backend)
+    raise NotImplementedException('Serial transport currently is not supported')
 
-    click.echo("Updating target on {1} with DFU package {0}. Flow control is {2}."
-               .format(package, port, "enabled" if flowcontrol else "disabled"))
+
+def enumerate_ports():
+    descs   = BLEDriver.enum_serial_ports()
+    click.echo('Please select connectivity serial port:')
+    for i, choice in enumerate(descs):
+        click.echo('\t{} : {} - {}'.format(i, choice.port, choice.serial_number))
+
+    index = click.prompt('Enter your choice: ', type=click.IntRange(0, len(descs)))
+    return descs[index].port
+
+
+@dfu.command(short_help="Update the firmware on a device over a BLE connection.")
+@click.option('-pkg', '--package',
+              help='Filename of the DFU package.',
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
+              required=True)
+@click.option('-p', '--port',
+              help='Serial port COM port to which the connectivity IC is connected.',
+              type=click.STRING,
+              default=enumerate_ports)
+@click.option('-n', '--name',
+              help='Device name.',
+              type=click.STRING)
+@click.option('-a', '--address',
+              help='Device address.',
+              type=click.STRING)
+@click.option('-f', '--flash_connectivity',
+              help='Flash connectivity firmware automatically. Default: disabled.',
+              type=click.BOOL,
+              is_flag=True)
+def ble(package, port, name, address, flash_connectivity):
+    """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
+    if name is None and address is None:
+        name = 'DfuTarg'
+        click.echo("No target selected. Default device name: {} is used.".format(name))
+
+    ble_backend = DfuTransportBle(serial_port=str(port),
+                                  target_device_name=str(name),
+                                  target_device_addr=str(address),
+                                  flash_connectivity=flash_connectivity)
+    ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend)
 
     try:
-        with click.progressbar(length=100) as bar:
+        with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
             global global_bar
             global_bar = bar
             dfu.dfu_send_images()
@@ -300,19 +353,11 @@ def serial(package, port, baudrate, flowcontrol):
         click.echo("")
         click.echo("Failed to update the target. Error is: {0}".format(e.message))
         click.echo("")
-        click.echo("Possible causes:")
-        click.echo("- The bootloader, SoftDevice, or application on target "
-                   "does not match the requirements in the DFU package.")
-        click.echo("- The baud rate or flow control is not the same as in the target bootloader.")
-        click.echo("- The target is not in DFU mode. If using the SDK examples, "
-                   "press Button 4 and RESET and release both to enter DFU mode.")
 
         return False
 
     click.echo("Device programmed.")
-
     return True
-
 
 if __name__ == '__main__':
     cli()

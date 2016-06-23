@@ -1,32 +1,40 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2015, Nordic Semiconductor
+# Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
 #
-# * Redistributions of source code must retain the above copyright notice, this
+#   1. Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
+#   2. Redistributions in binary form must reproduce the above copyright notice, this
+#   list of conditions and the following disclaimer in the documentation and/or
+#   other materials provided with the distribution.
 #
-# * Neither the name of Nordic Semiconductor ASA nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
+#   3. Neither the name of Nordic Semiconductor ASA nor the names of other
+#   contributors to this software may be used to endorse or promote products
+#   derived from this software without specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#   4. This software must only be used in or with a processor manufactured by Nordic
+#   Semiconductor ASA, or in or with a processor manufactured by a third party that
+#   is used in combination with a processor manufactured by Nordic Semiconductor.
+#
+#   5. Any software provided in binary or object form under this license must not be
+#   reverse engineered, decompiled, modified and/or disassembled.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
 
 """
 Setup script for nrfutil.
@@ -73,6 +81,7 @@ dll_excludes = [
 build_dir = os.environ.get("NRFUTIL_BUILD_DIR", "./{}".format(version.NRFUTIL_VERSION))
 description = """A Python package that includes the nrfutil utility and the nordicsemi library"""
 
+common_requirements=["pyserial >= 2.7", "enum34 >= 1.0.4", "click", "ecdsa >= 0.13", "behave", "protobuf", "pc_ble_driver_py >= 0.4.0" ]
 
 class NoseTestCommand(TestCommand):
     def finalize_options(self):
@@ -84,19 +93,19 @@ class NoseTestCommand(TestCommand):
         import nose
         nose.run_exit(argv=['nosetests', '--with-xunit', '--xunit-file=test-reports/unittests.xml'])
 
-common_requirements=[]
-
 setup(
     name="nrfutil",
     version=version.NRFUTIL_VERSION,
-    license="Nordic Semicondictor proprietary license",
+    license="Modified BSD License",
+    author = "Nordic Semiconductor ASA",
     url="https://github.com/NordicSemiconductor/pc-nrfutil",
     description="Nordic Semiconductor nrfutil utility and Python library",
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
-    include_package_data=False,
+    package_data = { 
+                '': ['*.txt']
+    },
     install_requires=common_requirements,
-    setup_requires=common_requirements,
     zipfile=None,
     tests_require=[
         "nose >= 1.3.4",
@@ -104,8 +113,23 @@ setup(
     ],
     zip_safe=False,
     classifiers=[
-        "Programming Language :: Python :: 2.7",
+        'Development Status :: 4 - Beta',
+
+        'Intended Audience :: Developers',
+        
+        'Operating System :: MacOS',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: POSIX :: Linux',
+
+        'Topic :: System :: Networking',
+        'Topic :: System :: Hardware :: Hardware Drivers',
+        'Topic :: Software Development :: Embedded Systems',
+        
+        'License :: Other/Proprietary License',
+
+        'Programming Language :: Python :: 2.7',
     ],
+    keywords = 'nordic nrf51 nrf52 ble bluetooth dfu ota softdevice serialization nrfutil pc-nrfutil',
     cmdclass={
         'test': NoseTestCommand
     },

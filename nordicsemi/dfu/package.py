@@ -1,30 +1,39 @@
-# Copyright (c) 2015, Nordic Semiconductor
+#
+# Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
 #
-# * Redistributions of source code must retain the above copyright notice, this
+#   1. Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
+#   2. Redistributions in binary form must reproduce the above copyright notice, this
+#   list of conditions and the following disclaimer in the documentation and/or
+#   other materials provided with the distribution.
 #
-# * Neither the name of Nordic Semiconductor ASA nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
+#   3. Neither the name of Nordic Semiconductor ASA nor the names of other
+#   contributors to this software may be used to endorse or promote products
+#   derived from this software without specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#   4. This software must only be used in or with a processor manufactured by Nordic
+#   Semiconductor ASA, or in or with a processor manufactured by a third party that
+#   is used in combination with a processor manufactured by Nordic Semiconductor.
+#
+#   5. Any software provided in binary or object form under this license must not be
+#   reverse engineered, decompiled, modified and/or disassembled.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
 
 # Python standard library
 import os
@@ -38,7 +47,7 @@ import hashlib
 
 
 # Nordic libraries
-from nordicsemi.exceptions import NordicSemiException
+from pc_ble_driver_py.exceptions import NordicSemiException
 from nordicsemi.dfu.nrfhex import *
 from nordicsemi.dfu.init_packet_pb import *
 from nordicsemi.dfu.manifest import ManifestGenerator, Manifest
@@ -56,16 +65,15 @@ HexTypeToInitPacketFwTypemap = {
 
 
 class PacketField(Enum):
-    DEVICE_TYPE = 1
-    DEVICE_REVISION = 2
-    APP_VERSION = 3
-    REQUIRED_SOFTDEVICES_ARRAY = 4
-    OPT_DATA = 5
-    NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID = 6
-    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH = 7
-    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH = 8
-    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16 = 9
-    NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS = 10
+    HW_VERSION = 1
+    FW_VERSION = 2
+    REQUIRED_SOFTDEVICES_ARRAY = 3
+    OPT_DATA = 4
+    NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID = 5
+    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH = 6
+    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH = 7
+    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16 = 8
+    NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS = 9
 
 
 
@@ -99,17 +107,17 @@ class Package(object):
 
     """
 
-    DEFAULT_DEV_TYPE = 0xFFFF
-    DEFAULT_DEV_REV = 0xFFFF
+    DEFAULT_HW_VERSION = 0xFFFFFFFF
     DEFAULT_APP_VERSION = 0xFFFFFFFF
+    DEFAULT_BL_VERSION = 0xFFFFFFFF
     DEFAULT_SD_REQ = [0xFFFE]
     DEFAULT_DFU_VER = 0.5
     MANIFEST_FILENAME = "manifest.json"
 
     def __init__(self,
-                 dev_type=DEFAULT_DEV_TYPE,
-                 dev_rev=DEFAULT_DEV_REV,
+                 hw_version=DEFAULT_HW_VERSION,
                  app_version=DEFAULT_APP_VERSION,
+                 bl_version=DEFAULT_BL_VERSION,
                  sd_req=DEFAULT_SD_REQ,
                  app_fw=None,
                  bootloader_fw=None,
@@ -118,9 +126,9 @@ class Package(object):
         """
         Constructor that requires values used for generating a Nordic DFU package.
 
-        :param int dev_type: Device type init-packet field
-        :param int dev_rev: Device revision init-packet field
+        :param int hw_version: Hardware version init-packet field
         :param int app_version: App version init-packet field
+        :param int bl_version: Bootloader version init-packet field
         :param list sd_req: Softdevice Requirement init-packet field
         :param str app_fw: Path to application firmware file
         :param str bootloader_fw: Path to bootloader firmware file
@@ -131,14 +139,8 @@ class Package(object):
 
         init_packet_vars = {}
 
-        if dev_type is not None:
-            init_packet_vars[PacketField.DEVICE_TYPE] = dev_type
-
-        if dev_rev is not None:
-            init_packet_vars[PacketField.DEVICE_REVISION] = dev_rev
-
-        if app_version is not None:
-            init_packet_vars[PacketField.APP_VERSION] = app_version
+        if hw_version is not None:
+            init_packet_vars[PacketField.HW_VERSION] = hw_version
 
         if sd_req is not None:
             init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
@@ -148,16 +150,19 @@ class Package(object):
         if app_fw:
             self.__add_firmware_info(HexType.APPLICATION,
                                      app_fw,
+                                     app_version,
                                      init_packet_vars)
 
         if bootloader_fw:
             self.__add_firmware_info(HexType.BOOTLOADER,
                                      bootloader_fw,
+                                     bootloader_version,
                                      init_packet_vars)
 
         if softdevice_fw:
             self.__add_firmware_info(HexType.SOFTDEVICE,
                                      softdevice_fw,
+                                     0xFFFFFFFF,
                                      init_packet_vars)
 
         if key_file:
@@ -195,6 +200,7 @@ class Package(object):
 
             self.__add_firmware_info(HexType.SD_BL,
                                      sd_bl_file_path,
+                                     bootloader_fw_dat[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],  # use bootloader version in combination with SD
                                      softdevice_fw_data[FirmwareKeys.INIT_PACKET_DATA],
                                      softdevice_size,
                                      bootloader_size)
@@ -230,8 +236,8 @@ class Package(object):
                             app_size=app_size,
                             sd_size=sd_size,
                             bl_size=bl_size,
-                            fw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.APP_VERSION],
-                            hw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.DEVICE_REVISION],
+                            fw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],
+                            hw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.HW_VERSION],
                             sd_req=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.REQUIRED_SOFTDEVICES_ARRAY])
 
             signer = Signing()
@@ -327,7 +333,7 @@ class Package(object):
     def _is_bootloader_softdevice_combination(firmwares):
         return (HexType.BOOTLOADER in firmwares) and (HexType.SOFTDEVICE in firmwares)
 
-    def __add_firmware_info(self, firmware_type, filename, init_packet_data, sd_size=None, bl_size=None):
+    def __add_firmware_info(self, firmware_type, firmware_version, filename, init_packet_data, sd_size=None, bl_size=None):
         self.firmwares_data[firmware_type] = {
             FirmwareKeys.FIRMWARE_FILENAME: filename,
             FirmwareKeys.INIT_PACKET_DATA: init_packet_data.copy(),
@@ -337,6 +343,9 @@ class Package(object):
         if firmware_type == HexType.SD_BL:
             self.firmwares_data[firmware_type][FirmwareKeys.SD_SIZE] = sd_size
             self.firmwares_data[firmware_type][FirmwareKeys.BL_SIZE] = bl_size
+        
+        if firmware_version is not None:
+            self.firmwares_data[firmware_type][FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION] = firmware_version
 
     @staticmethod
     def normalize_firmware_to_bin(work_directory, firmware_path):
