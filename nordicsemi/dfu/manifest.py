@@ -1,30 +1,39 @@
-# Copyright (c) 2015, Nordic Semiconductor
+#
+# Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
 #
-# * Redistributions of source code must retain the above copyright notice, this
+#   1. Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
-# * Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
+#   2. Redistributions in binary form must reproduce the above copyright notice, this
+#   list of conditions and the following disclaimer in the documentation and/or
+#   other materials provided with the distribution.
 #
-# * Neither the name of Nordic Semiconductor ASA nor the names of its
-#   contributors may be used to endorse or promote products derived from
-#   this software without specific prior written permission.
+#   3. Neither the name of Nordic Semiconductor ASA nor the names of other
+#   contributors to this software may be used to endorse or promote products
+#   derived from this software without specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#   4. This software must only be used in or with a processor manufactured by Nordic
+#   Semiconductor ASA, or in or with a processor manufactured by a third party that
+#   is used in combination with a processor manufactured by Nordic Semiconductor.
+#
+#   5. Any software provided in binary or object form under this license must not be
+#   reverse engineered, decompiled, modified and/or disassembled.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
 
 # Python libraries
 import json
@@ -32,7 +41,7 @@ import binascii
 import os
 
 # Nordic libraries
-from nordicsemi.exceptions import NotImplementedException
+from pc_ble_driver_py.exceptions import NotImplementedException
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 
 
@@ -90,41 +99,23 @@ class ManifestGenerator(object):
                           separators=(',', ': '))
 
 
-class InitPacketData(object):
+class FWMetaData(object):
     def __init__(self,
-                 device_type=None,
-                 device_revision=None,
-                 application_version=None,
+                 hw_version=None,
+                 fw_version=None,
                  softdevice_req=None,
-                 ext_packet_id=None,
-                 firmware_length=None,
-                 firmware_hash=None,
-                 firmware_crc16=None,
-                 init_packet_ecds=None
                  ):
         """
-        The InitPacketData data model.
+        The FWMetaData data model.
 
-        :param int device_type:  device type
-        :param int device_revision: device revision
-        :param int application_version:  application version
+        :param int hw_version:  hardware version
+        :param int fw_version:  application or bootloader version
         :param list softdevice_req: softdevice requirements
-        :param int ext_packet_id: packet extension id
-        :param int firmware_length: firmware length
-        :param str firmware_hash: firmware hash
-        :param int firmware_crc16: firmware CRC-16 calculated value
-        :param str init_packet_ecds: Init packet signature
-        :return: InitPacketData
+        :return:FWMetaData 
         """
-        self.device_type = device_type
-        self.device_revision = device_revision
-        self.application_version = application_version
+        self.hw_version = hw_version
+        self.fw_version = fw_version
         self.softdevice_req = softdevice_req
-        self.ext_packet_id = ext_packet_id
-        self.firmware_length = firmware_length
-        self.firmware_hash = firmware_hash
-        self.firmware_crc16 = firmware_crc16
-        self.init_packet_ecds = init_packet_ecds
 
 
 class Firmware(object):
@@ -144,7 +135,7 @@ class Firmware(object):
         self.bin_file = bin_file
 
         if init_packet_data:
-            self.init_packet_data = InitPacketData(**init_packet_data)
+            self.info_read_only_metadata = InitPacketData(**init_packet_data)
 
 
 class SoftdeviceBootloaderFirmware(Firmware):
@@ -167,8 +158,8 @@ class SoftdeviceBootloaderFirmware(Firmware):
             bin_file,
             dat_file,
             init_packet_data)
-        self.sd_size = sd_size
-        self.bl_size = bl_size
+        self.info_read_only_metadata.sd_size = sd_size
+        self.info_read_only_metadata.bl_size = bl_size
 
 
 class Manifest:
