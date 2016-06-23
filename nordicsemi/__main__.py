@@ -317,9 +317,8 @@ def enumerate_ports():
         except KeyboardInterrupt:
             raise
         except Exception as e:
-            click.echo("Failed to update the target. Error is: {0}".format(e.message))
+            click.echo('\tTry again...')
             pass
-        click.echo('\tTry again...')
 
 
 @dfu.command(short_help="Update the firmware on a device over a BLE connection.")
@@ -338,7 +337,7 @@ def enumerate_ports():
               help='Device address.',
               type=click.STRING)
 @click.option('-f', '--flash_connectivity',
-              help='Flash connectivity automatically. Default: disabled.',
+              help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
 def ble(package, port, name, address, flash_connectivity):
