@@ -1,4 +1,4 @@
-# nrfutil
+# pc-nrfutil
 
 pc-nrfutil is a Python package that includes the `nrfutil` command line utility and the `nordicsemi` library.
 
@@ -29,21 +29,28 @@ that you are using you will need to select a release of this tool compatible wit
 * Version 0.5.1 generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
 * Versions 1.0.0 and later generate modern firmware packages compatible with **nRF SDK 11.1 and newer**
 
-## Prerequisites
+## Installing from PyPI
 
-To install nrfutil the following prerequisites must be satisfied:
+To install the latest published version from the Python Package Index simply type:
+
+    pip install pc-nrfutil
+
+## Installation from source
+
+### Prerequisites
+
+To install nrfutil from the the following prerequisites must be satisfied:
 
 * Python 2.7 (2.7.6 or newer, not Python 3)
 * pip (https://pip.pypa.io/en/stable/installing.html)
 * setuptools (upgrade to latest version: pip install -U setuptools)
-* install required modules: pip install -r requirements.txt
 
 py2exe prerequisites (Windows only):  
 
 * py2exe (Windows only) (v0.6.9) (pip install http://sourceforge.net/projects/py2exe/files/latest/download?source=files)
 * VC compiler for Python (Windows only) (http://www.microsoft.com/en-us/download/confirmation.aspx?id=44266)
 
-## Installation
+### Installation procedure
 
 To install the library to the local Python site-packages and script folder:  
 ```
@@ -78,6 +85,7 @@ Below is an example of the generation of a package from an application's `app.he
 ```
 nrfutil pkg generate --application app.hex --key-file key.pem app_dfu_package.zip
 ```
+
 #### dfu
 This set of commands allow you to perform an actual firmware update over a serial or BLE connection.
 
@@ -86,9 +94,12 @@ Perform a full DFU procedure over a BLE connection. This command takes several o
 ```
 nrfutil dfu ble --help
 ```
+Below is an example of the execution of a DFU procedure of the file generated above over COM3, where the remote BLE device to be upgraded is called "MyDevice":
+```
+nrfutil dfu serial -pkg app_dfu_package.zip -p COM3 -n "MyDevice"
+```
 
 ##### serial
-
 **Note**: DFU over a serial line is currently disabled
 
 Perform a full DFU procedure over a serial (UART) line. This command takes several options that you can list using:
