@@ -3,7 +3,7 @@
 [![Latest version](https://img.shields.io/pypi/v/nrfutil.svg)](https://pypi.python.org/pypi/nrfutil)
 [![License](https://img.shields.io/pypi/l/nrfutil.svg)](https://pypi.python.org/pypi/nrfutil)
 
-pc-nrfutil is a Python package that includes the `nrfutil` command line utility and the `nordicsemi` library.
+nrfutil is a Python package that includes the `nrfutil` command line utility and the `nordicsemi` library.
 
 ## Introduction
 
@@ -36,7 +36,7 @@ that you are using you will need to select a release of this tool compatible wit
 
 To install the latest published version from the Python Package Index simply type:
 
-    pip install pc-nrfutil
+    pip install nrfutil
 
 ## Installation from source
 
