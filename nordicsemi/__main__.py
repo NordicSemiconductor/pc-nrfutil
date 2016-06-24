@@ -39,6 +39,7 @@
 import os
 import sys
 import click
+import time
 import logging
 import subprocess
 sys.path.append(os.getcwd())
@@ -52,7 +53,7 @@ from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
 from nordicsemi.dfu.util import query_func
 from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
-from pc_ble_driver_py.ble_driver import BLEDriver
+from pc_ble_driver_py.ble_driver import BLEDriver, Flasher
 
 
 def int_as_text_to_int(value):
@@ -336,28 +337,29 @@ def ble(package, port, name, address, flash_connectivity):
         name = 'DfuTarg'
         click.echo("No target selected. Default device name: {} is used.".format(name))
 
+    if flash_connectivity:
+        flasher = Flasher(serial_port=port) 
+        if flasher.fw_check():
+            click.echo("Connectivity already flashed with firmware.")
+        else:
+            click.echo("Flashing connectivity ")
+            flasher.fw_flash()
+            click.echo("Connectivity flashed")
+        flasher.reset()
+        time.sleep(1)
+
     ble_backend = DfuTransportBle(serial_port=str(port),
                                   target_device_name=str(name),
-                                  target_device_addr=str(address),
-                                  flash_connectivity=flash_connectivity)
+                                  target_device_addr=str(address))
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend)
 
-    try:
-        with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
-            global global_bar
-            global_bar = bar
-            dfu.dfu_send_images()
-
-    except Exception as e:
-        click.echo("")
-        click.echo("Failed to update the target. Error is: {0}".format(e.message))
-        click.echo("")
-
-        return False
+    with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
+        global global_bar
+        global_bar = bar
+        dfu.dfu_send_images()
 
     click.echo("Device programmed.")
-    return True
 
 if __name__ == '__main__':
     cli()
