@@ -148,22 +148,22 @@ class Package(object):
         self.firmwares_data = {}
 
         if app_fw:
-            self.__add_firmware_info(HexType.APPLICATION,
-                                     app_fw,
-                                     app_version,
-                                     init_packet_vars)
+            self.__add_firmware_info(firmware_type=HexType.APPLICATION,
+                                     firmware_version=app_version,
+                                     filename=app_fw,
+                                     init_packet_data=init_packet_vars)
 
         if bootloader_fw:
-            self.__add_firmware_info(HexType.BOOTLOADER,
-                                     bootloader_fw,
-                                     bootloader_version,
-                                     init_packet_vars)
+            self.__add_firmware_info(firmware_type=HexType.BOOTLOADER,
+                                     firmware_version=bootloader_version,
+                                     filename=bootloader_fw,
+                                     init_packet_data=init_packet_vars)
 
         if softdevice_fw:
-            self.__add_firmware_info(HexType.SOFTDEVICE,
-                                     softdevice_fw,
-                                     0xFFFFFFFF,
-                                     init_packet_vars)
+            self.__add_firmware_info(firmware_type=HexType.SOFTDEVICE,
+                                     firmware_version=0xFFFFFFFF,
+                                     filename=softdevice_fw,
+                                     init_packet_data=init_packet_vars)
 
         if key_file:
             self.key_file = key_file
