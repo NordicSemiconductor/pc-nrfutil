@@ -319,26 +319,35 @@ def enumerate_ports():
               required=True)
 @click.option('-p', '--port',
               help='Serial port COM port to which the connectivity IC is connected.',
-              type=click.STRING,
-              default=enumerate_ports)
+              type=click.STRING)
 @click.option('-n', '--name',
               help='Device name.',
               type=click.STRING)
 @click.option('-a', '--address',
               help='Device address.',
               type=click.STRING)
+@click.option('-snr', '--jlink_snr',
+              help='Jlink serial number.',
+              type=click.STRING)
 @click.option('-f', '--flash_connectivity',
               help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
-def ble(package, port, name, address, flash_connectivity):
+def ble(package, port, name, address, jlink_snr, flash_connectivity):
     """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
     if name is None and address is None:
         name = 'DfuTarg'
         click.echo("No target selected. Default device name: {} is used.".format(name))
 
+    if port is None and jlink_snr is not None:
+        click.echo("Please specify also serial port.")
+        return
+
+    elif port is None:
+        port = enumerate_ports()
+
     if flash_connectivity:
-        flasher = Flasher(serial_port=port) 
+        flasher = Flasher(serial_port=port, snr = jlink_snr) 
         if flasher.fw_check():
             click.echo("Connectivity already flashed with firmware.")
         else:
