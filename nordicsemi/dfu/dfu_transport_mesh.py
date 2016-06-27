@@ -147,7 +147,7 @@ class DfuTransportMesh(DfuTransport):
     DEFAULT_SERIAL_PORT_TIMEOUT = 5.0  # Timeout time on serial port read
     ACK_PACKET_TIMEOUT = 1.0  # Timeout time for for ACK packet received before reporting timeout through event system
     SEND_INIT_PACKET_WAIT_TIME = 0.1  # Time to wait before communicating with bootloader after init packet is sent
-    SEND_START_DFU_WAIT_TIME = 0.2  # Time to wait before communicating with bootloader after start DFU packet is sent
+    SEND_START_DFU_WAIT_TIME = 1.0  # Time to wait before communicating with bootloader after start DFU packet is sent
     SEND_DATA_PACKET_WAIT_TIME = 0.5 # Time between each data packet
     RETRY_WAIT_TIME = 0.5 # Time to wait before attempting to retransmit a packet
     DFU_PACKET_MAX_SIZE = 16  # The DFU packet max size
