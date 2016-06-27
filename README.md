@@ -38,6 +38,8 @@ To install the latest published version from the Python Package Index simply typ
 
     pip install nrfutil
 
+**Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
+
 ## Installation from source
 
 ### Prerequisites
@@ -64,7 +66,10 @@ To generate a self-contained Windows exe version of the utility (Windows only):
 ```
 python setup.py py2exe
 ```
-NOTE: Some anti-virus programs will stop py2exe from executing correctly when it modifies the .exe file.
+
+**Note**: Some anti-virus programs will stop py2exe from executing correctly when it modifies the .exe file.
+
+**Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
 ## Usage
 
