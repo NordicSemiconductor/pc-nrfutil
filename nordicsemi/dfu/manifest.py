@@ -63,8 +63,8 @@ class ManifestGenerator(object):
 
             if key == HexType.SD_BL:
                 _firmware = SoftdeviceBootloaderFirmware()
-                _firmware.bl_size = firmware_dict[FirmwareKeys.BL_SIZE]
-                _firmware.sd_size = firmware_dict[FirmwareKeys.SD_SIZE]
+                _firmware.info_read_only_metadata.bl_size = firmware_dict[FirmwareKeys.BL_SIZE]
+                _firmware.info_read_only_metadata.sd_size = firmware_dict[FirmwareKeys.SD_SIZE]
             else:
                 _firmware = Firmware()
 
