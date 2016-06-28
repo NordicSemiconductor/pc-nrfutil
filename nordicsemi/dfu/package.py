@@ -155,7 +155,7 @@ class Package(object):
 
         if bootloader_fw:
             self.__add_firmware_info(firmware_type=HexType.BOOTLOADER,
-                                     firmware_version=bootloader_version,
+                                     firmware_version=bl_version,
                                      filename=bootloader_fw,
                                      init_packet_data=init_packet_vars)
 
