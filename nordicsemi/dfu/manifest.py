@@ -63,6 +63,7 @@ class ManifestGenerator(object):
 
             if key == HexType.SD_BL:
                 _firmware = SoftdeviceBootloaderFirmware()
+                _firmware.info_read_only_metadata = FWMetaData()
                 _firmware.info_read_only_metadata.bl_size = firmware_dict[FirmwareKeys.BL_SIZE]
                 _firmware.info_read_only_metadata.sd_size = firmware_dict[FirmwareKeys.SD_SIZE]
             else:
@@ -128,47 +129,41 @@ class Firmware(object):
     def __init__(self,
                  bin_file=None,
                  dat_file=None,
-                 init_packet_data=None):
+                 info_read_only_metadata=None):
         """
         The firmware datamodel
 
         :param str bin_file: Firmware binary file
         :param str dat_file: Firmware .dat file (init packet for Nordic DFU)
-        :param dict init_packet_data:  Initial packet data
+        :param int info_read_only_metadata: The metadata about this firwmare image
         :return:
         """
         self.dat_file = dat_file
         self.bin_file = bin_file
 
-        if init_packet_data:
-            self.info_read_only_metadata = FWMetaData(**init_packet_data)
+        if info_read_only_metadata:
+            self.info_read_only_metadata = FWMetaData(**info_read_only_metadata)
         else:
-            self.info_read_only_metadata = FWMetaData()
+            self.info_read_only_metadata = None
 
 
 class SoftdeviceBootloaderFirmware(Firmware):
     def __init__(self,
                  bin_file=None,
                  dat_file=None,
-                 init_packet_data=None,
-                 sd_size=None,
-                 bl_size=None):
+                 info_read_only_metadata=None):
         """
         The SoftdeviceBootloaderFirmware data model
 
         :param str bin_file: Firmware binary file
         :param str dat_file: Firmware .dat file (init packet for Nordic DFU)
-        :param int sd_size: The softdevice size
-        :param int bl_size: The bootloader size
+        :param int info_read_only_metadata: The metadata about this firwmare image
         :return: SoftdeviceBootloaderFirmware
         """
         super(SoftdeviceBootloaderFirmware, self).__init__(
             bin_file,
             dat_file,
-            init_packet_data)
-        self.info_read_only_metadata.sd_size = sd_size
-        self.info_read_only_metadata.bl_size = bl_size
-
+            info_read_only_metadata)
 
 class Manifest:
     def __init__(self,
