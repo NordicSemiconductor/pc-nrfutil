@@ -198,12 +198,12 @@ class Package(object):
             softdevice_size = nrf_hex.size()
             bootloader_size = nrf_hex.bootloadersize()
 
-            self.__add_firmware_info(HexType.SD_BL,
-                                     sd_bl_file_path,
-                                     bootloader_fw_dat[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],  # use bootloader version in combination with SD
-                                     softdevice_fw_data[FirmwareKeys.INIT_PACKET_DATA],
-                                     softdevice_size,
-                                     bootloader_size)
+            self.__add_firmware_info(firmware_type=HexType.SD_BL,
+                                     firmware_version=bootloader_fw_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],  # use bootloader version in combination with SD
+                                     filename=sd_bl_file_path,
+                                     init_packet_data=softdevice_fw_data[FirmwareKeys.INIT_PACKET_DATA],
+                                     sd_size=softdevice_size,
+                                     bl_size=bootloader_size)
 
         for key, firmware_data in self.firmwares_data.iteritems():
 

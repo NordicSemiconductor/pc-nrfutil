@@ -104,6 +104,8 @@ class FWMetaData(object):
                  hw_version=None,
                  fw_version=None,
                  softdevice_req=None,
+                 sd_size=None,
+                 bl_size=None
                  ):
         """
         The FWMetaData data model.
@@ -111,11 +113,15 @@ class FWMetaData(object):
         :param int hw_version:  hardware version
         :param int fw_version:  application or bootloader version
         :param list softdevice_req: softdevice requirements
+        :param int sd_size SoftDevice size
+        :param int bl_size Bootloader size
         :return:FWMetaData 
         """
         self.hw_version = hw_version
         self.fw_version = fw_version
         self.softdevice_req = softdevice_req
+        self.sd_size = sd_size
+        self.bl_size = bl_size
 
 
 class Firmware(object):
@@ -135,7 +141,9 @@ class Firmware(object):
         self.bin_file = bin_file
 
         if init_packet_data:
-            self.info_read_only_metadata = InitPacketData(**init_packet_data)
+            self.info_read_only_metadata = FWMetaData(**init_packet_data)
+        else:
+            self.info_read_only_metadata = FWMetaData()
 
 
 class SoftdeviceBootloaderFirmware(Firmware):
