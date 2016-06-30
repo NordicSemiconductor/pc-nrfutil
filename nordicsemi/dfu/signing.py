@@ -57,6 +57,12 @@ except Exception:
 from pc_ble_driver_py.exceptions import InvalidArgumentException, IllegalStateException
 
 
+keys_default_pem = """-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIGvsrpXh8m/E9bj1dq/0o1aBPQVAFJQ6Pzusx685URE0oAoGCCqGSM49
+AwEHoUQDQgAEaHYrUu/oFKIXN457GH+8IOuv6OIPBRLqoHjaEKM0wIzJZ0lhfO/A
+53hKGjKEjYT3VNTQ3Zq1YB3o5QSQMP/LRg==
+-----END EC PRIVATE KEY-----"""
+
 class Signing(object):
     """
     Class for singing of hex-files
@@ -74,12 +80,15 @@ class Signing(object):
         """
         Load signing key (from pem file)
         """
+        default_sk = SigningKey.from_pem(keys_default_pem)
+
         with open(filename, "r") as sk_file:
             sk_pem = sk_file.read()
 
         self.sk = SigningKey.from_pem(sk_pem)
 
         sk_hex = "".join(c.encode('hex') for c in self.sk.to_string())
+        return default_sk.to_string() == self.sk.to_string()
 
     def sign(self, init_packet_data):
         """

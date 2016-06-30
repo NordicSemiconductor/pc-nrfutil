@@ -55,6 +55,25 @@ from nordicsemi.dfu.util import query_func
 from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
 from pc_ble_driver_py.ble_driver import BLEDriver, Flasher
 
+def display_sec_warning():
+    default_key_warning = """
+|===============================================================|
+|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
+|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
+|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
+|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
+|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
+|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
+| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
+|===============================================================|
+|The security key you provided is insecure, as it part of a     |
+|known set of keys that have been widely distributed. Do NOT use|
+|it in your final product or your DFU procedure may be          |
+|compromised and at risk of malicious attacks.                  |
+|===============================================================|
+"""
+    click.echo("{}".format(default_key_warning))
+
 
 def int_as_text_to_int(value):
     try:
@@ -146,7 +165,9 @@ def display(key_file, key, format):
     if not os.path.isfile(key_file):
         raise NordicSemiException("File not found: %s" % key_file)
 
-    signer.load_key(key_file)
+    default_key = signer.load_key(key_file)
+    if default_key:
+        display_sec_warning()
 
     if not key:
         click.echo("You must specify a key with --key (pk|sk).")
@@ -250,6 +271,11 @@ def generate(zipfile,
         except ValueError:
             raise NordicSemiException("Could not parse value for --sd-req. "
                                       "Hex values should be prefixed with 0x.")
+
+    signer = Signing()
+    default_key = signer.load_key(key_file)
+    if default_key:
+        display_sec_warning()
 
     package = Package(hw_version,
                       application_version,
