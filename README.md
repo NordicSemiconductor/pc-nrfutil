@@ -30,7 +30,7 @@ The DFU package format transitioned from legacy to modern in SDK 12.0. Depending
 that you are using you will need to select a release of this tool compatible with it:
 
 * Version 0.5.1 generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
-* Versions 1.0.0 and later generate modern firmware packages compatible with **nRF SDK 11.1 and newer**
+* Versions 1.0.0 and later generate modern firmware packages compatible with **nRF SDK 12.0 and newer**
 
 ## Installing from PyPI
 
