@@ -222,11 +222,13 @@ def pkg():
               type=BASED_INT_OR_NONE,
               default=str(Package.DEFAULT_HW_VERSION))
 @click.option('--sd-req',
-              help='The SoftDevice requirement. A list of SoftDevice versions (1 or more) '
-                   'of which one must be present on the target device. '
-                   'Example: --sd-req 0x4F,0x5A. Default: 0xFFFE',
+              help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs (1 or more) '
+                   'of which one must be present on the target device. Each item on the list must be in hex and prefixed with \"0x\".'
+                   '\nExample #1 (s130 2.0.0 and 2.0.1): --sd-req 0x80,0x87. '
+                   '\nExample #2 (s132 2.0.0 and 2.0.1): --sd-req 0x81,0x88. Default: 0xFFFE',
               type=TEXT_OR_NONE,
-              default=str(Package.DEFAULT_SD_REQ[0]))
+              default=str(Package.DEFAULT_SD_REQ[0]),
+              multiple=True)
 @click.option('--softdevice',
               help='The SoftDevice firmware file.',
               type=click.STRING)
@@ -260,6 +262,11 @@ def generate(zipfile,
         hw_version = None
 
     sd_req_list = None
+    if len(sd_req) > 1:
+        click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
+        return
+    else:
+        sd_req = sd_req[0]
 
     if sd_req.lower() == 'none':
         sd_req_list = []
@@ -271,7 +278,8 @@ def generate(zipfile,
         except ValueError:
             raise NordicSemiException("Could not parse value for --sd-req. "
                                       "Hex values should be prefixed with 0x.")
-
+    print sd_req
+    print sd_req_list
     signer = Signing()
     default_key = signer.load_key(key_file)
     if default_key:
