@@ -227,7 +227,7 @@ def pkg():
                    '\nExample #1 (s130 2.0.0 and 2.0.1): --sd-req 0x80,0x87. '
                    '\nExample #2 (s132 2.0.0 and 2.0.1): --sd-req 0x81,0x88. Default: 0xFFFE',
               type=TEXT_OR_NONE,
-              default=str(Package.DEFAULT_SD_REQ[0]),
+              default=[str(Package.DEFAULT_SD_REQ[0])],
               multiple=True)
 @click.option('--softdevice',
               help='The SoftDevice firmware file.',
@@ -278,8 +278,6 @@ def generate(zipfile,
         except ValueError:
             raise NordicSemiException("Could not parse value for --sd-req. "
                                       "Hex values should be prefixed with 0x.")
-    print sd_req
-    print sd_req_list
     signer = Signing()
     default_key = signer.load_key(key_file)
     if default_key:
