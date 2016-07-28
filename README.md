@@ -163,12 +163,12 @@ $ protoc --python_out=<dest_folder> dfu-cc.proto
 ```
 Where `<dest_folder>` is an empty folder where the Protocol Buffers compiler will write its output.
 
-After compilation is complete, a file named `<dest_folder>/dfu_cc_pb2.py` will be created. You can then use this file to overwrite the one in [](nordicsemi/dfu) to start using the new Init Packet format.
+After compilation is complete, a file named `<dest_folder>/dfu_cc_pb2.py` will be created. You can then use this file to overwrite the one in [nordicsemi/dfu](nordicsemi/dfu) to start using the new Init Packet format.
 
 ### Adapting nrfutil to the new Init Packet format
 
 Once you have the customized `dfu_cc_pb2.py` file in your repository you will need to adapt the actual tool to conform to the new format you have designed. To do that you will need to alter several of the Python source files included, as well as potentially having to modify the command-line options to fit the contents of your Init Packet.
-Refer to [](nordicsemi/dfu/init_packet_pb.py) and [](nordicsemi/dfu/package.py) for the contents themselves, and to [](nordicsemi/__main.py__) for the command-line options.
+Refer to [init_packet_pb.py](nordicsemi/dfu/init_packet_pb.py) and [package.py](nordicsemi/dfu/package.py) for the contents themselves, and to [__main__.py](nordicsemi/__main__.py) for the command-line options.
 
 
 
