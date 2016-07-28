@@ -145,3 +145,30 @@ nrfutil keys display --key pk --format code private.pem
 
 #### version
 This command displays the version of nrfutil.
+
+## Init Packet customisation
+
+If you want to modify the Init Packet, which is the packet that contains all of the metadata and that is sent before the actual firmware images, you will need to recompile the Google Protocol Buffers `.proto` file and adapt `nrfutil` itself.
+
+### Modifying the Protocol Buffers file
+
+Edit `dfu-cc.proto` and modify the Init packet to suit your needs. Additional information on the format of `.proto` files can be found [here](https://developers.google.com/protocol-buffers/).
+
+### Compiling the Protocol Buffers file
+
+After you have modified the `.proto` file you will need to compile it to generate the corresponding Python file that will be then usable from the `nrfutil` source code. To do that install the Protocol Buffers compiler from [here](https://developers.google.com/protocol-buffers/docs/downloads) and then execute:
+
+```
+$ protoc --python_out=<dest_folder> dfu-cc.proto
+```
+Where `<dest_folder>` is an empty folder where the Protocol Buffers compiler will write its output.
+
+After compilation is complete, a file named `<dest_folder>/dfu_cc_pb2.py` will be created. You can then use this file to overwrite the one in [](nordicsemi/dfu) to start using the new Init Packet format.
+
+### Adapting nrfutil to the new Init Packet format
+
+Once you have the customized `dfu_cc_pb2.py` file in your repository you will need to adapt the actual tool to conform to the new format you have designed. To do that you will need to alter several of the Python source files included, as well as potentially having to modify the command-line options to fit the contents of your Init Packet.
+Refer to [](nordicsemi/dfu/init_packet_pb.py) and [](nordicsemi/dfu/package.py) for the contents themselves, and to [](nordicsemi/__main.py__) for the command-line options.
+
+
+
