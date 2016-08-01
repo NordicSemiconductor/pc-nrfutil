@@ -116,6 +116,10 @@ class BasedIntOrNoneParamType(click.ParamType):
 
 BASED_INT_OR_NONE = BasedIntOrNoneParamType()
 
+class BasedIntParamType(BasedIntOrNoneParamType):
+    name = 'Integer'
+
+BASED_INT= BasedIntParamType()
 
 class TextOrNoneParamType(click.ParamType):
     name = 'Text or None'
@@ -238,13 +242,13 @@ def pkg():
               type=BASED_INT_OR_NONE)
 @click.option('--hw-version',
               help='The hardware version.',
-              type=BASED_INT_OR_NONE)
+              type=BASED_INT)
 @click.option('--sd-req',
               help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs (1 or more) '
                    'of which one must be present on the target device. Each item on the list must be in hex and prefixed with \"0x\".'
                    '\nExample #1 (s130 2.0.0 and 2.0.1): --sd-req 0x80,0x87. '
                    '\nExample #2 (s132 2.0.0 and 2.0.1): --sd-req 0x81,0x88. Default: 0xFFFE',
-              type=TEXT_OR_NONE,
+              type=click.STRING,
               multiple=True)
 @click.option('--softdevice',
               help='The SoftDevice firmware file.',
@@ -302,10 +306,6 @@ def generate(zipfile,
 
     if bootloader_version is not None and bootloader is None:
         click.echo("Error: Bootloader version with no image.")
-        return
-
-    if sd_req is not None and softdevice is None:
-        click.echo("Error: Softdevice requirements with no image.")
         return
 
     if debug_mode:
