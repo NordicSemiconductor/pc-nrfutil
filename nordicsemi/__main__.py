@@ -325,16 +325,16 @@ def generate(zipfile,
         click.echo("Error: --hw-version required.")
         return
 
+    if sd_req is None: 
+        click.echo("Error: --sd-req required.")
+        return
+
     if application is not None and application_version is None: 
-        click.echo("Error: --application-version required.")
+        click.echo("Error: --application-version required with application image.")
         return
 
     if bootloader is not None and bootloader_version is None: 
-        click.echo("Error: --bootloader-version required.")
-        return
-
-    if softdevice is not None and sd_req is None: 
-        click.echo("Error: --sd-req required.")
+        click.echo("Error: --bootloader-version required with bootloader image.")
         return
 
     sd_req_list = []
