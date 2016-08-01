@@ -65,17 +65,10 @@ HexTypeToInitPacketFwTypemap = {
 
 
 class PacketField(Enum):
-    HW_VERSION = 1
-    FW_VERSION = 2
-    REQUIRED_SOFTDEVICES_ARRAY = 3
-    OPT_DATA = 4
-    NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID = 5
-    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH = 6
-    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH = 7
-    NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16 = 8
-    NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS = 9
-
-
+    DEBUG_MODE = 1
+    HW_VERSION = 2
+    FW_VERSION = 3
+    REQUIRED_SOFTDEVICES_ARRAY = 4
 
 class Package(object):
     """
@@ -107,6 +100,7 @@ class Package(object):
 
     """
 
+    DEFAULT_DEBUG_MODE = 0
     DEFAULT_HW_VERSION = 0xFFFFFFFF
     DEFAULT_APP_VERSION = 0xFFFFFFFF
     DEFAULT_BL_VERSION = 0xFFFFFFFF
@@ -115,6 +109,7 @@ class Package(object):
     MANIFEST_FILENAME = "manifest.json"
 
     def __init__(self,
+                 debug_mode=DEFAULT_DEBUG_MODE,
                  hw_version=DEFAULT_HW_VERSION,
                  app_version=DEFAULT_APP_VERSION,
                  bl_version=DEFAULT_BL_VERSION,
@@ -126,6 +121,7 @@ class Package(object):
         """
         Constructor that requires values used for generating a Nordic DFU package.
 
+        :param int debug_mode: Debug init-packet field
         :param int hw_version: Hardware version init-packet field
         :param int app_version: App version init-packet field
         :param int bl_version: Bootloader version init-packet field
@@ -138,6 +134,9 @@ class Package(object):
         """
 
         init_packet_vars = {}
+
+        if debug_mode is not None:
+            init_packet_vars[PacketField.DEBUG_MODE] = debug_mode
 
         if hw_version is not None:
             init_packet_vars[PacketField.HW_VERSION] = hw_version
@@ -236,6 +235,7 @@ class Package(object):
                             app_size=app_size,
                             sd_size=sd_size,
                             bl_size=bl_size,
+                            is_debug=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.DEBUG_MODE],
                             fw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],
                             hw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.HW_VERSION],
                             sd_req=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.REQUIRED_SOFTDEVICES_ARRAY])

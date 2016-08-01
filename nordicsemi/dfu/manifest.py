@@ -102,6 +102,7 @@ class ManifestGenerator(object):
 
 class FWMetaData(object):
     def __init__(self,
+                 is_debug=None,
                  hw_version=None,
                  fw_version=None,
                  softdevice_req=None,
@@ -111,6 +112,7 @@ class FWMetaData(object):
         """
         The FWMetaData data model.
 
+        :param bool is_debug:  debug mode on
         :param int hw_version:  hardware version
         :param int fw_version:  application or bootloader version
         :param list softdevice_req: softdevice requirements
@@ -118,6 +120,7 @@ class FWMetaData(object):
         :param int bl_size Bootloader size
         :return:FWMetaData 
         """
+        self.is_debug = is_debug
         self.hw_version = hw_version
         self.fw_version = fw_version
         self.softdevice_req = softdevice_req

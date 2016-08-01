@@ -60,6 +60,7 @@ class InitPacketPB(object):
                  hash_bytes,
                  hash_type,
                  dfu_type,
+                 is_debug=False,
                  fw_version=0xffffffff,
                  hw_version=0xffffffff,
                  sd_size=0,
@@ -76,6 +77,7 @@ class InitPacketPB(object):
         self.init_command.hash.hash_type = hash_type.value
         self.init_command.type = dfu_type.value
         self.init_command.hash.hash = hash_bytes
+        self.init_command.is_debug = is_debug
         self.init_command.fw_version = fw_version
         self.init_command.hw_version = hw_version
         self.init_command.sd_req.extend(list(set(sd_req)))

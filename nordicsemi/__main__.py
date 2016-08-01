@@ -74,6 +74,23 @@ def display_sec_warning():
 """
     click.echo("{}".format(default_key_warning))
 
+def display_debug_warning():
+    debug_warning = """
+|===============================================================|
+|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
+|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
+|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
+|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
+|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
+|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
+| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
+|===============================================================|
+|You are generating a package with the debug bit enabled in the |
+|init packet. This is only compatible with a debug bootloader   |
+|and is not suitable for production.                            |
+|===============================================================|
+"""
+    click.echo("{}".format(debug_warning))
 
 def int_as_text_to_int(value):
     try:
@@ -126,7 +143,6 @@ def version():
     click.echo("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
 
 @cli.group(short_help='Generate and display private and public keys.')
-#@click.argument('key_file', required=True, type=click.Path())
 def keys():
     """
     This set of commands supports creating and displaying a private (signing) key
@@ -203,39 +219,41 @@ def pkg():
 @click.argument('zipfile',
                 required=True,
                 type=click.Path())
+@click.option('--debug-mode',
+              help='Debug mode switch, enables version check skipping.',
+              type=click.BOOL,
+              is_flag=True)
 @click.option('--application',
               help='The application firmware file.',
               type=click.STRING)
 @click.option('--application-version',
-              help='The application version. Default: 0xFFFFFFFF',
-              type=BASED_INT_OR_NONE,
-              default=str(Package.DEFAULT_APP_VERSION))
+              help='The application version.',
+              type=BASED_INT_OR_NONE)
 @click.option('--bootloader',
               help='The bootloader firmware file.',
               type=click.STRING)
 @click.option('--bootloader-version',
-              help='The bootloader version. Default: 0xFFFFFFFF',
-              type=BASED_INT_OR_NONE,
-              default=str(Package.DEFAULT_BL_VERSION))
+              help='The bootloader version.',
+              type=BASED_INT_OR_NONE)
 @click.option('--hw-version',
-              help='The hardware version. Default: 0xFFFFFFFF',
-              type=BASED_INT_OR_NONE,
-              default=str(Package.DEFAULT_HW_VERSION))
+              help='The hardware version.',
+              type=BASED_INT_OR_NONE)
 @click.option('--sd-req',
               help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs (1 or more) '
                    'of which one must be present on the target device. Each item on the list must be in hex and prefixed with \"0x\".'
                    '\nExample #1 (s130 2.0.0 and 2.0.1): --sd-req 0x80,0x87. '
                    '\nExample #2 (s132 2.0.0 and 2.0.1): --sd-req 0x81,0x88. Default: 0xFFFE',
               type=TEXT_OR_NONE,
-              default=[str(Package.DEFAULT_SD_REQ[0])],
               multiple=True)
 @click.option('--softdevice',
               help='The SoftDevice firmware file.',
               type=click.STRING)
 @click.option('--key-file',
               help='The private (signing) key in PEM fomat.',
+              required=True,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 def generate(zipfile,
+           debug_mode,
            application,
            application_version,
            bootloader,
@@ -261,16 +279,62 @@ def generate(zipfile,
     if hw_version == 'none':
         hw_version = None
 
-    sd_req_list = None
+    # Convert multiple value into a single instance
+
     if len(sd_req) > 1:
         click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
         return
+    elif len(sd_req) == 0:
+        sd_req = None
     else:
         sd_req = sd_req[0]
+        if sd_req == 'none':
+            sd_req = None
 
-    if sd_req.lower() == 'none':
-        sd_req_list = []
-    elif sd_req:
+    # Initial consistency checks
+    if application_version is not None and application is None:
+        click.echo("Error: Application version with no image.")
+        return
+
+    if bootloader_version is not None and bootloader is None:
+        click.echo("Error: Bootloader version with no image.")
+        return
+
+    if sd_req is not None and softdevice is None:
+        click.echo("Error: Softdevice requirements with no image.")
+        return
+
+    if debug_mode:
+        display_debug_warning()
+        # Default to no version checking
+        if application_version is None:
+            application_version=str(Package.DEFAULT_APP_VERSION)
+        if bootloader_version is None:
+            bootloader_version=str(Package.DEFAULT_BL_VERSION)
+        if hw_version is None:
+            hw_version=str(Package.DEFAULT_HW_VERSION)
+        if sd_req is None:
+            sd_req=str(Package.DEFAULT_SD_REQ[0])
+
+    # Version checks
+    if hw_version is None:
+        click.echo("Error: --hw-version required.")
+        return
+
+    if application is not None and application_version is None: 
+        click.echo("Error: --application-version required.")
+        return
+
+    if bootloader is not None and bootloader_version is None: 
+        click.echo("Error: --bootloader-version required.")
+        return
+
+    if softdevice is not None and sd_req is None: 
+        click.echo("Error: --sd-req required.")
+        return
+
+    sd_req_list = []
+    if sd_req is not None:
         try:
             # This will parse any string starting with 0x as base 16.
             sd_req_list = sd_req.split(',')
@@ -278,12 +342,14 @@ def generate(zipfile,
         except ValueError:
             raise NordicSemiException("Could not parse value for --sd-req. "
                                       "Hex values should be prefixed with 0x.")
+
     signer = Signing()
     default_key = signer.load_key(key_file)
     if default_key:
         display_sec_warning()
 
-    package = Package(hw_version,
+    package = Package(debug_mode,
+                      hw_version,
                       application_version,
                       bootloader_version,
                       sd_req_list,
