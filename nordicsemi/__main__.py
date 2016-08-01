@@ -222,6 +222,7 @@ def pkg():
 @click.option('--debug-mode',
               help='Debug mode switch, enables version check skipping.',
               type=click.BOOL,
+              default=False,
               is_flag=True)
 @click.option('--application',
               help='The application firmware file.',
@@ -269,6 +270,9 @@ def generate(zipfile,
     http://developer.nordicsemi.com/nRF5_SDK/doc/
     """
     zipfile_path = zipfile
+
+    if debug_mode is None:
+        debug_mode = False
 
     if application_version == 'none':
         application_version = None

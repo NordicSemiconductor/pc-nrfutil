@@ -100,7 +100,7 @@ class Package(object):
 
     """
 
-    DEFAULT_DEBUG_MODE = 0
+    DEFAULT_DEBUG_MODE = False
     DEFAULT_HW_VERSION = 0xFFFFFFFF
     DEFAULT_APP_VERSION = 0xFFFFFFFF
     DEFAULT_BL_VERSION = 0xFFFFFFFF
@@ -134,7 +134,6 @@ class Package(object):
         """
 
         init_packet_vars = {}
-
         if debug_mode is not None:
             init_packet_vars[PacketField.DEBUG_MODE] = debug_mode
 
