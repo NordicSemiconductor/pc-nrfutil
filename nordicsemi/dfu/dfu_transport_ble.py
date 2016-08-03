@@ -144,28 +144,6 @@ class DfuTransportBle(DfuTransport):
     DEFAULT_TIMEOUT     = 20
     RETRIES_NUMBER      = 3
 
-    OP_CODE = {
-        'CreateObject'          : 0x01,
-        'SetPRN'                : 0x02,
-        'CalcChecSum'           : 0x03,
-        'Execute'               : 0x04,
-        'ReadError'             : 0x05,
-        'ReadObject'            : 0x06,
-        'Response'              : 0x60,
-    }
-
-    RES_CODE = {
-        'InvalidCode'           : 0x00,
-        'Success'               : 0x01,
-        'NotSupported'          : 0x02,
-        'InvParam'              : 0x03,
-        'InsufficientResources' : 0x04,
-        'InvObject'             : 0x05,
-        'InvSignature'          : 0x06,
-        'UnsupportedType'       : 0x07,
-        'OperationFailed'       : 0x0A,
-        'ExtendedError'         : 0x0B,
-    }
 
     def __init__(self,
                  serial_port,
@@ -182,7 +160,7 @@ class DfuTransportBle(DfuTransport):
 
     def open(self):
         if self.dfu_adapter:
-            IllegalStateException('DFU Adapter is already opened')
+            IllegalStateException('DFU Adapter is already open')
 
         super(DfuTransportBle, self).open()
         driver           = BLEDriver(serial_port    = self.serial_port,
@@ -390,12 +368,13 @@ class DfuTransportBle(DfuTransport):
             raise NordicSemiException('Unexpected Executed OP_CODE.\n' \
                                     + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
 
-        if resp[2] == DfuTransportBle.RES_CODE['Success']:
+        if resp[2] == DfuTransport.RES_CODE['Success']:
             return resp[3:]
 
 
-        elif resp[2] == DfuTransportBle.RES_CODE['ExtendedError']:
+        elif resp[2] == DfuTransport.RES_CODE['ExtendedError']:
             error = self.__read_error()
             NordicSemiException('Extended Error {:X}: {}'.format(error['err_code'], error['data']))
         else:
-            raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransportBle.RES_CODE, resp[2])))
+            raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
+

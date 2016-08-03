@@ -58,6 +58,30 @@ class DfuTransport(object):
     """
     __metaclass__ = abc.ABCMeta
 
+    OP_CODE = {
+        'CreateObject'          : 0x01,
+        'SetPRN'                : 0x02,
+        'CalcChecSum'           : 0x03,
+        'Execute'               : 0x04,
+        'ReadError'             : 0x05,
+        'ReadObject'            : 0x06,
+        'Response'              : 0x60,
+    }
+
+    RES_CODE = {
+        'InvalidCode'           : 0x00,
+        'Success'               : 0x01,
+        'NotSupported'          : 0x02,
+        'InvalidParameter'      : 0x03,
+        'InsufficientResources' : 0x04,
+        'InvalidObject'         : 0x05,
+        'InvalidSignature'      : 0x06,
+        'UnsupportedType'       : 0x07,
+        'OperationNotPermitted' : 0x08,
+        'OperationFailed'       : 0x0A,
+        'ExtendedError'         : 0x0B,
+    }
+
     @abc.abstractmethod
     def __init__(self):
         self.callbacks = {}
