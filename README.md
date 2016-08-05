@@ -108,8 +108,9 @@ nrfutil dfu ble --help
 ```
 Below is an example of the execution of a DFU procedure of the file generated above over BLE using a connectivity IC connected to COM3, where the remote BLE device to be upgraded is called "MyDevice":
 ```
-nrfutil dfu ble -pkg app_dfu_package.zip -p COM3 -n "MyDevice"
+nrfutil dfu ble -pkg app_dfu_package.zip -p COM3 -n "MyDevice" -f
 ```
+The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a serialized SoftDevice. Use with caution as this will overwrite the contents of the IC's flash memory.
 
 ##### serial
 **Note**: DFU over a serial line is currently disabled
@@ -120,9 +121,8 @@ nrfutil dfu serial --help
 ```
 Below is an example of the execution of a DFU procedure of the file generated above over COM3 at 115200 bits per second:
 ```
-nrfutil dfu serial -pkg app_dfu_package.zip -p COM3 -b 115200 -f
+nrfutil dfu serial -pkg app_dfu_package.zip -p COM3 -b 115200
 ```
-The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a serialized SoftDevice. Use with caution as this will overwrite the contents of the IC's flash memory.
 
 #### keys
 This set of commands allow you to generate and display cryptographic keys used to sign and verify DFU packages.
