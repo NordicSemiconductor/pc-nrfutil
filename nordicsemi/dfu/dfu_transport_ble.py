@@ -324,11 +324,11 @@ class DfuTransportBle(DfuTransport):
 
         response = self.__calculate_checksum()
         if (crc != response['crc']):
-            raise ValidationError('Failed CRC validation.\n'\
+            raise ValidationException('Failed CRC validation.\n'\
                                 + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
 
         if (offset != response['offset']):
-            raise ValidationError('Failed offset validation.\n'\
+            raise ValidationException('Failed offset validation.\n'\
                                 + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
 
         return crc

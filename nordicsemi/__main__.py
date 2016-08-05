@@ -406,6 +406,8 @@ def serial(package, port, baudrate, flowcontrol):
 
 def enumerate_ports():
     descs   = BLEDriver.enum_serial_ports()
+    if len(descs) == 0:
+        return None
     click.echo('Please select connectivity serial port:')
     for i, choice in enumerate(descs):
         click.echo('\t{} : {} - {}'.format(i, choice.port, choice.serial_number))
@@ -447,6 +449,9 @@ def ble(package, port, name, address, jlink_snr, flash_connectivity):
 
     elif port is None:
         port = enumerate_ports()
+        if port is None:
+            click.echo("\nNo Segger USB CDC ports found, please connect your board.")
+            return
 
     if flash_connectivity:
         flasher = Flasher(serial_port=port, snr = jlink_snr) 
