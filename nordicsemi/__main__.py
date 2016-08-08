@@ -312,12 +312,13 @@ def generate(zipfile,
         display_debug_warning()
         # Default to no version checking
         if application_version is None:
-            application_version=str(Package.DEFAULT_APP_VERSION)
+            application_version=Package.DEFAULT_APP_VERSION
         if bootloader_version is None:
-            bootloader_version=str(Package.DEFAULT_BL_VERSION)
+            bootloader_version=Package.DEFAULT_BL_VERSION
         if hw_version is None:
-            hw_version=str(Package.DEFAULT_HW_VERSION)
+            hw_version=Package.DEFAULT_HW_VERSION
         if sd_req is None:
+            # Use string as this will be mapped into an int below
             sd_req=str(Package.DEFAULT_SD_REQ[0])
 
     # Version checks

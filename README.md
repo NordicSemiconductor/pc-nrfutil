@@ -93,9 +93,13 @@ Generate a package (.zip file) that you can later use with a mobile application 
 ```
 nrfutil pkg generate --help
 ```
-Below is an example of the generation of a package from an application's `app.hex` file:
+Below is an example of the generation of a package in debug mode from an application's `app.hex` file:
 ```
-nrfutil pkg generate --application app.hex --key-file key.pem app_dfu_package.zip
+nrfutil pkg generate --debug-mode --application app.hex --key-file key.pem app_dfu_package.zip
+```
+When using debug mode you don't need to specify versions for hardware and firmware, so you can develop without having to worry about versioning your application. If you want to generate a package for production, you will need to do so without the `--debug-mode` parameter and specify the versions:
+```
+nrfutil pkg generate --hw-version 1 --sd-req 0x80 --application-version 4 --application app.hex --key-file key.pem app_dfu_package.zip
 ```
 
 #### dfu
