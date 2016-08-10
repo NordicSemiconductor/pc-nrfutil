@@ -39,6 +39,7 @@
 import os
 import tempfile
 import shutil
+import binascii
 from enum import Enum
 
 # 3rd party libraries
@@ -304,7 +305,7 @@ class Package(object):
         return sha256[31::-1]
 
     @staticmethod
-    def calculate_crc16(firmware_filename):
+    def calculate_crc(crc, firmware_filename):
         """
         Calculates CRC16 has on provided firmware filename
 
@@ -321,8 +322,12 @@ class Package(object):
                     data_buffer += data
                 else:
                     break
-
-        return calc_crc16(data_buffer, 0xffff)
+        if crc == 16:
+            return calc_crc16(data_buffer, 0xffff)
+        elif crc == 32:
+            return binascii.crc32(data_buffer, 0xffffffff)
+        else:
+            raise NordicSemiException("Invalid CRC type")
 
     def create_manifest(self):
         manifest = ManifestGenerator(self.firmwares_data)

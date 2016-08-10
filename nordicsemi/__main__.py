@@ -44,6 +44,7 @@ import logging
 import subprocess
 sys.path.append(os.getcwd())
 
+from nordicsemi.dfu.bl import BootloaderSettings
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent
 from nordicsemi.dfu.dfu_transport_ble import DfuTransportBle
@@ -146,6 +147,71 @@ def version():
     """Display nrfutil version."""
     click.echo("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
 
+@cli.group(short_help='Generate and display bootloader settings.')
+def bl():
+    """
+    This set of commands supports creating and displaying bootloader settings. 
+    """
+    pass
+
+@bl.command(short_help='Generate a .hex file with bootloader settings.')
+@click.argument('hex_file', required=True, type=click.Path())
+@click.option('--family',
+              help='nRF IC family: NRF51 or NRF52',
+              type=click.Choice(['NRF51', 'NRF52']))
+@click.option('--application',
+              help='The application firmware file.',
+              type=click.STRING)
+@click.option('--application-version',
+              help='The application version.',
+              type=BASED_INT_OR_NONE)
+@click.option('--bootloader-version',
+              help='The bootloader version.',
+              type=BASED_INT_OR_NONE)
+@click.option('--bl-settings-version',
+              help='The Bootloader settings version.'
+              'Defined in nrf_dfu_types.h, the following apply to released SDKs:'
+              '\n SDK12: 1',
+              type=BASED_INT_OR_NONE)
+
+def settings(hex_file,
+        family,
+        application,
+        application_version,
+        bootloader_version,
+        bl_settings_version):
+
+    # Initial consistency checks
+    if family is None:
+        click.echo("Error: IC Family required.")
+        return
+
+    if application is None:
+        click.echo("Error: Application image required.")
+        return
+
+    if not os.path.isfile(application):
+        click.echo("Error: Application file not found.")
+        return
+
+    if application_version is None:
+        click.echo("Error: Application version required.")
+        return
+
+    if bootloader_version is None:
+        click.echo("Error: Bootloader version required.")
+        return
+ 
+    if bl_settings_version is None:
+        click.echo("Error: Bootloader settings version required.")
+        return
+       
+    bls = BootloaderSettings(arch=family, app_file=application, app_ver=application_version, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version)
+
+    bls.tohexfile(hex_file)
+
+    click.echo("Generated settings .hex file and stored it in: %s" % hex_file)
+
 @cli.group(short_help='Generate and display private and public keys.')
 def keys():
     """
@@ -154,7 +220,6 @@ def keys():
     Private keys are stored in PEM format.
     """
     pass
-
 
 @keys.command(short_help='Generate a private key and store it in a file in PEM format.')
 @click.argument('key_file', required=True, type=click.Path())

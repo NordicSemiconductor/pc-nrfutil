@@ -37,7 +37,11 @@
 
 from nordicsemi.dfu import intelhex
 from struct import unpack
+from enum import Enum
 
+class nRFArch(Enum):
+    NRF51 = 1
+    NRF52 = 2
 
 class nRFHex(intelhex.IntelHex):
     """
@@ -53,7 +57,7 @@ class nRFHex(intelhex.IntelHex):
     s1x0_mbr_end_address = 0x1000
     s132_mbr_end_address = 0x3000
 
-    def __init__(self, source, bootloader=None):
+    def __init__(self, source, bootloader=None, arch=None):
         """
         Constructor that requires a firmware file path.
         Softdevices can take an optional bootloader file path as parameter.
@@ -64,6 +68,7 @@ class nRFHex(intelhex.IntelHex):
         """
         super(nRFHex, self).__init__()
 
+        self.arch = arch
         self.file_format = 'hex'
 
         if source.endswith('.bin'):
@@ -77,6 +82,9 @@ class nRFHex(intelhex.IntelHex):
 
         if bootloader is not None:
             self.bootloaderhex = nRFHex(bootloader)
+
+    def tohexfile(self, dest):
+        pass
 
     def _removeuicr(self):
         uicr_start_address = 0x10000000
