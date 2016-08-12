@@ -119,18 +119,24 @@ class BLDFUSettings(object):
             raise NordicSemiException("Unknown bootloader settings version")
         
         self.bl_sett_ver = bl_sett_ver & 0xffffffff
-        self.app_ver = app_ver & 0xffffffff
         self.bl_ver = bl_ver & 0xffffffff
 
-        format_str = '<' + ('I' * self.setts.uint32_count) 
+        if app_ver is not None:
+            self.app_ver = app_ver & 0xffffffff
+        else:
+            self.app_ver = 0x0 & 0xffffffff
 
-        # load application to find out size and CRC
-        self.temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_bl_sett_")
-        self.app_bin = Package.normalize_firmware_to_bin(self.temp_dir, app_file)
+        if app_file is not None:
+            # load application to find out size and CRC
+            self.temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_bl_sett_")
+            self.app_bin = Package.normalize_firmware_to_bin(self.temp_dir, app_file)
 
-        # calculate application size and CRC32
-        self.app_sz = int(Package.calculate_file_size(self.app_bin)) & 0xffffffff
-        self.app_crc = int(Package.calculate_crc(32, self.app_bin)) & 0xffffffff
+            # calculate application size and CRC32
+            self.app_sz = int(Package.calculate_file_size(self.app_bin)) & 0xffffffff
+            self.app_crc = int(Package.calculate_crc(32, self.app_bin)) & 0xffffffff
+        else:
+            self.app_sz = 0x0 & 0xffffffff
+            self.app_crc = 0x0 & 0xffffffff
 
         # build the uint32_t array
         arr = [0x0] * self.setts.uint32_count
@@ -158,6 +164,8 @@ class BLDFUSettings(object):
 
         # fill in the calculated CRC32
         arr[self.setts.offs_crc] = self.crc
+
+        format_str = '<' + ('I' * self.setts.uint32_count) 
 
         # Get the packed data to insert into the hex instance
         data = struct.pack(format_str, *arr)
@@ -221,17 +229,17 @@ class BLDFUSettings(object):
     def __str__(self):
         s = """
 Bootloader DFU Settings:
-* File: {0}
-* Family: {1}
-* CRC: 0x{2:08X}
-* Version: 0x{3:08X} ({3})
-* App Version: 0x{4:08X} ({4})
-* Bootloader Version: 0x{5:08X} ({5})
-* Bank Layout: 0x{6:08X}
-* Current Bank: 0x{7:08X}
-* Application Size: 0x{8:08X} ({8} bytes)
-* Application CRC: 0x{9:08X}
-* Bank0 Bank Code: 0x{10:08X}
+* File:                 {0}
+* Family:               {1}
+* CRC:                  0x{2:08X}
+* Settings Version:     0x{3:08X} ({3})
+* App Version:          0x{4:08X} ({4})
+* Bootloader Version:   0x{5:08X} ({5})
+* Bank Layout:          0x{6:08X}
+* Current Bank:         0x{7:08X}
+* Application Size:     0x{8:08X} ({8} bytes)
+* Application CRC:      0x{9:08X}
+* Bank0 Bank Code:      0x{10:08X}
 """.format(self.hex_file, self.arch_str, self.crc, self.bl_sett_ver, self.app_ver, self.bl_ver, self.bank_layout, self.bank_current, self.app_sz, self.app_crc, self.bank0_bank_code)
         return s
 

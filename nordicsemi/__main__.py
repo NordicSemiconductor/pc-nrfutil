@@ -105,7 +105,7 @@ def int_as_text_to_int(value):
 
 
 class BasedIntOrNoneParamType(click.ParamType):
-    name = 'Int or None'
+    name = 'Integer'
 
     def convert(self, value, param, ctx):
         try:
@@ -123,7 +123,7 @@ class BasedIntParamType(BasedIntOrNoneParamType):
 BASED_INT= BasedIntParamType()
 
 class TextOrNoneParamType(click.ParamType):
-    name = 'Text or None'
+    name = 'Text'
 
     def convert(self, value, param, ctx):
         return value
@@ -160,10 +160,11 @@ def settings():
               help='nRF IC family: NRF51 or NRF52',
               type=click.Choice(['NRF51', 'NRF52']))
 @click.option('--application',
-              help='The application firmware file.',
+              help='The application firmware file. This can be omitted if'
+                    'the target IC does not contain an application in flash.',
               type=click.STRING)
 @click.option('--application-version',
-              help='The application version.',
+              help='The application version. Required with --application.',
               type=BASED_INT_OR_NONE)
 @click.option('--bootloader-version',
               help='The bootloader version.',
@@ -186,17 +187,13 @@ def generate(hex_file,
         click.echo("Error: IC Family required.")
         return
 
-    if application is None:
-        click.echo("Error: Application image required.")
-        return
-
-    if not os.path.isfile(application):
-        click.echo("Error: Application file not found.")
-        return
-
-    if application_version is None:
-        click.echo("Error: Application version required.")
-        return
+    if application is not None:
+        if not os.path.isfile(application):
+            click.echo("Error: Application file not found.")
+            return
+        if application_version is None:
+            click.echo("Error: Application version required.")
+            return
 
     if bootloader_version is None:
         click.echo("Error: Bootloader version required.")
