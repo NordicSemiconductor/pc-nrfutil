@@ -325,7 +325,7 @@ class Package(object):
         if crc == 16:
             return calc_crc16(data_buffer, 0xffff)
         elif crc == 32:
-            return binascii.crc32(data_buffer, 0xffffffff)
+            return binascii.crc32(data_buffer)
         else:
             raise NordicSemiException("Invalid CRC type")
 

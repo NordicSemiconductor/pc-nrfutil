@@ -44,7 +44,7 @@ import logging
 import subprocess
 sys.path.append(os.getcwd())
 
-from nordicsemi.dfu.bl import BootloaderSettings
+from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent
 from nordicsemi.dfu.dfu_transport_ble import DfuTransportBle
@@ -147,14 +147,14 @@ def version():
     """Display nrfutil version."""
     click.echo("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
 
-@cli.group(short_help='Generate and display bootloader settings.')
-def bl():
+@cli.group(short_help='Generate and display Bootloader DFU settings.')
+def settings():
     """
     This set of commands supports creating and displaying bootloader settings. 
     """
     pass
 
-@bl.command(short_help='Generate a .hex file with bootloader settings.')
+@settings.command(short_help='Generate a .hex file with Bootloader DFU settings.')
 @click.argument('hex_file', required=True, type=click.Path())
 @click.option('--family',
               help='nRF IC family: NRF51 or NRF52',
@@ -174,7 +174,7 @@ def bl():
               '\n SDK12: 1',
               type=BASED_INT_OR_NONE)
 
-def settings(hex_file,
+def generate(hex_file,
         family,
         application,
         application_version,
@@ -203,14 +203,27 @@ def settings(hex_file,
         return
  
     if bl_settings_version is None:
-        click.echo("Error: Bootloader settings version required.")
+        click.echo("Error: Bootloader DFU settings version required.")
         return
        
-    bls = BootloaderSettings(arch=family, app_file=application, app_ver=application_version, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version)
+    sett = BLDFUSettings()
+    sett.generate(arch=family, app_file=application, app_ver=application_version, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version)
+    sett.tohexfile(hex_file)
 
-    bls.tohexfile(hex_file)
+    click.echo("\nGenerated Bootloader DFU settings .hex file and stored it in: {}".format(hex_file))
 
-    click.echo("Generated settings .hex file and stored it in: %s" % hex_file)
+    click.echo("{0}".format(str(sett)))
+
+@settings.command(short_help='Display the contents of a .hex file with Bootloader DFU settings.')
+@click.argument('hex_file', required=True, type=click.Path())
+
+def display(hex_file): 
+
+    sett = BLDFUSettings()
+    sett.fromhexfile(hex_file)
+
+    click.echo("{0}".format(str(sett)))
+
 
 @cli.group(short_help='Generate and display private and public keys.')
 def keys():
@@ -312,7 +325,7 @@ def pkg():
               help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs (1 or more) '
                    'of which one must be present on the target device. Each item on the list must be in hex and prefixed with \"0x\".'
                    '\nExample #1 (s130 2.0.0 and 2.0.1): --sd-req 0x80,0x87. '
-                   '\nExample #2 (s132 2.0.0 and 2.0.1): --sd-req 0x81,0x88. Default: 0xFFFE',
+                   '\nExample #2 (s132 2.0.0 and 2.0.1): --sd-req 0x81,0x88.',
               type=click.STRING,
               multiple=True)
 @click.option('--softdevice',
