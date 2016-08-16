@@ -214,9 +214,18 @@ class Signing(object):
 
         sk_x_separated = sk_x_separated[:-2]
 
-        sk_code = "static const uint8_t sk[] = {{ {0} }};".format(sk_x_separated)
+        sk_code = """
+/** @brief Private key used to sign DFU image */
+__ALIGN(4) static const uint8_t sk[] =
+{{
+    {0}
+}};
 
-        return sk_code + "\nstatic const nrf_crypto_key_t crypto_key_sk = { .p_le_data = (uint8_t *) sk, .len = sizeof(sk) };"
+static const nrf_crypto_key_t crypto_key_sk = {{ .p_le_data = (uint8_t *) sk, .len = sizeof(sk) }};
+"""
+        sk_code = sk_code.format(sk_x_separated)
+
+        return sk_code
 
     def get_vk_code(self):
         """
@@ -238,10 +247,20 @@ class Signing(object):
         for i in xrange(0, len(vk_y_str), 2):
             vk_y_separated = "0x" + vk_y_str[i:i+2] + ", " + vk_y_separated
         vk_y_separated = vk_y_separated[:-2]
+        
+        vk_code = """
+/** @brief Public key used to verify DFU image */
+__ALIGN(4) static const uint8_t pk[] =
+{{
+    {0}
+    {1}
+}};
 
-        vk_code = "static const uint8_t pk[] = {{ {0} }};".format(vk_x_separated+vk_y_separated)
+static const nrf_crypto_key_t crypto_key_pk = {{ .p_le_data = (uint8_t *) pk, .len = sizeof(pk) }};
+"""
+        vk_code = vk_code.format(vk_x_separated, vk_y_separated)
 
-        return vk_code + "\nstatic const nrf_crypto_key_t crypto_key_pk = { .p_le_data = (uint8_t *) pk, .len = sizeof(pk) };"
+        return vk_code
 
     def get_vk_pem(self):
         """
