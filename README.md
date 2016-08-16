@@ -167,6 +167,8 @@ SDK Version   | BL Settings Version
 ------------- | -------------------
 12.0          | 1
 
+The Bootloader DFU settings version supported and used by the SDK you are using can be found in `nrf_dfu_types.h` in the `bootloader` library.
+
 ##### display
 
 Use this option to display the contents of the Bootloader DFU settings present in a .hex file. The .hex file might be a full dump of the IC's flash memory, obtained with `nrfjprog`:
