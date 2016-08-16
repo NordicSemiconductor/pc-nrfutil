@@ -11,6 +11,7 @@ This application and its library offer the following features:
 
 * Device Firmware Update package generation
 * Cryptographic key generation, management and storage
+* Bootloader DFU settings generation and display
 * Device Firmware Update procedure over Bluetooth Low Energy
 
 ## License
@@ -147,6 +148,36 @@ Below is an example of displaying a public key in code format from the key file 
 ```
 nrfutil keys display --key pk --format code private.pem
 ```
+
+#### settings
+This set of commands allow you to generate and display Bootloader DFU settings, which must be present on the last page of available flash memory for the bootloader to function correctly.
+
+##### generate
+Generate a flash page of Bootloader DFU settings  and store it in a file in .hex format. This command takes several options that you can list using:
+```
+nrfutil settings generate --help
+```
+You can generate a .hex file with Bootloader DFU settings matching a particular flashed application by providing the application .hex to nrfutil:
+```
+nrfutil settings generate --family NRF52 --application app.hex --application-version 3 --bootloader-version 2 --bl-settings-version 1 sett.hex
+```
+The `--bl-settings-version` depends on the SDK version used. Check the following table to find out which version to use:
+
+SDK Version   | BL Settings Version
+------------- | -------------------
+12.0          | 1
+
+##### display
+
+Use this option to display the contents of the Bootloader DFU settings present in a .hex file. The .hex file might be a full dump of the IC's flash memory, obtained with `nrfjprog`:
+```
+nrfjprog --readcode flash_dump.hex
+```
+After you have obtained the contents of the flash memory, use nrfutil to decode the Bootloader DFU settings section:
+```
+nrfutil settings display flash_dump.hex
+```
+**Note**: nrfutil will autodetect the IC family when displaying the contents of the Bootloader DFU settings.
 
 #### version
 This command displays the version of nrfutil.
