@@ -243,7 +243,7 @@ class Signing(object):
 
         key_code = """
 /** @brief Private key used to sign DFU images */
-__ALIGN(4) static const uint8_t sk[32] =
+__ALIGN(4) const uint8_t sk[32] =
 {{
     {0}
 }};
@@ -276,7 +276,7 @@ __ALIGN(4) static const uint8_t sk[32] =
         
         key_code ="""
 /** @brief Public key used to verify DFU images */
-__ALIGN(4) static const uint8_t pk[64] =
+__ALIGN(4) const uint8_t pk[64] =
 {{
     {0}
     {1}
