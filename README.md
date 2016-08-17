@@ -53,10 +53,12 @@ To install nrfutil from source the following prerequisites must be satisfied:
 * [pip](https://pip.pypa.io/en/stable/installing.html)
 * setuptools (upgrade to latest version): `pip install -U setuptools`
 
-py2exe prerequisites (**Windows only**):  
+PyInstaller prerequisites:  
+
+**IMPORTANT NOTE**: py2exe is no longer supported and instead you can use PyInstaller to generate an executable
 
 * [VC compiler for Python](http://aka.ms/vcpython27)
-* py2exe: `pip install http://sourceforge.net/projects/py2exe/files/latest/download?source=files`
+* PyInstaller: `pip install pyinstaller`
 
 ### Installation procedure
 
@@ -65,12 +67,12 @@ To install the library to the local Python site-packages and script folder:
 python setup.py install
 ```
 
-To generate a self-contained Windows exe version of the utility (**Windows only**):  
+To generate a self-contained executable version of the utility:  
 ```
-python setup.py py2exe
+pyinstaller nrfutil.spec
 ```
 
-**Note**: Some anti-virus programs will stop py2exe from executing correctly when it modifies the .exe file.
+**Note**: Some anti-virus programs will stop PyInstaller from executing correctly when it modifies the .exe file.
 
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
