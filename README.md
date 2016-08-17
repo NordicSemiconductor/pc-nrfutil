@@ -31,7 +31,7 @@ The DFU package format transitioned from legacy to modern in SDK 12.0. Depending
 that you are using you will need to select a release of this tool compatible with it:
 
 * Version 0.5.1 generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
-* Versions 1.0.0 and later generate modern firmware packages compatible with **nRF SDK 12.0 and newer**
+* Versions 1.5.0 and later generate modern firmware packages compatible with **nRF SDK 12.0 and newer**
 
 ## Installing from PyPI
 
@@ -47,16 +47,16 @@ To install the latest published version from the Python Package Index simply typ
 
 ### Prerequisites
 
-To install nrfutil from the the following prerequisites must be satisfied:
+To install nrfutil from source the following prerequisites must be satisfied:
 
-* Python 2.7 (2.7.6 or newer, not Python 3)
-* pip (https://pip.pypa.io/en/stable/installing.html)
-* setuptools (upgrade to latest version: pip install -U setuptools)
+* [Python 2.7 (2.7.6 or newer, not Python 3)](https://www.python.org/downloads/)
+* [pip](https://pip.pypa.io/en/stable/installing.html)
+* setuptools (upgrade to latest version): `pip install -U setuptools`
 
-py2exe prerequisites (Windows only):  
+py2exe prerequisites (**Windows only**):  
 
-* py2exe (Windows only) (v0.6.9) (pip install http://sourceforge.net/projects/py2exe/files/latest/download?source=files)
-* VC compiler for Python (Windows only) (http://www.microsoft.com/en-us/download/confirmation.aspx?id=44266)
+* [VC compiler for Python](http://aka.ms/vcpython27)
+* py2exe: `pip install http://sourceforge.net/projects/py2exe/files/latest/download?source=files`
 
 ### Installation procedure
 
@@ -65,7 +65,7 @@ To install the library to the local Python site-packages and script folder:
 python setup.py install
 ```
 
-To generate a self-contained Windows exe version of the utility (Windows only):  
+To generate a self-contained Windows exe version of the utility (**Windows only**):  
 ```
 python setup.py py2exe
 ```
