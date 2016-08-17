@@ -253,8 +253,11 @@ def generate(key_file):
 @click.option('--format',
               help='(hex|code|pem) Display the key in hexadecimal format (hex), C code (code), or PEM (pem) format.',
               type=click.STRING)
+@click.option('--out_file',
+              help='If provided, save the output in file out_file.',
+              type=click.STRING)
 
-def display(key_file, key, format):
+def display(key_file, key, format, out_file):
     signer = Signing()
 
     if not os.path.isfile(key_file):
@@ -274,16 +277,27 @@ def display(key_file, key, format):
     if not format:
         click.echo("You must specify a format with --format (hex|code|pem).")
         return
-    if format != "hex" and format != "code" and format != "pem":
+    if format != "hex" and format != "code" and format != "pem" and format != "dbgcode":
         click.echo("Invalid format. Valid formats are (hex|code|pem).")
         return
 
+    if format == "dbgcode":
+        format = "code"
+        dbg = True
+    else:
+        dbg = False
 
     if key == "pk":
-        click.echo(signer.get_vk(format))
+        kstr = signer.get_vk(format, dbg)
     elif key == "sk": 
-        click.echo("\nWARNING: Security risk! Do not share the private key.\n")
-        click.echo(signer.get_sk(format))
+        kstr = "\nWARNING: Security risk! Do not share the private key.\n"
+        kstr = kstr + signer.get_sk(format, dbg)
+
+    if not out_file:
+        click.echo(kstr)
+    else:
+        with open(out_file, "w") as kfile:
+            kfile.write(kstr)
 
 
 @cli.group(short_help='Generate a Device Firmware Update package.')
