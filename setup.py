@@ -103,7 +103,8 @@ setup(
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
     package_data = { 
-                '': ['*.txt']
+                '': ['*.txt'],
+                '': ['*.spec'],
     },
     install_requires=common_requirements,
     zipfile=None,
@@ -141,15 +142,4 @@ setup(
         "script": "./nordicsemi/__main__.py",
         "dest_base": "nrfutil"
     }],
-    options={
-        "py2exe": {
-            "includes": includes,
-            "excludes": excludes,
-            "ascii": False,
-            "bundle_files": 1,  # 1 for bunding into exe, 3 for to distdir
-            "dist_dir": build_dir,
-            "verbose": True,
-            "dll_excludes": dll_excludes
-        }
-    }
 )
