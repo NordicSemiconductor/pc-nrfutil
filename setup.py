@@ -81,7 +81,7 @@ dll_excludes = [
 build_dir = os.environ.get("NRFUTIL_BUILD_DIR", "./{}".format(version.NRFUTIL_VERSION))
 description = """A Python package that includes the nrfutil utility and the nordicsemi library"""
 
-common_requirements=["six >= 1.9", "pyserial >= 2.7", "enum34 >= 1.0.4", "click >= 6.0", "ecdsa >= 0.13", "behave", "protobuf", "pc_ble_driver_py >= 0.5.0"]
+common_requirements=["six >= 1.9", "pyserial >= 2.7", "enum34 >= 1.0.4", "click >= 6.0", "ecdsa >= 0.13", "behave", "protobuf", "pc_ble_driver_py >= 0.6.1"]
 
 class NoseTestCommand(TestCommand):
     def finalize_options(self):
