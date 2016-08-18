@@ -9,7 +9,6 @@ import sys
 module = importlib.import_module("pc_ble_driver_py")
 mod_dir = os.path.dirname(module.__file__)
 shlib_dir = os.path.join(os.path.abspath(mod_dir), 'lib')
-print shlib_dir
 
 a = Analysis(['nordicsemi\\__main__.py'],
              binaries=[(shlib_dir, "lib")],
@@ -21,6 +20,7 @@ a = Analysis(['nordicsemi\\__main__.py'],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher)
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
