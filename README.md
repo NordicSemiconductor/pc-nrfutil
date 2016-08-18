@@ -33,24 +33,19 @@ that you are using you will need to select a release of this tool compatible wit
 * Version 0.5.2 generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
 * Versions 1.5.0 and later generate modern firmware packages compatible with **nRF SDK 12.0 and newer**
 
-## Running without installation
-
-If you have cloned the Git repository, you can run the program directly without installing it by executing:
-```
-python nordicsemi/__main__.py
-```
-
 ## Installing from PyPI
 
 To install the latest published version from the Python Package Index simply type:
 
     pip install nrfutil
 
+This will also retrieve and install all additional required packages.
+
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
 **Note**: To use the `dfu ble` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/tree/self_contained_driver#hardware-setup). 
 
-## Installation from source
+## Running and installing from source
 
 ### Prerequisites
 
@@ -65,6 +60,21 @@ Additionally, if you want to generate a self-contained executable:
 * PyInstaller: `pip install pyinstaller`
 
 **IMPORTANT NOTE**: py2exe is no longer supported and you must use PyInstaller instead to generate an executable
+
+### Requirements
+
+To obtain and install all required Python packages simply run:
+
+```
+pip install -r requirements.txt
+```
+
+## Running without installation
+
+If you have cloned the Git repository, you can run the program directly without installing it by executing:
+```
+python nordicsemi/__main__.py
+```
 
 ### Installation procedure
 

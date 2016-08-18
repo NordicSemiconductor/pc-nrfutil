@@ -41,7 +41,6 @@ Setup script for nrfutil.
 
 USAGE:
     python setup.py install
-    python setup.py py2exe
 
 """
 import os
@@ -49,11 +48,9 @@ import platform
 
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
+from pip.req import parse_requirements
 
 from nordicsemi import version
-
-if platform.system() == 'Windows':
-    import py2exe  # Required even if it is not used in this file. This import adds py2exe to distutils.
 
 excludes = ["Tkconstants",
             "Tkinter",
@@ -81,7 +78,10 @@ dll_excludes = [
 build_dir = os.environ.get("NRFUTIL_BUILD_DIR", "./{}".format(version.NRFUTIL_VERSION))
 description = """A Python package that includes the nrfutil utility and the nordicsemi library"""
 
-common_requirements=["six >= 1.9", "pyserial >= 2.7", "enum34 >= 1.0.4", "click >= 6.0", "ecdsa >= 0.13", "behave", "protobuf", "pc_ble_driver_py >= 0.6.1"]
+# parse_requirements() returns generator of pip.req.InstallRequirement objects
+install_reqs = parse_requirements("requirements.txt", session=False)
+# reqs is a list of requirements as strings
+reqs = [str(ir.req) for ir in install_reqs]
 
 class NoseTestCommand(TestCommand):
     def finalize_options(self):
@@ -106,7 +106,7 @@ setup(
                 '': ['*.txt'],
                 '': ['*.spec'],
     },
-    install_requires=common_requirements,
+    install_requires=reqs,
     zipfile=None,
     tests_require=[
         "nose >= 1.3.4",
