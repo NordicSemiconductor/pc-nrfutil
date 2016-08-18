@@ -45,7 +45,7 @@ import binascii
 
 from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent
 from pc_ble_driver_py.exceptions    import NordicSemiException, IllegalStateException
-from pc_ble_driver_py.ble_driver    import BLEDriver, BLEDriverObserver, BLEUUID, BLEAdvData, BLEGapConnParams, NordicSemiException
+from pc_ble_driver_py.ble_driver    import BLEDriver, BLEDriverObserver, BLEUUIDBase, BLEUUID, BLEAdvData, BLEGapConnParams, NordicSemiException
 from pc_ble_driver_py.ble_adapter   import BLEAdapter, BLEAdapterObserver, EvtSync
 
 logger  = logging.getLogger(__name__)
@@ -61,10 +61,10 @@ class ValidationException(NordicSemiException):
 
 
 class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
-    SERV_UUID   = BLEUUID([0x8E, 0xC9, 0x00, 0x00, 0xF3, 0x15, 0x4F, 0x60,
-                           0x9F, 0xB8, 0x83, 0x88, 0x30, 0xDA, 0xEA, 0x50])
-    CP_UUID     = BLEUUID(0x0001)
-    DP_UUID     = BLEUUID(0x0002)
+    BASE_UUID   = BLEUUIDBase([0x8E, 0xC9, 0x00, 0x00, 0xF3, 0x15, 0x4F, 0x60,
+                               0x9F, 0xB8, 0x83, 0x88, 0x30, 0xDA, 0xEA, 0x50])
+    CP_UUID     = BLEUUID(0x0001, BASE_UUID)
+    DP_UUID     = BLEUUID(0x0002, BASE_UUID)
 
 
     def __init__(self, adapter, target_device_name, target_device_addr):
@@ -83,7 +83,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter.driver.open()
         self.adapter.driver.ble_enable()
 
-        self.adapter.driver.ble_vs_uuid_add(DFUAdapter.SERV_UUID)
+        self.adapter.driver.ble_vs_uuid_add(DFUAdapter.BASE_UUID)
         self.adapter.driver.ble_gap_scan_start()
         self.conn_handle = self.evt_sync.wait('connected')
         if self.conn_handle is None:
