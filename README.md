@@ -69,14 +69,14 @@ To obtain and install all required Python packages simply run:
 pip install -r requirements.txt
 ```
 
-## Running without installation
+### Running from source
 
 If you have cloned the Git repository, you can run the program directly without installing it by executing:
 ```
 python nordicsemi/__main__.py
 ```
 
-### Installation procedure
+### Installing from source
 
 To install the library to the local Python site-packages and script folder:  
 ```
