@@ -33,6 +33,13 @@ that you are using you will need to select a release of this tool compatible wit
 * Version 0.5.2 generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
 * Versions 1.5.0 and later generate modern firmware packages compatible with **nRF SDK 12.0 and newer**
 
+## Running without installation
+
+If you have cloned the Git repository, you can run the program directly without installing it by executing:
+```
+python nordicsemi/__main__.py
+```
+
 ## Installing from PyPI
 
 To install the latest published version from the Python Package Index simply type:
@@ -53,12 +60,11 @@ To install nrfutil from source the following prerequisites must be satisfied:
 * [pip](https://pip.pypa.io/en/stable/installing.html)
 * setuptools (upgrade to latest version): `pip install -U setuptools`
 
-PyInstaller prerequisites:  
+Additionally, if you want to generate a self-contained executable:  
 
-**IMPORTANT NOTE**: py2exe is no longer supported and instead you can use PyInstaller to generate an executable
-
-* [VC compiler for Python](http://aka.ms/vcpython27)
 * PyInstaller: `pip install pyinstaller`
+
+**IMPORTANT NOTE**: py2exe is no longer supported and you must use PyInstaller instead to generate an executable
 
 ### Installation procedure
 
@@ -72,7 +78,7 @@ To generate a self-contained executable version of the utility:
 pyinstaller nrfutil.spec
 ```
 
-**Note**: Some anti-virus programs will stop PyInstaller from executing correctly when it modifies the .exe file.
+**Note**: Some anti-virus programs will stop PyInstaller from executing correctly when it modifies the executable file.
 
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
