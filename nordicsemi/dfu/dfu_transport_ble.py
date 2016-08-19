@@ -109,6 +109,10 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.evt_sync.notify(evt = 'connected', data = conn_handle)
 
 
+    def on_gap_evt_disconnected(self, ble_driver, conn_handle, reason):
+        print("on_gap_evt_disconnected handle: {} reason: {}".format(conn_handle, reason))
+
+
     def on_gap_evt_adv_report(self, ble_driver, conn_handle, peer_addr, rssi, adv_type, adv_data):
         dev_name_list = []
         if BLEAdvData.Types.complete_local_name in adv_data.records:
