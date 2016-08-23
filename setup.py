@@ -103,8 +103,7 @@ setup(
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
     package_data = { 
-                '': ['*.txt'],
-                '': ['*.spec'],
+                '': ['../requirements.txt']
     },
     install_requires=reqs,
     zipfile=None,
