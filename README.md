@@ -123,7 +123,7 @@ nrfutil pkg generate --hw-version 1 --sd-req 0x80 --application-version 4 --appl
 
 The following table lists the FWIDs which are used to identify the SoftDevice versions both included in the package and installed on the target device to perform the required SoftDevice version check:
 
-SoftDevice              FWID (sd-req)
+SoftDevice            | FWID (sd-req)
 ----------------------| -------------------
 `s130_nrf51_1.0.0`    | 0x67
 `s130_nrf51_2.0.0`    | 0x80
