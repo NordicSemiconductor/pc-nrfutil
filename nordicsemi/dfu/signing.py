@@ -152,7 +152,7 @@ class Signing(object):
         elif output_type == 'hex':
             return self.get_sk_hex()
         elif output_type == 'code':
-            return self.get_sk_code(dbg)
+            raise InvalidArgumentException("Private key cannot be shown as code")
         elif output_type == 'pem':
             return self.sk.to_pem()
         else:
@@ -226,32 +226,6 @@ class Signing(object):
             code = header + key_code
         return code
 
-    def get_sk_code(self, dbg):
-        """
-        Get the verification key as code
-        """
-        if self.sk is None:
-            raise IllegalStateException("Can't get key. No key created/loaded")
-
-        sk_hex = binascii.hexlify(self.sk.to_string())
-
-        sk_x_separated = ""
-        for i in xrange(0, len(sk_hex), 2):
-            sk_x_separated = "0x" + sk_hex[i:i+2] + ", " + sk_x_separated
-
-        sk_x_separated = sk_x_separated[:-2]
-
-        key_code = """
-/** @brief Private key used to sign DFU images */
-__ALIGN(4) const uint8_t sk[32] =
-{{
-    {0}
-}};
-"""
-        key_code = key_code.format(sk_x_separated)
-        sk_code = self.wrap_code(key_code, dbg)
-
-        return sk_code
 
     def get_vk_code(self, dbg):
         """

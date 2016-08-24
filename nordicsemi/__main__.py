@@ -287,10 +287,14 @@ def display(key_file, key, format, out_file):
     else:
         dbg = False
 
+    if format == "code" and key == "sk":
+        click.echo("Displaying the private key as code is not available.")
+        return
+
     if key == "pk":
         kstr = signer.get_vk(format, dbg)
     elif key == "sk": 
-        kstr = "\nWARNING: Security risk! Do not share the private key.\n"
+        kstr = "\nWARNING: Security risk! Do not share the private key.\n\n"
         kstr = kstr + signer.get_sk(format, dbg)
 
     if not out_file:

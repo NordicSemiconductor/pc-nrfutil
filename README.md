@@ -121,6 +121,17 @@ When using debug mode you don't need to specify versions for hardware and firmwa
 nrfutil pkg generate --hw-version 1 --sd-req 0x80 --application-version 4 --application app.hex --key-file key.pem app_dfu_package.zip
 ```
 
+The following table lists the FWIDs which are used to identify the SoftDevice versions both included in the package and installed on the target device to perform the required SoftDevice version check:
+
+SoftDevice              FWID (sd-req)
+----------------------| -------------------
+`s130_nrf51_1.0.0`    | 0x67
+`s130_nrf51_2.0.0`    | 0x80
+`s132_nrf52_2.0.0`    | 0x81
+`s130_nrf51_2.0.1`    | 0x87
+`s132_nrf52_2.0.1`    | 0x88
+`s132_nrf52_3.0.0`    | 0x8C
+
 #### dfu
 This set of commands allow you to perform an actual firmware update over a serial or BLE connection.
 
