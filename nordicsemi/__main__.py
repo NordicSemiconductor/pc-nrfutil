@@ -172,7 +172,7 @@ def settings():
 @click.option('--bl-settings-version',
               help='The Bootloader settings version.'
               'Defined in nrf_dfu_types.h, the following apply to released SDKs:'
-              '\n SDK12: 1',
+              '\n|SDK12|1|',
               type=BASED_INT_OR_NONE)
 
 def generate(hex_file,
@@ -339,8 +339,13 @@ def pkg():
 @click.option('--sd-req',
               help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs (1 or more) '
                    'of which one must be present on the target device. Each item on the list must be in hex and prefixed with \"0x\".'
-                   '\nExample #1 (s130 2.0.0 and 2.0.1): --sd-req 0x80,0x87. '
-                   '\nExample #2 (s132 2.0.0 and 2.0.1): --sd-req 0x81,0x88.',
+                   'A list of the possible values to use with this option follows:'
+                   '\n|s130_nrf51_1.0.0|0x67|'
+                   '\n|s130_nrf51_2.0.0|0x80|'
+                   '\n|s132_nrf52_2.0.0|0x81|'
+                   '\n|s130_nrf51_2.0.1|0x87|'
+                   '\n|s132_nrf52_2.0.1|0x88|'
+                   '\n|s132_nrf52_3.0.0|0x8C|',
               type=click.STRING,
               multiple=True)
 @click.option('--softdevice',
