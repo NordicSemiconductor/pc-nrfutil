@@ -47,6 +47,8 @@ This will also retrieve and install all additional required packages.
 
 ## Running and installing from source
 
+You will need to clone the present repository first to run or install nrfutil from source.
+
 ### Prerequisites
 
 To install nrfutil from source the following prerequisites must be satisfied:
@@ -71,7 +73,7 @@ pip install -r requirements.txt
 
 ### Running from source
 
-If you have cloned the Git repository, you can run the program directly without installing it by executing:
+You can run the program directly without installing it by executing:
 ```
 python nordicsemi/__main__.py
 ```
