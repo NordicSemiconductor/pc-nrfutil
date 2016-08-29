@@ -145,12 +145,12 @@ The following conventions are used on the table:
 Combination   | Supported | Notes
 --------------| ----------|-------
 BL            | Yes       |
-SD            | Yes       | SD must be of the same Major Version
+SD            | Yes       | **SD must be of the same Major Version**
 APP           | Yes       |
 BL + SD       | Yes       |
 BL + APP      | No        | Create two .zip packages instead
 BL + SD + APP | Yes       |
-SD + APP      | Yes       | SD must be of the same Major Version
+SD + APP      | Yes       | **SD must be of the same Major Version**
 
 
 #### dfu

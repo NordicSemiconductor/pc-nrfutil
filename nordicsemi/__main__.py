@@ -370,8 +370,29 @@ def generate(zipfile,
     The application, bootloader, and SoftDevice files are converted to .bin if supplied as .hex files.
     For more information on the generated package, see:
     http://developer.nordicsemi.com/nRF5_SDK/doc/
+
+    The following combinations are supported by this command:
+
+    * BL only: Supported.
+
+    * SD only: Supported (SD of same Major Version).
+
+    * APP only: Supported.
+   
+    * BL + SD: Supported.
+
+    * BL + APP: Not supported (use two packages instead).
+
+    * BL + SD + APP: Supported.
+
+    * SD + APP: Supported (SD of same Major Version).
     """
     zipfile_path = zipfile
+
+    # Check combinations
+    if bootloader is not None and application is not None and softdevice is None:
+        click.echo("Error: Invalid combination: use two .zip packages instead.")
+        return
 
     if debug_mode is None:
         debug_mode = False
@@ -386,7 +407,6 @@ def generate(zipfile,
         hw_version = None
 
     # Convert multiple value into a single instance
-
     if len(sd_req) > 1:
         click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
         return
