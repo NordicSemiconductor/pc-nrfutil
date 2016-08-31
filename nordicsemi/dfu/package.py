@@ -167,18 +167,140 @@ class Package(object):
         if key_file:
             self.key_file = key_file
 
-    def generate_package(self, filename, preserve_work_directory=False):
+        self.work_dir = None
+        self.manifest = None
+
+    def __del__(self):
+        """
+        Destructor removes the temporary working directory
+        :return:
+        """
+        if self.work_dir is not None:
+            shutil.rmtree(self.work_dir)
+        self.work_dir = None
+
+    def rm_work_dir(self, preserve):
+        # Delete the temporary directory
+        if self.work_dir is not None:
+            if not preserve:
+                shutil.rmtree(self.work_dir)
+
+        self.work_dir = None
+
+    def parse_package(self, filename, preserve_work_dir=False):
+        self.work_dir = self.__create_temp_workspace()
+
+        self.zip_file = filename
+        self.zip_dir  = os.path.join(self.work_dir, 'unpacked_zip')
+        self.manifest = Package.unpack_package(filename, self.zip_dir)
+        
+        self.rm_work_dir(preserve_work_dir)
+
+    def image_str(self, index, hex_type, img):
+        type_strs = {HexType.SD_BL : "sd_bl", 
+                    HexType.SOFTDEVICE : "softdevice",
+                    HexType.BOOTLOADER : "bootloader",
+                    HexType.APPLICATION : "application" }
+
+        # parse init packet
+        with open(os.path.join(self.zip_dir, img.dat_file), "rb") as imgf:
+            initp_bytes = imgf.read()
+
+        initp = InitPacketPB(from_bytes=initp_bytes)
+
+        sd_req = ""
+        for x in initp.init_command.sd_req:
+            sd_req = sd_req + "0x{0:02X}, ".format(x)
+
+        if len(sd_req) != 0:
+            sd_req = sd_req[:-2]
+
+        s = """|
+|-Image #{0}:
+    |- Type: {1}
+    |- Image file: {2}
+    |- Init packet file: {3}
+        |
+        |- op_code: {4}
+        |- signature_type: {5}
+        |- signature: {6}
+        |
+        |- fw_version: 0x{7:08X} ({7})
+        |- hw_version 0x{8:08X} ({8})
+        |- sd_req: {9}
+        |- type: {10}
+        |- sd_size: {11}
+        |- bl_size: {12}
+        |- app_size: {13}
+        |
+        |- hash_type: {14}
+        |- hash: {15}
+        |
+        |- is_debug: {16}
+
+""".format(index,
+        type_strs[hex_type],
+        img.bin_file,
+        img.dat_file,
+        CommandTypes(initp.signed_command.command.op_code).name,
+        SigningTypes(initp.signed_command.signature_type).name,
+        binascii.hexlify(initp.signed_command.signature),
+        initp.init_command.fw_version,
+        initp.init_command.hw_version,
+        sd_req,
+        DFUType(initp.init_command.type).name,
+        initp.init_command.sd_size,
+        initp.init_command.bl_size,
+        initp.init_command.app_size,
+        HashTypes(initp.init_command.hash.hash_type).name,
+        binascii.hexlify(initp.init_command.hash.hash),
+        initp.init_command.is_debug,
+        )
+
+        return s
+
+    def __str__(self):
+        
+        imgs = ""
+        i = 0
+        if self.manifest.softdevice_bootloader:
+            imgs = imgs + self.image_str(i, HexType.SD_BL, self.manifest.softdevice_bootloader)
+            i = i + 1
+
+        if self.manifest.softdevice:
+            imgs = imgs + self.image_str(i, HexType.SOFTDEVICE, self.manifest.softdevice)
+            i = i + 1
+
+        if self.manifest.bootloader:
+            imgs = imgs + self.image_str(i, HexType.BOOTLOADER, self.manifest.bootloader)
+            i = i + 1
+
+        if self.manifest.application:
+            imgs = imgs + self.image_str(i, HexType.APPLICATION, self.manifest.application)
+            i = i + 1
+
+        s = """
+DFU Package: <{0}>:
+|
+|- Image count: {1}
+""".format(self.zip_file, i)
+
+        s = s + imgs
+        return s
+
+    def generate_package(self, filename, preserve_work_dir=False):
         """
         Generates a Nordic DFU package. The package is a zip file containing firmware(s) and metadata required
         for Nordic DFU applications to perform DFU onn nRF5X devices.
 
         :param str filename: Filename for generated package.
-        :param bool preserve_work_directory: True to preserve the temporary working directory.
+        :param bool preserve_work_dir: True to preserve the temporary working directory.
         Useful for debugging of a package, and if the user wants to look at the generated package without having to
         unzip it.
         :return: None
         """
-        work_directory = self.__create_temp_workspace()
+        self.zip_file = filename
+        self.work_dir = self.__create_temp_workspace()
 
         if Package._is_bootloader_softdevice_combination(self.firmwares_data):
             # Removing softdevice and bootloader data from dictionary and adding the combined later
@@ -189,7 +311,7 @@ class Package(object):
             bootloader_fw_name = bootloader_fw_data[FirmwareKeys.FIRMWARE_FILENAME]
 
             new_filename = "sd_bl.bin"
-            sd_bl_file_path = os.path.join(work_directory, new_filename)
+            sd_bl_file_path = os.path.join(self.work_dir, new_filename)
 
             nrf_hex = nRFHex(softdevice_fw_name, bootloader_fw_name)
             nrf_hex.tobinfile(sd_bl_file_path)
@@ -208,10 +330,10 @@ class Package(object):
 
             # Normalize the firmware file and store it in the work directory
             firmware_data[FirmwareKeys.BIN_FILENAME] = \
-                Package.normalize_firmware_to_bin(work_directory, firmware_data[FirmwareKeys.FIRMWARE_FILENAME])
+                Package.normalize_firmware_to_bin(self.work_dir, firmware_data[FirmwareKeys.FIRMWARE_FILENAME])
 
             # Calculate the hash for the .bin file located in the work directory
-            bin_file_path = os.path.join(work_directory, firmware_data[FirmwareKeys.BIN_FILENAME])
+            bin_file_path = os.path.join(self.work_dir, firmware_data[FirmwareKeys.BIN_FILENAME])
             firmware_hash = Package.calculate_sha256_hash(bin_file_path)
             bin_length = int(Package.calculate_file_size(bin_file_path))
 
@@ -229,15 +351,16 @@ class Package(object):
                 sd_size = firmware_data[FirmwareKeys.SD_SIZE]
 
             init_packet = InitPacketPB(
+                            from_bytes = None,
                             hash_bytes=firmware_hash,
-                            dfu_type=HexTypeToInitPacketFwTypemap[key],
                             hash_type=HashTypes.SHA256,
-                            app_size=app_size,
-                            sd_size=sd_size,
-                            bl_size=bl_size,
+                            dfu_type=HexTypeToInitPacketFwTypemap[key],
                             is_debug=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.DEBUG_MODE],
                             fw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],
                             hw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.HW_VERSION],
+                            sd_size=sd_size,
+                            app_size=app_size,
+                            bl_size=bl_size,
                             sd_req=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.REQUIRED_SOFTDEVICES_ARRAY])
 
             signer = Signing()
@@ -248,7 +371,7 @@ class Package(object):
             # Store the .dat file in the work directory
             init_packet_filename = firmware_data[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")
 
-            with open(os.path.join(work_directory, init_packet_filename), 'wb') as init_packet_file:
+            with open(os.path.join(self.work_dir, init_packet_filename), 'wb') as init_packet_file:
                 init_packet_file.write(init_packet.get_init_packet_pb_bytes())
 
             firmware_data[FirmwareKeys.DAT_FILENAME] = \
@@ -257,27 +380,26 @@ class Package(object):
         # Store the manifest to manifest.json
         manifest = self.create_manifest()
 
-        with open(os.path.join(work_directory, Package.MANIFEST_FILENAME), "w") as manifest_file:
+        with open(os.path.join(self.work_dir, Package.MANIFEST_FILENAME), "w") as manifest_file:
             manifest_file.write(manifest)
 
-        # Package the work_directory to a zip file
-        Package.create_zip_package(work_directory, filename)
+        # Package the work_dir to a zip file
+        Package.create_zip_package(self.work_dir, filename)
 
         # Delete the temporary directory
-        if not preserve_work_directory:
-            shutil.rmtree(work_directory)
+        self.rm_work_dir(preserve_work_dir)
 
     @staticmethod
     def __create_temp_workspace():
-        return tempfile.mkdtemp(prefix="nrf_dfu_")
+        return tempfile.mkdtemp(prefix="nrf_dfu_pkg_")
 
     @staticmethod
-    def create_zip_package(work_directory, filename):
-        files = os.listdir(work_directory)
+    def create_zip_package(work_dir, filename):
+        files = os.listdir(work_dir)
 
         with ZipFile(filename, 'w') as package:
             for _file in files:
-                file_path = os.path.join(work_directory, _file)
+                file_path = os.path.join(work_dir, _file)
                 package.write(file_path, _file)
 
     @staticmethod
@@ -352,10 +474,10 @@ class Package(object):
             self.firmwares_data[firmware_type][FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION] = firmware_version
 
     @staticmethod
-    def normalize_firmware_to_bin(work_directory, firmware_path):
+    def normalize_firmware_to_bin(work_dir, firmware_path):
         firmware_filename = os.path.basename(firmware_path)
         new_filename = firmware_filename.replace(".hex", ".bin")
-        new_filepath = os.path.join(work_directory, new_filename)
+        new_filepath = os.path.join(work_dir, new_filename)
 
         if not os.path.exists(new_filepath):
             temp = nRFHex(firmware_path)

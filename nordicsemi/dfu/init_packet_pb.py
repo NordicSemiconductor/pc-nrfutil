@@ -37,13 +37,18 @@
 import dfu_cc_pb2 as pb
 from enum import Enum
 
-
 class SigningTypes(Enum):
-    ED25519 = pb.ED25519
     ECDSA_P256_SHA256 = pb.ECDSA_P256_SHA256
+    ED25519 = pb.ED25519
 
+class CommandTypes(Enum):
+    RESET = pb.RESET
+    INIT = pb.INIT
 
 class HashTypes(Enum):
+    NONE = pb.NO_HASH
+    CRC = pb.CRC
+    SHA128 = pb.SHA128
     SHA256 = pb.SHA256
     SHA512 = pb.SHA512
 
@@ -51,15 +56,16 @@ class HashTypes(Enum):
 class DFUType(Enum):
     APPLICATION = pb.APPLICATION
     SOFTDEVICE = pb.SOFTDEVICE
-    SOFTDEVICE_BOOTLOADER = pb.SOFTDEVICE_BOOTLOADER
     BOOTLOADER = pb.BOOTLOADER
+    SOFTDEVICE_BOOTLOADER = pb.SOFTDEVICE_BOOTLOADER
 
 
 class InitPacketPB(object):
     def __init__(self,
-                 hash_bytes,
-                 hash_type,
-                 dfu_type,
+                 from_bytes = None,
+                 hash_bytes = None,
+                 hash_type = None,
+                 dfu_type = None,
                  is_debug=False,
                  fw_version=0xffffffff,
                  hw_version=0xffffffff,
@@ -69,22 +75,31 @@ class InitPacketPB(object):
                  sd_req=None
                  ):
 
-        if not sd_req:
-            sd_req = [0xfffe]  # Set to default value
-        self.packet = pb.Packet()
-        self.signed_command = self.packet.signed_command
-        self.init_command = self.signed_command.command.init
-        self.init_command.hash.hash_type = hash_type.value
-        self.init_command.type = dfu_type.value
-        self.init_command.hash.hash = hash_bytes
-        self.init_command.is_debug = is_debug
-        self.init_command.fw_version = fw_version
-        self.init_command.hw_version = hw_version
-        self.init_command.sd_req.extend(list(set(sd_req)))
-        self.init_command.sd_size = sd_size
-        self.init_command.bl_size = bl_size
-        self.init_command.app_size = app_size
-        self.signed_command.command.op_code = pb.INIT
+        if from_bytes is not None:
+            # construct from a stream
+            self.packet = pb.Packet()
+            self.packet.ParseFromString(from_bytes)
+            self.signed_command = self.packet.signed_command
+            self.init_command = self.signed_command.command.init
+        else:
+            # construct from input variables
+            if not sd_req:
+                sd_req = [0xfffe]  # Set to default value
+            self.packet = pb.Packet()
+            self.signed_command = self.packet.signed_command
+            self.init_command = self.signed_command.command.init
+            self.init_command.hash.hash_type = hash_type.value
+            self.init_command.type = dfu_type.value
+            self.init_command.hash.hash = hash_bytes
+            self.init_command.is_debug = is_debug
+            self.init_command.fw_version = fw_version
+            self.init_command.hw_version = hw_version
+            self.init_command.sd_req.extend(list(set(sd_req)))
+            self.init_command.sd_size = sd_size
+            self.init_command.bl_size = bl_size
+            self.init_command.app_size = app_size
+            self.signed_command.command.op_code = pb.INIT
+
         self._validate()
 
     def _validate(self):

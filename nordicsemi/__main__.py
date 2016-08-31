@@ -486,6 +486,15 @@ def generate(zipfile,
     log_message = "Zip created at {0}".format(zipfile_path)
     click.echo(log_message)
 
+@pkg.command(short_help='Display the contents of a .zip package file.')
+@click.argument('zip_file', required=True, type=click.Path())
+
+def display(zip_file): 
+
+    package = Package()
+    package.parse_package(zip_file, preserve_work_dir=True)
+
+    click.echo("{0}".format(str(package)))
 
 global_bar = None
 def update_progress(progress=0):

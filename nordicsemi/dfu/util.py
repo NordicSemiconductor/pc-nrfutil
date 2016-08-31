@@ -37,7 +37,19 @@
 
 # Nordic libraries
 from pc_ble_driver_py.exceptions import NordicSemiException
+from enum import Enum
 
+# From http://stackoverflow.com/questions/4472901/python-enum-class-with-tostring-fromstring
+class NordicEnum(Enum):
+  @classmethod
+  def tostring(cls, val):
+    for k,v in vars(cls).iteritems():
+        if v==val:
+            return k
+
+  @classmethod
+  def fromstring(cls, str):
+      return getattr(cls, str.upper(), None)
 
 # TODO: Create query function that maps query-result strings with functions
 def query_func(question, default=False):
