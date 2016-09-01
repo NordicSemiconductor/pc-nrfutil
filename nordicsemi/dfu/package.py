@@ -216,27 +216,27 @@ class Package(object):
             sd_req = sd_req[:-2]
 
         s = """|
-|-Image #{0}:
-    |- Type: {1}
-    |- Image file: {2}
-    |- Init packet file: {3}
-        |
-        |- op_code: {4}
-        |- signature_type: {5}
-        |- signature: {6}
-        |
-        |- fw_version: 0x{7:08X} ({7})
-        |- hw_version 0x{8:08X} ({8})
-        |- sd_req: {9}
-        |- type: {10}
-        |- sd_size: {11}
-        |- bl_size: {12}
-        |- app_size: {13}
-        |
-        |- hash_type: {14}
-        |- hash: {15}
-        |
-        |- is_debug: {16}
+|- Image #{0}:
+   |- Type: {1}
+   |- Image file: {2}
+   |- Init packet file: {3}
+      |
+      |- op_code: {4}
+      |- signature_type: {5}
+      |- signature: {6}
+      |
+      |- fw_version: 0x{7:08X} ({7})
+      |- hw_version 0x{8:08X} ({8})
+      |- sd_req: {9}
+      |- type: {10}
+      |- sd_size: {11}
+      |- bl_size: {12}
+      |- app_size: {13}
+      |
+      |- hash_type: {14}
+      |- hash: {15}
+      |
+      |- is_debug: {16}
 
 """.format(index,
         type_strs[hex_type],

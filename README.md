@@ -152,6 +152,11 @@ BL + APP      | No        | Create two .zip packages instead
 BL + SD + APP | Yes       |
 SD + APP      | Yes       | **SD must be of the same Major Version**
 
+##### display
+Use this option to display the contents of a DFU package in a .zip file.
+```
+nrfutil pkg display package.zip
+```
 
 #### dfu
 This set of commands allow you to perform an actual firmware update over a serial or BLE connection.
