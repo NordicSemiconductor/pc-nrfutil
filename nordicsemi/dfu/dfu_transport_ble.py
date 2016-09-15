@@ -164,7 +164,7 @@ class DfuTransportBle(DfuTransport):
 
     def open(self):
         if self.dfu_adapter:
-            IllegalStateException('DFU Adapter is already open')
+            raise IllegalStateException('DFU Adapter is already open')
 
         super(DfuTransportBle, self).open()
         driver           = BLEDriver(serial_port    = self.serial_port,
@@ -178,7 +178,7 @@ class DfuTransportBle(DfuTransport):
 
     def close(self):
         if not self.dfu_adapter:
-            IllegalStateException('DFU Adapter is already closed')
+            raise IllegalStateException('DFU Adapter is already closed')
         super(DfuTransportBle, self).close()
         self.dfu_adapter.close()
         self.dfu_adapter = None
@@ -378,7 +378,7 @@ class DfuTransportBle(DfuTransport):
 
         elif resp[2] == DfuTransport.RES_CODE['ExtendedError']:
             error = self.__read_error()
-            NordicSemiException('Extended Error {:X}: {}'.format(error['err_code'], error['data']))
+            raise NordicSemiException('Extended Error {:X}: {}'.format(error['err_code'], error['data']))
         else:
             raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
 
