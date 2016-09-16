@@ -79,6 +79,7 @@ class Dfu(object):
 
 
     def _dfu_send_image(self, firmware):
+        time.sleep(3)
         self.dfu_transport.open()
 
         start_time = time.time()
