@@ -56,6 +56,8 @@ from nordicsemi.dfu.util import query_func
 from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
 from pc_ble_driver_py.ble_driver import BLEDriver, Flasher
 
+logger = logging.getLogger(__name__)
+
 def display_sec_warning():
     default_key_warning = """
 |===============================================================|
@@ -130,22 +132,27 @@ class TextOrNoneParamType(click.ParamType):
 
 TEXT_OR_NONE = TextOrNoneParamType()
 
-
 @click.group()
-@click.option('--verbose',
+@click.option('-v', '--verbose',
               help='Show verbose information.',
-              is_flag=True)
+              count=True)
 def cli(verbose):
-    if verbose:
-        logging.basicConfig(format='%(message)s', level=logging.INFO)
+    #click.echo('verbosity: %s' % verbose)
+    if verbose == 0:
+        log_level = logging.ERROR
+    elif verbose == 1:
+        log_level = logging.INFO
     else:
-        logging.basicConfig(format='%(message)s')
+        log_level = logging.DEBUG
 
+    logging.basicConfig(format='%(message)s', level=log_level)
 
 @cli.command()
 def version():
     """Display nrfutil version."""
     click.echo("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
+    logger.info("PyPi URL: https://pypi.python.org/pypi/nrfutil")
+    logger.debug("GitHub URL: https://github.com/NordicSemiconductor/pc-nrfutil")
 
 @cli.group(short_help='Generate and display Bootloader DFU settings.')
 def settings():
@@ -584,23 +591,27 @@ def ble(package, port, name, address, jlink_snr, flash_connectivity):
     if flash_connectivity:
         flasher = Flasher(serial_port=port, snr = jlink_snr) 
         if flasher.fw_check():
-            click.echo("Connectivity already flashed with firmware.")
+            click.echo("Board already flashed with connectivity firmware.")
         else:
-            click.echo("Flashing connectivity ")
+            click.echo("Flashing connectivity firmware...")
             flasher.fw_flash()
-            click.echo("Connectivity flashed")
+            click.echo("Connectivity firmware flashed.")
         flasher.reset()
         time.sleep(1)
 
+    logger.info("Using connectivity board at serial port: {}".format(port))
     ble_backend = DfuTransportBle(serial_port=str(port),
                                   target_device_name=str(name),
                                   target_device_addr=str(address))
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend)
 
-    with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
-        global global_bar
-        global_bar = bar
+    if logger.getEffectiveLevel() > logging.INFO: 
+        with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
+            global global_bar
+            global_bar = bar
+            dfu.dfu_send_images()
+    else:
         dfu.dfu_send_images()
 
     click.echo("Device programmed.")

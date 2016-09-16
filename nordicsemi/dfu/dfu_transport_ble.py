@@ -85,18 +85,22 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     def connect(self, target_device_name, target_device_addr):
         self.target_device_name = target_device_name
         self.target_device_addr = target_device_addr
-        logger.debug('connect: target address: 0x{}'.format(self.target_device_addr))
+        logger.debug('BLE: connect: target address: 0x{}'.format(self.target_device_addr))
+        logger.info('BLE: Scanning...')
         self.adapter.driver.ble_gap_scan_start()
         self.conn_handle = self.evt_sync.wait('connected')
         if self.conn_handle is None:
             raise NordicSemiException('Timeout. Device not found.')
-
+        logger.info('BLE: Connected to target')
+        logger.debug('BLE: Service Discovery')
         self.adapter.service_discovery(conn_handle=self.conn_handle)
+        logger.debug('BLE: Enabling Notifications')
         self.adapter.enable_notification(conn_handle=self.conn_handle, uuid=DFUAdapter.CP_UUID)
         return self.target_device_name, self.target_device_addr
 
     def close(self):
         if self.conn_handle is not None:
+            logger.info('BLE: Disconnecting from target')
             self.adapter.disconnect(self.conn_handle)
             self.evt_sync.wait('disconnected')
         self.adapter.driver.close()
@@ -112,11 +116,13 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
     def on_gap_evt_connected(self, ble_driver, conn_handle, peer_addr, own_addr, role, conn_params):
         self.evt_sync.notify(evt = 'connected', data = conn_handle)
+        logger.info('BLE: Connected to {}'.format(peer_addr))
 
 
     def on_gap_evt_disconnected(self, ble_driver, conn_handle, reason):
         self.evt_sync.notify(evt = 'disconnected', data = conn_handle)
         self.conn_handle = None
+        logger.info('BLE: Disconnected')
 
 
     def on_gap_evt_adv_report(self, ble_driver, conn_handle, peer_addr, rssi, adv_type, adv_data):
@@ -129,15 +135,15 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
         dev_name        = "".join(chr(e) for e in dev_name_list)
         address_string  = "".join("{0:02X}".format(b) for b in peer_addr.addr)
-        logger.debug('Received advertisment report, address: 0x{}, device_name: {}'.format(address_string,
-                                                                                           dev_name))
-        logger.debug('target address: 0x{}'.format(self.target_device_addr))
+        logger.debug('Received advertisment report, address: 0x{}, device_name: {}'.format(address_string, dev_name))
 
         if (dev_name == self.target_device_name) or (address_string == self.target_device_addr):
             conn_params = BLEGapConnParams(min_conn_interval_ms = 15,
                                            max_conn_interval_ms = 30,
                                            conn_sup_timeout_ms  = 4000,
                                            slave_latency        = 0)
+            logger.info('BLE: Found target advertiser, address: 0x{}, name: {}'.format(address_string, dev_name))
+            logger.info('BLE: Connecting to 0x{}'.format(address_string))
             self.adapter.connect(address = peer_addr, conn_params = conn_params)
             # store the name and address for subsequent connections
             self.target_device_name = dev_name
@@ -322,14 +328,17 @@ class DfuTransportBle(DfuTransport):
 
 
     def __select_object(self, object_type):
+        logger.debug("BLE: Selecting Object: type:{}".format(object_type))
         self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['ReadObject'], object_type])
         response = self.__get_response(DfuTransportBle.OP_CODE['ReadObject'])
 
         (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
+        logger.debug("BLE: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
         return {'max_size': max_size, 'offset': offset, 'crc': crc}
 
 
     def __stream_data(self, data, crc=0, offset=0):
+        logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
         for i in range(0, len(data), DfuTransportBle.DATA_PACKET_SIZE):
             to_transmit     = data[i:i + DfuTransportBle.DATA_PACKET_SIZE]
             self.dfu_adapter.write_data_point(map(ord, to_transmit))

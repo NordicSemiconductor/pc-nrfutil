@@ -84,18 +84,18 @@ class Dfu(object):
 
         start_time = time.time()
 
-        logger.info("Sending DFU init packet")
+        logger.info("Sending init packet...")
         with open(os.path.join(self.unpacked_zip_path, firmware.dat_file), 'rb') as f:
             data    = f.read()
             self.dfu_transport.send_init_packet(data)
 
-        logger.info("Sending firmware file")
+        logger.info("Sending firmware file...")
         with open(os.path.join(self.unpacked_zip_path, firmware.bin_file), 'rb') as f:
             data    = f.read()
             self.dfu_transport.send_firmware(data)
 
         end_time = time.time()
-        logger.info("DFU upgrade took {0}s".format(end_time - start_time))
+        logger.info("Image sent in {0}s".format(end_time - start_time))
 
         self.dfu_transport.close()
 
@@ -106,15 +106,19 @@ class Dfu(object):
         :return:
         """
         if self.manifest.softdevice_bootloader:
+            logger.info("Sending SoftDevice+Bootloader image.")
             self._dfu_send_image(self.manifest.softdevice_bootloader)
 
         if self.manifest.softdevice:
+            logger.info("Sending SoftDevice image...")
             self._dfu_send_image(self.manifest.softdevice)
 
         if self.manifest.bootloader:
+            logger.info("Sending Bootloader image.")
             self._dfu_send_image(self.manifest.bootloader)
 
         if self.manifest.application:
+            logger.info("Sending Application image.")
             self._dfu_send_image(self.manifest.application)
 
 
