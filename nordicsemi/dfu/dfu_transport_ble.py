@@ -178,8 +178,6 @@ class DfuTransportBle(DfuTransport):
         self.target_device_addr = target_device_addr
         self.dfu_adapter        = None
         self.prn                = prn
-        
-
 
     def open(self):
         if self.dfu_adapter:
