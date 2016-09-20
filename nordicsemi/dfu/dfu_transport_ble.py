@@ -178,6 +178,7 @@ class DfuTransportBle(DfuTransport):
         self.target_device_addr = target_device_addr
         self.dfu_adapter        = None
         self.prn                = prn
+        
 
 
     def open(self):
@@ -343,16 +344,21 @@ class DfuTransportBle(DfuTransport):
         (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
         logger.debug("BLE: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
         return {'max_size': max_size, 'offset': offset, 'crc': crc}
+    
+    def __get_checksum_response(self):
+        response = self.__get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
 
+        (offset, crc) = struct.unpack('<II', bytearray(response))
+        return {'offset': offset, 'crc': crc}
 
     def __stream_data(self, data, crc=0, offset=0):
         logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
         def validate_crc():
-            
+             
             if (crc != response['crc']):
                 raise ValidationException('Failed CRC validation.\n'\
                                 + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
-
+ 
             if (offset != response['offset']):
                 raise ValidationException('Failed offset validation.\n'\
                                 + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
@@ -366,7 +372,7 @@ class DfuTransportBle(DfuTransport):
             current_pnr    += 1
             if self.prn == current_pnr:
                 current_pnr = 0
-                response    = self.__calculate_checksum()
+                response    = self.__get_checksum_response()
                 validate_crc()
 
         response = self.__calculate_checksum()
