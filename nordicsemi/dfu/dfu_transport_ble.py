@@ -169,13 +169,15 @@ class DfuTransportBle(DfuTransport):
                  serial_port,
                  target_device_name=None,
                  target_device_addr=None,
-                 baud_rate=115200):
+                 baud_rate=115200,
+                 prn=0):
         super(DfuTransportBle, self).__init__()
         self.baud_rate          = baud_rate
         self.serial_port        = serial_port
         self.target_device_name = target_device_name
         self.target_device_addr = target_device_addr
         self.dfu_adapter        = None
+        self.prn                = prn
 
 
     def open(self):
@@ -191,6 +193,7 @@ class DfuTransportBle(DfuTransport):
         self.target_device_name, self.target_device_addr = self.dfu_adapter.connect(
                                                         target_device_name = self.target_device_name,
                                                         target_device_addr = self.target_device_addr)
+        self.__set_prn()
 
     def close(self):
         if not self.dfu_adapter:
@@ -291,7 +294,12 @@ class DfuTransportBle(DfuTransport):
                 raise NordicSemiException("Failed to send firmware")
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
 
-
+    
+    def __set_prn(self):
+        logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
+        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + map(ord, struct.pack('<H', self.prn)))
+        self.__get_response(DfuTransportBle.OP_CODE['SetPRN'])
+    
     def __create_command(self, size):
         self.__create_object(0x01, size)
 
@@ -339,20 +347,30 @@ class DfuTransportBle(DfuTransport):
 
     def __stream_data(self, data, crc=0, offset=0):
         logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
+        def validate_crc():
+            
+            if (crc != response['crc']):
+                raise ValidationException('Failed CRC validation.\n'\
+                                + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
+
+            if (offset != response['offset']):
+                raise ValidationException('Failed offset validation.\n'\
+                                + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
+        
+        current_pnr     = 0
         for i in range(0, len(data), DfuTransportBle.DATA_PACKET_SIZE):
             to_transmit     = data[i:i + DfuTransportBle.DATA_PACKET_SIZE]
             self.dfu_adapter.write_data_point(map(ord, to_transmit))
             crc     = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
+            current_pnr    += 1
+            if self.prn == current_pnr:
+                current_pnr = 0
+                response    = self.__calculate_checksum()
+                validate_crc()
 
         response = self.__calculate_checksum()
-        if (crc != response['crc']):
-            raise ValidationException('Failed CRC validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
-
-        if (offset != response['offset']):
-            raise ValidationException('Failed offset validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
+        validate_crc()
 
         return crc
 
