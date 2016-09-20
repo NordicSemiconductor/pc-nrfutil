@@ -354,11 +354,9 @@ class DfuTransportBle(DfuTransport):
     def __stream_data(self, data, crc=0, offset=0):
         logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
         def validate_crc():
-             
             if (crc != response['crc']):
                 raise ValidationException('Failed CRC validation.\n'\
                                 + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
- 
             if (offset != response['offset']):
                 raise ValidationException('Failed offset validation.\n'\
                                 + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
@@ -379,7 +377,6 @@ class DfuTransportBle(DfuTransport):
         validate_crc()
 
         return crc
-
 
     def __read_error(self):
         self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['ReadError']])
