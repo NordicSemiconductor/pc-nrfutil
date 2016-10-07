@@ -146,8 +146,7 @@ class DfuTransportMesh(DfuTransport):
     DEFAULT_FLOW_CONTROL = True
     DEFAULT_SERIAL_PORT_TIMEOUT = 5.0  # Timeout time on serial port read
     ACK_PACKET_TIMEOUT = 1.0  # Timeout time for for ACK packet received before reporting timeout through event system
-    SEND_INIT_PACKET_WAIT_TIME = 0.1  # Time to wait before communicating with bootloader after init packet is sent
-    SEND_START_DFU_WAIT_TIME = 1.0  # Time to wait before communicating with bootloader after start DFU packet is sent
+    SEND_START_DFU_WAIT_TIME = 2.0  # Time to wait before communicating with bootloader after start DFU packet is sent
     SEND_DATA_PACKET_WAIT_TIME = 0.5 # Time between each data packet
     RETRY_WAIT_TIME = 0.5 # Time to wait before attempting to retransmit a packet
     DFU_PACKET_MAX_SIZE = 16  # The DFU packet max size
@@ -248,7 +247,7 @@ class DfuTransportMesh(DfuTransport):
 
         start_packet = SerialPacket(self, start)
         self.send_packet(start_packet)
-        time.sleep(self.interval)
+        time.sleep(DfuTransportMesh.SEND_START_DFU_WAIT_TIME)
 
     def send_activate_firmware(self):
         super(DfuTransportMesh, self).send_activate_firmware()
@@ -342,6 +341,8 @@ class DfuTransportMesh(DfuTransport):
         except Exception, e:
             self._send_event(DfuEvent.ERROR_EVENT,
                 log_message = e.message)
+            if self.is_open():
+                self.serial_port.close()
 
 
     def send_bytes(self, data):
@@ -436,7 +437,7 @@ class SerialPacket(object):
         self.thread.start()
 
     def run(self):
-        while self.retries < SerialPacket.MAX_RETRIES and self.transport.serial_port and not self.is_acked:
+        while self.retries < SerialPacket.MAX_RETRIES and self.transport.serial_port and self.transport.serial_port.isOpen() and not self.is_acked:
             try:
                 self.transport.send_bytes(self.data)
             except:
