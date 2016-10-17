@@ -346,8 +346,11 @@ def serial(package, port, baudrate, flowcontrol, interval, mesh):
         click.echo("- target is not in DFU mode. If using the SDK examples, "
                    "press Button 4 and RESET and release both to enter DFU mode.")
 
-        click.echo("Trace:\r\n{0}".format(traceback.print_exc()))
+        #click.echo("Trace:\r\n{0}".format(traceback.print_exc()))
         return False
+    finally:
+        serial_backend.close()
+
 
     click.echo("Device programmed.")
 
