@@ -145,11 +145,12 @@ class DfuTransportMesh(DfuTransport):
     DEFAULT_BAUD_RATE = 1000000
     DEFAULT_FLOW_CONTROL = True
     DEFAULT_SERIAL_PORT_TIMEOUT = 5.0  # Timeout time on serial port read
-    ACK_PACKET_TIMEOUT = 1.0  # Timeout time for for ACK packet received before reporting timeout through event system
     SEND_START_DFU_WAIT_TIME = 2.0  # Time to wait before communicating with bootloader after start DFU packet is sent
     SEND_DATA_PACKET_WAIT_TIME = 0.5 # Time between each data packet
-    RETRY_WAIT_TIME = 0.5 # Time to wait before attempting to retransmit a packet
     DFU_PACKET_MAX_SIZE = 16  # The DFU packet max size
+    ACK_WAIT_TIME = 0.5 # Time to wait for an ack before attempting to resend a packet.
+    MAX_CONTINUOUS_MESSAGE_INTERBYTE_GAP = 0.1 # Maximal time to wait between two bytes in the same packet
+    MAX_RETRIES = 5 # Number of send retries before the serial connection is considered lost.
 
     def __init__(self, com_port, baud_rate=DEFAULT_BAUD_RATE, flow_control=DEFAULT_FLOW_CONTROL, timeout=DEFAULT_SERIAL_PORT_TIMEOUT, interval=SEND_DATA_PACKET_WAIT_TIME):
         super(DfuTransportMesh, self).__init__()
@@ -177,26 +178,35 @@ class DfuTransportMesh(DfuTransport):
         super(DfuTransportMesh, self).open()
 
         try:
-            self.serial_port = Serial(port=self.com_port, baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
+            self.serial_port = Serial(port=self.com_port, baudrate=self.baud_rate, rtscts=self.flow_control, timeout=DfuTransportMesh.MAX_CONTINUOUS_MESSAGE_INTERBYTE_GAP)
         except Exception, e:
             if self.serial_port:
                 self.serial_port.close()
             raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
 
+        # Flush out-buffer
+        logger.info("Flushing com-port...")
+        # Flush incoming data by the assumption that no continuous message has a time gap of >MAX_CONTINUOUS_MESSAGE_INTERBYTE_GAP seconds
+        while len(self.serial_port.read()) > 0:
+            pass
+        self.serial_port.timeout = self.timeout # set the timeout to actually wanted value
         logger.info("Opened com-port")
         self.rxthread = Thread(target=self.receive_thread)
-        self.rxthread.daemon = True
+        self.rxthread.daemon = False
         self.rxthread.start()
+        time.sleep(1)
+
+    def __del__(self):
+        self.close()
 
     def close(self):
-        try:
+        logger.info("Closing serial port...")
+        if self.is_open():
             self.serial_port.close()
-        except Exception, e:
-            pass
+        if self.rxthread:
+            self.rxthread.join()
 
     def is_open(self):
-        super(DfuTransportMesh, self).is_open()
-
         if self.serial_port is None:
             return False
 
