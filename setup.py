@@ -35,7 +35,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-
 """
 Setup script for nrfutil.
 
@@ -83,6 +82,13 @@ install_reqs = parse_requirements("requirements.txt", session=False)
 # reqs is a list of requirements as strings
 reqs = [str(ir.req) for ir in install_reqs]
 
+def make_uri(dep):
+    uri = 'file://' + os.path.dirname(os.path.abspath(__file__)) + '/' + dep.rstrip()
+    return uri.replace('/', os.sep)
+
+with open('dependency_links.txt', 'r') as f:
+    dep_links = [make_uri(dep) for dep in f.readlines()]
+
 class NoseTestCommand(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
@@ -102,10 +108,11 @@ setup(
     description="Nordic Semiconductor nrfutil utility and Python library",
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
-    package_data = { 
-                '': ['../requirements.txt']
+    package_data = {
+                '': ['../requirements.txt', '../dependency_links.txt', 'thread/hex/ncp.hex', '../deps/*.tar.gz']
     },
     install_requires=reqs,
+    dependency_links=dep_links,
     zipfile=None,
     tests_require=[
         "nose >= 1.3.4",
@@ -116,7 +123,7 @@ setup(
         'Development Status :: 4 - Beta',
 
         'Intended Audience :: Developers',
-        
+
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX :: Linux',
@@ -124,7 +131,7 @@ setup(
         'Topic :: System :: Networking',
         'Topic :: System :: Hardware :: Hardware Drivers',
         'Topic :: Software Development :: Embedded Systems',
-        
+
         'License :: Other/Proprietary License',
 
         'Programming Language :: Python :: 2.7',

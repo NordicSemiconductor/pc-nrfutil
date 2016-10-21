@@ -34,6 +34,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import ipaddress
+import signal
 
 """nrfutil command line tool."""
 import os
@@ -547,7 +549,7 @@ def update_progress(progress=0):
     if global_bar:
         global_bar.update(progress)
 
-@cli.group(short_help='Perform a Device Firmware Update over a BLE or serial transport.')
+@cli.group(short_help='Perform a Device Firmware Update over, BLE, Thread, or serial transport.')
 def dfu():
     """
     This set of commands supports Device Firmware Upgrade procedures over both BLE and serial transports.
@@ -620,6 +622,13 @@ def enumerate_ports():
     index = click.prompt('Enter your choice: ', type=click.IntRange(0, len(descs)))
     return descs[index].port
 
+def get_port_by_snr(snr):
+    serial_ports = BLEDriver.enum_serial_ports()
+    try:
+        serial_port = [d.port for d in serial_ports if d.serial_number.lstrip('0') == snr][0]
+    except IndexError:
+        raise NordicSemiException('board not found')
+    return serial_port
 
 @dfu.command(short_help="Update the firmware on a device over a BLE connection.")
 @click.option('-pkg', '--package',
@@ -697,6 +706,113 @@ def convert_version_string_to_int(s):
     js = [10000, 100, 1]
     return sum([js[i] * int(numbers[i]) for i in range(3)])
 
+@dfu.command(short_help="Update the firmware on a device over a Thread connection.")
+@click.option('-pkg', '--package',
+              help='Filename of the DFU package.',
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
+              required=True)
+@click.option('-p', '--port',
+              help='Serial port COM port to which the NCP is connected.',
+              type=click.STRING)
+@click.option('-a', '--address',
+              help='Device IPv6 address. If address is not specified then perform DFU'
+                   + 'on all capable devices.',
+              type=click.STRING)
+@click.option('-sp', '--server_port',
+              help='UDP port to which the DFU server binds. If not specified the 5683 is used.',
+              type=click.INT,
+              default=5683)
+@click.option('--prefix',
+              help='URI prefix used added to DFU resources. Defaults to ''dfu''.',
+              type=click.STRING,
+              default='dfu')
+@click.option('--panid',
+              help='802.15.4 PAN ID. If not specified then 1234 is used as PAN ID.',
+              type=click.INT)
+@click.option('--channel',
+              help='802.15.4 Channel. If not specified then channel 11 is used.',
+              type=click.INT)
+@click.option('-snr', '--jlink_snr',
+              help='Jlink serial number.',
+              type=click.STRING)
+@click.option('-f', '--flash_connectivity',
+              help='Flash connectivity firmware automatically. Default: disabled.',
+              type=click.BOOL,
+              is_flag=True)
+@click.option('-s', '--sim',
+              help='Use software NCP and connect to the OT simulator.',
+              type=click.BOOL,
+              is_flag=True)
+def thread(package, port, address, server_port, prefix, panid, channel, jlink_snr, flash_connectivity, sim):
+    from nordicsemi.thread import ncp
+    from nordicsemi.thread.dfu_thread import ThreadDFU
+    from nordicsemi.thread.ncp_transport import NcpTransport
+    from nordicsemi.thread.ncp_flasher import NCPFlasher
+
+    """Perform a Device Firmware Update on a device with a bootloader that supports Thread DFU."""
+    if address is None:
+        address = ipaddress.ip_address(u"ff03::1")
+        click.echo("Address not specified. Using ff03::1 (all Thread nodes)")
+    else:
+        try:
+            address = ipaddress.ip_address(address)
+        except:
+            click.echo("Invalid IPv6 address")
+            return
+
+    if (not sim):
+        if port is None and jlink_snr is None:
+            click.echo("Please specify serial port or Jlink serial number.")
+            return
+
+        elif port is None:
+            port = get_port_by_snr(jlink_snr)
+            if port is None:
+                click.echo("\nNo Segger USB CDC ports found, please connect your board.")
+                return
+
+        stream_descriptor = 'u:' + port
+        logger.info("Using connectivity board at serial port: {}".format(port))
+    else:
+        stream_descriptor = 'p:' + Flasher.which('ot-ncp') + ' 30'
+        logger.info("Using ot-ncp binary: {}".format(stream_descriptor))
+
+    if flash_connectivity:
+        flasher = NCPFlasher(serial_port=port, snr = jlink_snr)
+        if flasher.fw_check():
+            click.echo("Board already flashed with connectivity firmware.")
+        else:
+            click.echo("Flashing connectivity firmware...")
+            flasher.fw_flash()
+            click.echo("Connectivity firmware flashed.")
+        flasher.reset()
+
+    config = ncp.Proxy.get_default_config()
+    if (panid):
+        config[ncp.Proxy.CFG_KEY_PANID] = panid
+    if (channel):
+        config[ncp.Proxy.CFG_KEY_CHANNEL] = channel
+    if (flash_connectivity):
+        config[ncp.Proxy.CFG_KEY_RESET] = False
+
+    factory = lambda endpoint : NcpTransport(server_port, endpoint, stream_descriptor, config)
+    dfu = ThreadDFU(factory, package, prefix)
+
+    try:
+        sighandler = lambda signum, frame : dfu.stop
+        signal.signal(signal.SIGINT, sighandler)
+        signal.signal(signal.SIGTERM, sighandler)
+
+        dfu.start()
+        dfu.trigger(address, 3)
+        click.echo("Press any key to terminate")
+        click.getchar()
+        click.echo("Terminating")
+
+    except Exception as e:
+        logger.error(e.args[0])
+    finally:
+        dfu.stop()
 
 if __name__ == '__main__':
     cli()
