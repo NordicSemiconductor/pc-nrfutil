@@ -525,19 +525,30 @@ def dfu():
               help='Serial port COM port to which the device is connected.',
               type=click.STRING,
               required=True)
-@click.option('-b', '--baudrate',
-              help='Desired baud rate: 38400/96000/115200/230400/250000/460800/921600/1000000. Default: 38400. '
-                   'Note: Physical serial ports (for example, COM1) typically do not support baud rates > 115200.',
-              type=click.INT,
-              default=DfuTransportSerial.DEFAULT_BAUD_RATE)
-@click.option('-fc', '--flowcontrol',
-              help='Enable flow control. Default: disabled.',
-              type=click.BOOL,
-              is_flag=True)
-def serial(package, port, baudrate, flowcontrol):
+def serial(package, port):
     """Perform a Device Firmware Update on a device with a bootloader that supports serial DFU."""
-    raise NotImplementedException('Serial transport currently is not supported')
+    #raise NotImplementedException('Serial transport currently is not supported')
+    """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
 
+    if port is None:
+        click.echo("Please specify serial port.")
+        return
+
+    logger.info("Using board at serial port: {}".format(port))
+    serial_backend = DfuTransportSerial(com_port=str(port))
+    serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
+
+    if logger.getEffectiveLevel() > logging.INFO: 
+        with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
+            global global_bar
+            global_bar = bar
+            dfu.dfu_send_images()
+    else:
+        dfu.dfu_send_images()
+
+    click.echo("Device programmed.")
+    
 
 def enumerate_ports():
     descs   = BLEDriver.enum_serial_ports()
