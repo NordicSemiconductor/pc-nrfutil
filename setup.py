@@ -79,7 +79,7 @@ build_dir = os.environ.get("NRFUTIL_BUILD_DIR", "./{}".format(version.NRFUTIL_VE
 description = """A Python package that includes the nrfutil utility and the nordicsemi library"""
 
 # parse_requirements() returns generator of pip.req.InstallRequirement objects
-install_reqs = parse_requirements("requirements.txt", session=False)
+install_reqs = parse_requirements("requirements.txt")
 # reqs is a list of requirements as strings
 reqs = [str(ir.req) for ir in install_reqs]
 
