@@ -171,15 +171,13 @@ nrfutil dfu ble -pkg app_dfu_package.zip -p COM3 -n "MyDevice" -f
 The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a serialized SoftDevice. Use with caution as this will overwrite the contents of the IC's flash memory.
 
 ##### serial
-**Note**: DFU over a serial line is currently disabled
-
 Perform a full DFU procedure over a serial (UART) line. This command takes several options that you can list using:
 ```
 nrfutil dfu serial --help
 ```
-Below is an example of the execution of a DFU procedure of the file generated above over COM3 at 115200 bits per second:
+Below is an example of the execution of a DFU procedure of the file generated above over COM3:
 ```
-nrfutil dfu serial -pkg app_dfu_package.zip -p COM3 -b 115200
+nrfutil dfu serial -pkg app_dfu_package.zip -p COM3
 ```
 
 #### keys
