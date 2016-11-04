@@ -47,16 +47,21 @@ sys.path.append(os.getcwd())
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent
-from nordicsemi.dfu.dfu_transport_ble import DfuTransportBle
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
 from nordicsemi.dfu.util import query_func
 from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
-from pc_ble_driver_py.ble_driver import BLEDriver, Flasher
 
 logger = logging.getLogger(__name__)
+
+def ble_driver_init(conn_ic_id):
+    global BLEDriver, Flasher, DfuTransportBle
+    from pc_ble_driver_py import config
+    config.__conn_ic_id__ = conn_ic_id
+    from pc_ble_driver_py.ble_driver    import BLEDriver, Flasher
+    from nordicsemi.dfu.dfu_transport_ble import DfuTransportBle
 
 def display_sec_warning():
     default_key_warning = """
@@ -567,6 +572,10 @@ def enumerate_ports():
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
               required=True)
+@click.option('-ic', '--conn-ic-id',
+              help='Connectivity IC ID: NRF51 or NRF52',
+              type=click.Choice(['NRF51', 'NRF52']),
+              required=True)
 @click.option('-p', '--port',
               help='Serial port COM port to which the connectivity IC is connected.',
               type=click.STRING)
@@ -583,7 +592,8 @@ def enumerate_ports():
               help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
-def ble(package, port, name, address, jlink_snr, flash_connectivity):
+def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity):
+    ble_driver_init(conn_ic_id)
     """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
     if name is None and address is None:
         name = 'DfuTarg'

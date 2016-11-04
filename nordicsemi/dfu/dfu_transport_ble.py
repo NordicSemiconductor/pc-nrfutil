@@ -114,7 +114,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter.write_cmd(self.conn_handle, DFUAdapter.DP_UUID, data)
 
 
-    def on_gap_evt_connected(self, ble_driver, conn_handle, peer_addr, own_addr, role, conn_params):
+    def on_gap_evt_connected(self, ble_driver, conn_handle, peer_addr, role, conn_params):
         self.evt_sync.notify(evt = 'connected', data = conn_handle)
         logger.info('BLE: Connected to {}'.format(peer_addr))
 
