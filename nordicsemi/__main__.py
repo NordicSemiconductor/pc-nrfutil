@@ -55,6 +55,7 @@ from nordicsemi.dfu.util import query_func
 from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 def ble_driver_init(conn_ic_id):
     global BLEDriver, Flasher, DfuTransportBle
@@ -580,10 +581,16 @@ def enumerate_ports():
               help='Serial port COM port to which the connectivity IC is connected.',
               type=click.STRING)
 @click.option('-n', '--name',
-              help='Device name.',
+              help='Bootloader name.',
               type=click.STRING)
 @click.option('-a', '--address',
-              help='Device address.',
+              help='Bootloader address.',
+              type=click.STRING)
+@click.option('-appn', '--application_name',
+              help='Application name.',
+              type=click.STRING)
+@click.option('-appa', '--application_address',
+              help='Application address.',
               type=click.STRING)
 @click.option('-snr', '--jlink_snr',
               help='Jlink serial number.',
@@ -592,8 +599,18 @@ def enumerate_ports():
               help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
-def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity):
+def ble(package,
+        conn_ic_id,
+        port,
+        name,
+        address,
+        application_name,
+        application_address,
+        jlink_snr,
+        flash_connectivity):
+
     ble_driver_init(conn_ic_id)
+
     """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
     if name is None and address is None:
         name = 'DfuTarg'
@@ -621,9 +638,11 @@ def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity)
         time.sleep(1)
 
     logger.info("Using connectivity board at serial port: {}".format(port))
-    ble_backend = DfuTransportBle(serial_port=str(port),
-                                  target_device_name=str(name),
-                                  target_device_addr=str(address))
+    ble_backend = DfuTransportBle(serial_port         = str(port),
+                                  bootloader_name     = name,
+                                  bootloader_address  = address,
+                                  application_name    = application_name,
+                                  application_address = application_address)
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend)
 
