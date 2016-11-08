@@ -67,7 +67,7 @@ class ValidationException(NordicSemiException):
 
 class DeviceNotFoundException(NordicSemiException):
     """"
-    Exception used when validation failed
+    Exception used when device was not found
     """
     pass
 
@@ -128,7 +128,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter.driver.ble_gap_scan_start()
         self.conn_handle = self.evt_sync.wait('connected')
         if self.conn_handle is None:
-            raise DeviceNotFoundException('Timeout. Target device not found.')
+            raise DeviceNotFoundException('Timeout. Device not found.')
+
         logger.info('BLE: Connected to target')
         logger.debug('BLE: Authenticating')
         self.adapter.authenticate(conn_handle=self.conn_handle)
@@ -282,9 +283,11 @@ class DfuTransportBle(DfuTransport):
         if self.application_name or self.application_address:
             self.dfu_adapter.open()
             try:
+                logger.info('Try to find Application.')
                 self.dfu_adapter.connect_application(target_device_name = self.application_name,
                                                      target_device_addr = self.application_address)
-                self.dfu_adapter.write_buttonless([0x01])
+                logger.info('Put application into DFU mode.')
+                self.__enter_dfu_mode()
             except DeviceNotFoundException:
                 pass
 
