@@ -60,6 +60,13 @@ class ValidationException(NordicSemiException):
     pass
 
 
+class DeviceNotFoundException(NordicSemiException):
+    """"
+    Exception used when device was not found
+    """
+    pass
+
+
 
 class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     BASE_UUID       = BLEUUIDBase([0x8E, 0xC9, 0x00, 0x00, 0xF3, 0x15, 0x4F, 0x60,
@@ -105,7 +112,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter.driver.ble_gap_scan_start()
         self.conn_handle = self.evt_sync.wait('connected')
         if self.conn_handle is None:
-            raise NordicSemiException('Timeout. Device not found.')
+            raise DeviceNotFoundException('Timeout. Device not found.')
         logger.info('BLE: Connected to target')
         logger.debug('BLE: Pairing')
         self.adapter.pair(conn_handle=self.conn_handle)
@@ -124,7 +131,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter.driver.ble_gap_scan_start()
         self.conn_handle = self.evt_sync.wait('connected')
         if self.conn_handle is None:
-            raise NordicSemiException('Timeout. Device not found.')
+            raise DeviceNotFoundException('Timeout. Device not found.')
         logger.info('BLE: Connected to target')
         logger.debug('BLE: Service Discovery')
         self.adapter.service_discovery(conn_handle=self.conn_handle)
@@ -241,9 +248,14 @@ class DfuTransportBle(DfuTransport):
 
         if self.application_name or self.application_address:
             self.dfu_adapter.open()
-            self.dfu_adapter.connect_application(target_device_name = self.application_name,
-                                                 target_device_addr = self.application_address)
-            self.__enter_dfu_mode()
+            try:
+                logger.info('Try to find Application.')
+                self.dfu_adapter.connect_application(target_device_name = self.application_name,
+                                                     target_device_addr = self.application_address)
+                logger.info('Put application into DFU mode.')
+                self.__enter_dfu_mode()
+            except DeviceNotFoundException:
+                pass
             self.dfu_adapter.close()
             time.sleep(1)
 
