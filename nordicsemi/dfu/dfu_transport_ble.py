@@ -38,6 +38,7 @@
 # Python standard library
 import os
 import sys
+import time
 import Queue
 import struct
 import logging
@@ -49,7 +50,7 @@ from pc_ble_driver_py.ble_driver    import BLEDriver, BLEDriverObserver, BLEUUID
 from pc_ble_driver_py.ble_adapter   import BLEAdapter, BLEAdapterObserver, EvtSync
 
 logger  = logging.getLogger(__name__)
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 
 
 class ValidationException(NordicSemiException):
@@ -61,11 +62,11 @@ class ValidationException(NordicSemiException):
 
 
 class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
-    BASE_UUID   = BLEUUIDBase([0x8E, 0xC9, 0x00, 0x00, 0xF3, 0x15, 0x4F, 0x60,
-                               0x9F, 0xB8, 0x83, 0x88, 0x30, 0xDA, 0xEA, 0x50])
-    CP_UUID     = BLEUUID(0x0001, BASE_UUID)
-    DP_UUID     = BLEUUID(0x0002, BASE_UUID)
-
+    BASE_UUID       = BLEUUIDBase([0x8E, 0xC9, 0x00, 0x00, 0xF3, 0x15, 0x4F, 0x60,
+                                   0x9F, 0xB8, 0x83, 0x88, 0x30, 0xDA, 0xEA, 0x50])
+    CP_UUID         = BLEUUID(0x0001, BASE_UUID)
+    DP_UUID         = BLEUUID(0x0002, BASE_UUID)
+    BUTTONLESS_UUID = BLEUUID(0x0003, BASE_UUID)
 
     def __init__(self, adapter):
         super(DFUAdapter, self).__init__()
@@ -78,11 +79,44 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
 
     def open(self):
-        self.adapter.driver.open()
+        self.adapter.open()
         self.adapter.driver.ble_enable()
         self.adapter.driver.ble_vs_uuid_add(DFUAdapter.BASE_UUID)
 
-    def connect(self, target_device_name, target_device_addr):
+
+    def close(self):
+        if self.conn_handle is not None:
+            logger.info('BLE: Disconnecting from target')
+            self.adapter.disconnect(self.conn_handle)
+            self.evt_sync.wait('disconnected')
+
+        self.evt_sync           = EvtSync(['connected', 'disconnected'])
+        self.conn_handle        = None
+        self.notifications_q    = Queue.Queue()
+
+        self.adapter.close()
+
+
+    def connect_application(self, target_device_name, target_device_addr):
+        self.target_device_name = target_device_name
+        self.target_device_addr = target_device_addr
+        logger.debug('BLE: connect: target address: 0x{}'.format(self.target_device_addr))
+        logger.info('BLE: Scanning...')
+        self.adapter.driver.ble_gap_scan_start()
+        self.conn_handle = self.evt_sync.wait('connected')
+        if self.conn_handle is None:
+            raise NordicSemiException('Timeout. Device not found.')
+        logger.info('BLE: Connected to target')
+        logger.debug('BLE: Pairing')
+        self.adapter.pair(conn_handle=self.conn_handle)
+        logger.debug('BLE: Service Discovery')
+        self.adapter.service_discovery(conn_handle=self.conn_handle)
+        logger.debug('BLE: Enabling Notifications')
+        self.adapter.enable_notification(self.conn_handle, DFUAdapter.BUTTONLESS_UUID)
+        return self.target_device_name, self.target_device_addr
+
+
+    def connect_bootloader(self, target_device_name, target_device_addr):
         self.target_device_name = target_device_name
         self.target_device_addr = target_device_addr
         logger.debug('BLE: connect: target address: 0x{}'.format(self.target_device_addr))
@@ -98,13 +132,6 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter.enable_notification(conn_handle=self.conn_handle, uuid=DFUAdapter.CP_UUID)
         return self.target_device_name, self.target_device_addr
 
-    def close(self):
-        if self.conn_handle is not None:
-            logger.info('BLE: Disconnecting from target')
-            self.adapter.disconnect(self.conn_handle)
-            self.evt_sync.wait('disconnected')
-        self.adapter.driver.close()
-
 
     def write_control_point(self, data):
         self.adapter.write_req(self.conn_handle, DFUAdapter.CP_UUID, data)
@@ -112,6 +139,10 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
     def write_data_point(self, data):
         self.adapter.write_cmd(self.conn_handle, DFUAdapter.DP_UUID, data)
+
+
+    def write_buttonless(self, data):
+        self.adapter.write_req(self.conn_handle, DFUAdapter.BUTTONLESS_UUID, data)
 
 
     def on_gap_evt_connected(self, ble_driver, conn_handle, peer_addr, own_addr, role, conn_params):
@@ -137,7 +168,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         address_string  = "".join("{0:02X}".format(b) for b in peer_addr.addr)
         logger.debug('Received advertisment report, address: 0x{}, device_name: {}'.format(address_string, dev_name))
 
-        if (dev_name == self.target_device_name) or (address_string == self.target_device_addr):
+        if ((dev_name == self.target_device_name) and self.target_device_name) \
+        or (address_string == self.target_device_addr):
             conn_params = BLEGapConnParams(min_conn_interval_ms = 15,
                                            max_conn_interval_ms = 30,
                                            conn_sup_timeout_ms  = 4000,
@@ -152,8 +184,9 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
     def on_notification(self, ble_adapter, conn_handle, uuid, data):
         if self.conn_handle         != conn_handle: return
-        if DFUAdapter.CP_UUID.value != uuid.value:  return
-        #logger.debug(data)
+        if (DFUAdapter.CP_UUID.value != uuid.value) and (DFUAdapter.BUTTONLESS_UUID.value != uuid.value):
+            return
+        # logger.debug(data)
         self.notifications_q.put(data)
 
 
@@ -167,17 +200,22 @@ class DfuTransportBle(DfuTransport):
 
     def __init__(self,
                  serial_port,
-                 target_device_name=None,
-                 target_device_addr=None,
+                 bootloader_name=None,
+                 bootloader_address=None,
+                 application_name=None,
+                 application_address=None,
                  baud_rate=115200,
                  prn=0):
         super(DfuTransportBle, self).__init__()
-        self.baud_rate          = baud_rate
-        self.serial_port        = serial_port
-        self.target_device_name = target_device_name
-        self.target_device_addr = target_device_addr
-        self.dfu_adapter        = None
-        self.prn                = prn
+        self.baud_rate              = baud_rate
+        self.serial_port            = serial_port
+        self.bootloader_name        = bootloader_name
+        self.bootloader_address     = bootloader_address
+        self.application_name       = application_name
+        self.application_address    = application_address
+        self.dfu_adapter            = None
+        self.prn                    = prn
+
 
     def open(self):
         if self.dfu_adapter:
@@ -188,11 +226,20 @@ class DfuTransportBle(DfuTransport):
                                      baud_rate      = self.baud_rate)
         adapter          = BLEAdapter(driver)
         self.dfu_adapter = DFUAdapter(adapter       = adapter)
+
+        if self.application_name or self.application_address:
+            self.dfu_adapter.open()
+            self.dfu_adapter.connect_application(target_device_name = self.application_name,
+                                                 target_device_addr = self.application_address)
+            self.dfu_adapter.write_buttonless([0x01])
+            self.dfu_adapter.close()
+            time.sleep(1)
+
         self.dfu_adapter.open()
-        self.target_device_name, self.target_device_addr = self.dfu_adapter.connect(
-                                                        target_device_name = self.target_device_name,
-                                                        target_device_addr = self.target_device_addr)
+        self.dfu_adapter.connect_bootloader(target_device_name = self.bootloader_name,
+                                            target_device_addr = self.bootloader_address)
         self.__set_prn()
+
 
     def close(self):
         if not self.dfu_adapter:
@@ -293,12 +340,13 @@ class DfuTransportBle(DfuTransport):
                 raise NordicSemiException("Failed to send firmware")
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
 
-    
+
     def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
         self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + map(ord, struct.pack('<H', self.prn)))
         self.__get_response(DfuTransportBle.OP_CODE['SetPRN'])
-    
+
+
     def __create_command(self, size):
         self.__create_object(0x01, size)
 
