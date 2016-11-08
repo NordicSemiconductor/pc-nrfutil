@@ -237,6 +237,18 @@ class DfuTransportBle(DfuTransport):
     DEFAULT_TIMEOUT     = 20
     RETRIES_NUMBER      = 3
 
+    BUTTONLESS_OP_CODE = {
+        'EnterDFU'              : 0x01,
+        'Response'              : 0x20,
+    }
+
+    BUTTONLESS_RES_CODE = {
+        'InvalidCode'           : 0x00,
+        'Success'               : 0x01,
+        'NotSupported'          : 0x02,
+        'OperationFailed'       : 0x04,
+        'WrongCCCDConfig'       : 0x01FD,
+    }
 
     def __init__(self,
                  serial_port,
@@ -275,6 +287,7 @@ class DfuTransportBle(DfuTransport):
                 self.dfu_adapter.write_buttonless([0x01])
             except DeviceNotFoundException:
                 pass
+
             self.dfu_adapter.close()
             time.sleep(1)
 
@@ -290,6 +303,14 @@ class DfuTransportBle(DfuTransport):
         super(DfuTransportBle, self).close()
         self.dfu_adapter.close()
         self.dfu_adapter = None
+
+
+    def __enter_dfu_mode(self):
+        logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
+        self.dfu_adapter.write_buttonless([DfuTransportBle.BUTTONLESS_OP_CODE['EnterDFU']])
+        self.__get_response(DfuTransportBle.BUTTONLESS_OP_CODE['EnterDFU'],
+                            DfuTransportBle.BUTTONLESS_OP_CODE,
+                            DfuTransportBle.BUTTONLESS_RES_CODE)
 
 
     def send_init_packet(self, init_packet):
@@ -386,8 +407,8 @@ class DfuTransportBle(DfuTransport):
 
     def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + map(ord, struct.pack('<H', self.prn)))
-        self.__get_response(DfuTransportBle.OP_CODE['SetPRN'])
+        self.dfu_adapter.write_control_point([DfuTransport.OP_CODE['SetPRN']] + map(ord, struct.pack('<H', self.prn)))
+        self.__get_response(DfuTransport.OP_CODE['SetPRN'])
 
 
     def __create_command(self, size):
@@ -399,22 +420,22 @@ class DfuTransportBle(DfuTransport):
 
 
     def __create_object(self, object_type, size):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
+        self.dfu_adapter.write_control_point([DfuTransport.OP_CODE['CreateObject'], object_type]\
                                             + map(ord, struct.pack('<L', size)))
-        self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
+        self.__get_response(DfuTransport.OP_CODE['CreateObject'])
 
 
     def __calculate_checksum(self):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
-        response = self.__get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+        self.dfu_adapter.write_control_point([DfuTransport.OP_CODE['CalcChecSum']])
+        response = self.__get_response(DfuTransport.OP_CODE['CalcChecSum'])
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
 
 
     def __execute(self):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['Execute']])
-        self.__get_response(DfuTransportBle.OP_CODE['Execute'])
+        self.dfu_adapter.write_control_point([DfuTransport.OP_CODE['Execute']])
+        self.__get_response(DfuTransport.OP_CODE['Execute'])
 
 
     def __select_command(self):
@@ -427,15 +448,15 @@ class DfuTransportBle(DfuTransport):
 
     def __select_object(self, object_type):
         logger.debug("BLE: Selecting Object: type:{}".format(object_type))
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['ReadObject'], object_type])
-        response = self.__get_response(DfuTransportBle.OP_CODE['ReadObject'])
+        self.dfu_adapter.write_control_point([DfuTransport.OP_CODE['ReadObject'], object_type])
+        response = self.__get_response(DfuTransport.OP_CODE['ReadObject'])
 
         (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
         logger.debug("BLE: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
         return {'max_size': max_size, 'offset': offset, 'crc': crc}
     
     def __get_checksum_response(self):
-        response = self.__get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+        response = self.__get_response(DfuTransport.OP_CODE['CalcChecSum'])
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
@@ -467,9 +488,9 @@ class DfuTransportBle(DfuTransport):
 
         return crc
 
-    def __read_error(self):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['ReadError']])
-        response = self.__get_response(DfuTransportBle.OP_CODE['ReadError'])
+    def __read_error(self, op_code):
+        self.dfu_adapter.write_control_point([op_code['ReadError']])
+        response = self.__get_response(op_code['ReadError'])
 
         (err_code, size) = struct.unpack('<HH', bytearray(response))
         data             = response[4:]
@@ -484,30 +505,30 @@ class DfuTransportBle(DfuTransport):
         return {'err_code': err_code, 'data': data}
 
 
-    def __get_response(self, operation):
+    def __get_response(self, operation, op_code=DfuTransport.OP_CODE, res_code=DfuTransport.RES_CODE):
         def get_dict_key(dictionary, value):
             return next((key for key, val in dictionary.items() if val == value), None)
 
         try:
             resp = self.dfu_adapter.notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
         except Queue.Empty:
-            raise NordicSemiException('Timeout: operation - {}'.format(get_dict_key(DfuTransportBle.OP_CODE,
+            raise NordicSemiException('Timeout: operation - {}'.format(get_dict_key(op_code,
                                                                                     operation)))
 
-        if resp[0] != DfuTransportBle.OP_CODE['Response']:
+        if resp[0] != op_code['Response']:
             raise NordicSemiException('No Response: 0x{:02X}'.format(resp[0]))
 
         if resp[1] != operation:
             raise NordicSemiException('Unexpected Executed OP_CODE.\n' \
                                     + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
 
-        if resp[2] == DfuTransport.RES_CODE['Success']:
+        if resp[2] == res_code['Success']:
             return resp[3:]
 
 
-        elif resp[2] == DfuTransport.RES_CODE['ExtendedError']:
-            error = self.__read_error()
+        elif resp[2] == res_code.get('ExtendedError', None):
+            error = self.__read_error(op_code)
             raise NordicSemiException('Extended Error {:X}: {}'.format(error['err_code'], error['data']))
         else:
-            raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
+            raise NordicSemiException('Response Code {}'.format(get_dict_key(res_code, resp[2])))
 
