@@ -131,7 +131,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             raise DeviceNotFoundException('Timeout. Device not found.')
 
         logger.info('BLE: Connected to target')
-        logger.debug('BLE: Authenticating')
+        logger.debug('BLE: Pairing')
         self.adapter.authenticate(conn_handle=self.conn_handle)
         logger.debug('BLE: Service Discovery')
 
