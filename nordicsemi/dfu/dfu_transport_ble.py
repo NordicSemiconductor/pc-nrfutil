@@ -82,6 +82,13 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
     LOCAL_ATT_MTU     = 23
 
+class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
+    BASE_UUID       = BLEUUIDBase([0x8E, 0xC9, 0x00, 0x00, 0xF3, 0x15, 0x4F, 0x60,
+                                   0x9F, 0xB8, 0x83, 0x88, 0x30, 0xDA, 0xEA, 0x50])
+    CP_UUID         = BLEUUID(0x0001, BASE_UUID)
+    DP_UUID         = BLEUUID(0x0002, BASE_UUID)
+    BUTTONLESS_UUID = BLEUUID(0x0003, BASE_UUID)
+
     def __init__(self, adapter):
         super(DFUAdapter, self).__init__()
         self.evt_sync           = EvtSync(['connected', 'disconnected'])
