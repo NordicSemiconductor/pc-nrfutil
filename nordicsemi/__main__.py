@@ -600,7 +600,7 @@ def serial(package, port, flow_control, packet_receipt_notification, baud_rate):
     serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
 
-    if logger.getEffectiveLevel() > logging.INFO: 
+    if logger.getEffectiveLevel() > logging.INFO:
         with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
             global global_bar
             global_bar = bar
@@ -609,7 +609,7 @@ def serial(package, port, flow_control, packet_receipt_notification, baud_rate):
         dfu.dfu_send_images()
 
     click.echo("Device programmed.")
-    
+
 
 def enumerate_ports():
     descs   = BLEDriver.enum_serial_ports()
@@ -744,6 +744,7 @@ def convert_version_string_to_int(s):
               type=click.BOOL,
               is_flag=True)
 def thread(package, port, address, server_port, prefix, panid, channel, jlink_snr, flash_connectivity, sim):
+    ble_driver_init('NRF52')
     from nordicsemi.thread import ncp
     from nordicsemi.thread.dfu_thread import ThreadDFU
     from nordicsemi.thread.ncp_transport import NcpTransport

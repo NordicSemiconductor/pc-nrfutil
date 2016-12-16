@@ -41,8 +41,8 @@ from pc_ble_driver_py.ble_driver import Flasher
 class NCPFlasher(Flasher):
     ERROR_CODE_VERIFY_ERROR = 55
 
-    def __init__(self, serial_port = None, snr = None, family = 'NRF52'):
-        Flasher.__init__(self, serial_port, snr, family)
+    def __init__(self, serial_port = None, snr = None):
+        Flasher.__init__(self, serial_port, snr)
 
     def __get_hex_path(self):
         return os.path.join(os.path.dirname(__file__), 'hex', 'ncp.hex')
