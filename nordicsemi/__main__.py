@@ -173,11 +173,15 @@ def settings():
               type=click.Choice(['NRF51', 'NRF52']))
 @click.option('--application',
               help='The application firmware file. This can be omitted if'
-                    'the target IC does not contain an application in flash.',
+                    'the target IC does not contain an application in flash.'
+                    'Requires --application-version or --application-version-string.',
               type=click.STRING)
 @click.option('--application-version',
-              help='The application version. Required with --application.',
+              help='The application version.',
               type=BASED_INT_OR_NONE)
+@click.option('--application-version-string',
+              help='The application version string, e.g "2.7.31".',
+              type=click.STRING)
 @click.option('--bootloader-version',
               help='The bootloader version.',
               type=BASED_INT_OR_NONE)
@@ -191,6 +195,7 @@ def generate(hex_file,
         family,
         application,
         application_version,
+        application_version_string,
         bootloader_version,
         bl_settings_version):
 
@@ -199,11 +204,19 @@ def generate(hex_file,
         click.echo("Error: IC Family required.")
         return
 
+    # The user can specify the application version with two different
+    # formats. As an integer, e.g. 102130, or as a string
+    # "10.21.30". Internally we convert to integer.
+    if application_version_string:
+        application_version_internal = convert_version_string_to_int(application_version_string)
+    else:
+        application_version_internal = application_version
+
     if application is not None:
         if not os.path.isfile(application):
             click.echo("Error: Application file not found.")
             return
-        if application_version is None:
+        if application_version_internal is None:
             click.echo("Error: Application version required.")
             return
 
@@ -216,7 +229,7 @@ def generate(hex_file,
         return
        
     sett = BLDFUSettings()
-    sett.generate(arch=family, app_file=application, app_ver=application_version, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version)
+    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version)
     sett.tohexfile(hex_file)
 
     click.echo("\nGenerated Bootloader DFU settings .hex file and stored it in: {}".format(hex_file))
@@ -339,6 +352,9 @@ def pkg():
 @click.option('--application-version',
               help='The application version.',
               type=BASED_INT_OR_NONE)
+@click.option('--application-version-string',
+              help='The application version string, e.g "2.7.31".',
+              type=click.STRING)
 @click.option('--bootloader',
               help='The bootloader firmware file.',
               type=click.STRING)
@@ -371,6 +387,7 @@ def generate(zipfile,
            debug_mode,
            application,
            application_version,
+           application_version_string,
            bootloader,
            bootloader_version,
            hw_version,
@@ -409,8 +426,16 @@ def generate(zipfile,
     if debug_mode is None:
         debug_mode = False
 
-    if application_version == 'none':
-        application_version = None
+    # The user can specify the application version with two different
+    # formats. As an integer, e.g. 102130, or as a string
+    # "10.21.30". Internally we convert to integer.
+    if application_version_string:
+        application_version_internal = convert_version_string_to_int(application_version_string)
+    else:
+        application_version_internal = application_version
+
+    if application_version_internal == 'none':
+        application_version_internal = None
 
     if bootloader_version == 'none':
         bootloader_version = None
@@ -430,7 +455,7 @@ def generate(zipfile,
             sd_req = None
 
     # Initial consistency checks
-    if application_version is not None and application is None:
+    if application_version_internal is not None and application is None:
         click.echo("Error: Application version with no image.")
         return
 
@@ -441,8 +466,8 @@ def generate(zipfile,
     if debug_mode:
         display_debug_warning()
         # Default to no version checking
-        if application_version is None:
-            application_version=Package.DEFAULT_APP_VERSION
+        if application_version_internal is None:
+            application_version_internal=Package.DEFAULT_APP_VERSION
         if bootloader_version is None:
             bootloader_version=Package.DEFAULT_BL_VERSION
         if hw_version is None:
@@ -460,8 +485,9 @@ def generate(zipfile,
         click.echo("Error: --sd-req required.")
         return
 
-    if application is not None and application_version is None: 
-        click.echo("Error: --application-version required with application image.")
+    if application is not None and application_version_internal is None: 
+        click.echo('Error: --application-version or --application-version-string'
+                   'required with application image.')
         return
 
     if bootloader is not None and bootloader_version is None: 
@@ -485,7 +511,7 @@ def generate(zipfile,
 
     package = Package(debug_mode,
                       hw_version,
-                      application_version,
+                      application_version_internal,
                       bootloader_version,
                       sd_req_list,
                       application,
@@ -636,6 +662,13 @@ def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity)
         dfu.dfu_send_images()
 
     click.echo("Device programmed.")
+
+def convert_version_string_to_int(s):
+    """Convert from semver string "1.2.3", to integer 10203"""
+    numbers = s.split(".")
+    js = [10000, 100, 1]
+    return sum([js[i] * int(numbers[i]) for i in range(3)])
+
 
 if __name__ == '__main__':
     cli()
