@@ -118,8 +118,9 @@ nrfutil pkg generate --debug-mode --application app.hex --key-file key.pem app_d
 ```
 When using debug mode you don't need to specify versions for hardware and firmware, so you can develop without having to worry about versioning your application. If you want to generate a package for production, you will need to do so without the `--debug-mode` parameter and specify the versions:
 ```
-nrfutil pkg generate --hw-version 1 --sd-req 0x80 --application-version 4 --application app.hex --key-file key.pem app_dfu_package.zip
+nrfutil pkg generate --hw-version 51 --sd-req 0x80 --application-version 4 --application app.hex --key-file key.pem app_dfu_package.zip
 ```
+The option `--hw-version` must correspond to the nRF5x IC used, i.e. 51 for nRF51x22 ICs and 52 for nRF52xxx  ICs
 
 The following table lists the FWIDs which are used to identify the SoftDevice versions both included in the package and installed on the target device to perform the required SoftDevice version check:
 
@@ -131,6 +132,7 @@ SoftDevice            | FWID (sd-req)
 `s130_nrf51_2.0.1`    | 0x87
 `s132_nrf52_2.0.1`    | 0x88
 `s132_nrf52_3.0.0`    | 0x8C
+`s132_nrf52_3.1.0`    | 0x91
 
 Not all combinations of Bootloader, SoftDevice and Application are possible when generating a package. The table below summarizes the support for different combinations.
 
