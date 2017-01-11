@@ -110,7 +110,7 @@ class Proxy:
     @staticmethod
     def get_default_config():
         return {Proxy.CFG_KEY_CHANNEL: 11,
-                Proxy.CFG_KEY_PANID:   1234,
+                Proxy.CFG_KEY_PANID:   0xabcd,
                 Proxy.CFG_KEY_RESET:   True}
 
     def add_ip_address(self, ipaddr):
