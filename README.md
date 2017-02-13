@@ -247,6 +247,10 @@ Note that if you modify the format of the Init Packet, you *will need to do the 
 
 Edit `dfu-cc.proto` and modify the Init packet to suit your needs. Additional information on the format of `.proto` files can be found [here](https://developers.google.com/protocol-buffers/).
 
+### Protocol Buffers versions
+
+Both versions 2 and 3 of Protocol Buffers library can be used, but make sure that the *language version* is version 2, a.k.a **proto2**. A new *syntax* keyword was added in Protocol Buffers v3 to specify language version of a .proto file. If `syntax = "proto3";` is *not* included, then **proto2** language version will be used.
+
 ### Compiling the Protocol Buffers file
 
 After you have modified the `.proto` file you will need to compile it to generate the corresponding Python file that will be then usable from the `nrfutil` source code. To do that install the Protocol Buffers compiler from [here](https://developers.google.com/protocol-buffers/docs/downloads) and then execute:
