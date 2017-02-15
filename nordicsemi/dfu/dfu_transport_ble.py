@@ -408,22 +408,6 @@ class DfuTransportBle(DfuTransport):
 
         return crc
 
-    def __read_error(self):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['ReadError']])
-        response = self.__get_response(DfuTransportBle.OP_CODE['ReadError'])
-
-        (err_code, size) = struct.unpack('<HH', bytearray(response))
-        data             = response[4:]
-
-        while size < len(data):
-            try:
-                new = self.dfu_adapter.notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
-                data.extend(new)
-            except Queue.Empty:
-                raise NordicSemiException('Timeout Error Read')
-
-        return {'err_code': err_code, 'data': data}
-
 
     def __get_response(self, operation):
         def get_dict_key(dictionary, value):
@@ -447,8 +431,11 @@ class DfuTransportBle(DfuTransport):
 
 
         elif resp[2] == DfuTransport.RES_CODE['ExtendedError']:
-            error = self.__read_error()
-            raise NordicSemiException('Extended Error {:X}: {}'.format(error['err_code'], error['data']))
+            try:
+                data = DfuTransport.EXT_ERROR_CODE[resp[3]]
+            except IndexError:
+                data = "Unsupported extended error type {}".format(resp[3])
+            raise NordicSemiException('Extended Error {:X}: {}'.format(resp[3], data))
         else:
             raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
 
