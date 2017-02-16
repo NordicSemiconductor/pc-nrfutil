@@ -435,7 +435,7 @@ class DfuTransportBle(DfuTransport):
                 data = DfuTransport.EXT_ERROR_CODE[resp[3]]
             except IndexError:
                 data = "Unsupported extended error type {}".format(resp[3])
-            raise NordicSemiException('Extended Error {:X}: {}'.format(resp[3], data))
+            raise NordicSemiException('Extended Error 0x{:02X}: {}'.format(resp[3], data))
         else:
             raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
 
