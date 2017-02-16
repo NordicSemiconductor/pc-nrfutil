@@ -63,7 +63,6 @@ class DfuTransport(object):
         'SetPRN'                : 0x02,
         'CalcChecSum'           : 0x03,
         'Execute'               : 0x04,
-        'ReadError'             : 0x05,
         'ReadObject'            : 0x06,
         'Response'              : 0x60,
     }
@@ -81,6 +80,23 @@ class DfuTransport(object):
         'OperationFailed'       : 0x0A,
         'ExtendedError'         : 0x0B,
     }
+
+    EXT_ERROR_CODE = [
+        "No extended error code has been set. This error indicates an implementation problem.",
+        "Invalid error code. This error code should never be used outside of development.",
+        "The format of the command was incorrect. This error code is not used in the current implementation, because @ref NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED and @ref NRF_DFU_RES_CODE_INVALID_PARAMETER cover all possible format errors.",
+        "The command was successfully parsed, but it is not supported or unknown.",
+        "The init command is invalid. The init packet either has an invalid update type or it is missing required fields for the update type (for example, the init packet for a SoftDevice update is missing the SoftDevice size field).",
+        "The firmware version is too low. For an application, the version must be greater than the current application. For a bootloader, it must be greater than or equal to the current version. This requirement prevents downgrade attacks.""", 
+        "The hardware version of the device does not match the required hardware version for the update.",
+        "The array of supported SoftDevices for the update does not contain the FWID of the current SoftDevice.",
+        "The init packet does not contain a signature. This error code is not used in the current implementation, because init packets without a signature are regarded as invalid.",
+        "The hash type that is specified by the init packet is not supported by the DFU bootloader.",
+        "The hash of the firmware image cannot be calculated.",
+        "The type of the signature is unknown or not supported by the DFU bootloader.",
+        "The hash of the received firmware image does not match the hash in the init packet.",
+        "The available space on the device is insufficient to hold the firmware.",
+    ]
 
     @abc.abstractmethod
     def __init__(self):
