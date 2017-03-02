@@ -76,6 +76,7 @@ class BLDFUSettings(object):
     flash_page_52_sz = 0x1000
     bl_sett_51_addr= 0x0003FC00
     bl_sett_52_addr= 0x0007F000
+    bl_sett_52840_addr= 0x000FF000
 
 
     def __init__(self, ):
@@ -105,11 +106,15 @@ class BLDFUSettings(object):
             self.arch_str = 'nRF52'
             self.flash_page_sz = BLDFUSettings.flash_page_52_sz 
             self.bl_sett_addr = BLDFUSettings.bl_sett_52_addr
+        elif arch == 'NRF52840':
+            self.arch = nRFArch.NRF52840
+            self.arch_str = 'NRF52840'
+            self.flash_page_sz = BLDFUSettings.flash_page_52_sz 
+            self.bl_sett_addr = BLDFUSettings.bl_sett_52840_addr
         else:
             raise RuntimeError("Unknown architecture")
 
     def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver):
-    
         # Set the architecture
         self.set_arch(arch)
 
@@ -215,7 +220,7 @@ class BLDFUSettings(object):
         # autodetect based on base address
         base = self.ihex.minaddr()
 
-        # check the 2 possible addresses for CRC matches
+        # check the 3 possible addresses for CRC matches
         try:
             self.probe_settings(BLDFUSettings.bl_sett_51_addr)
             self.set_arch('NRF51')
@@ -224,7 +229,11 @@ class BLDFUSettings(object):
                 self.probe_settings(BLDFUSettings.bl_sett_52_addr)
                 self.set_arch('NRF52')
             except Exception as e:
-                return "Failed to parse .hex file: {0}".format(e)
+                try:
+                    self.probe_settings(BLDFUSettings.bl_sett_52840_addr)
+                    self.set_arch('NRF52840')
+                except Exception as e:
+                    return "Failed to parse .hex file: {0}".format(e)
        
     def __str__(self):
         s = """
