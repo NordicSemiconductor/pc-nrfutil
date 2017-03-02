@@ -42,6 +42,7 @@ from enum import Enum
 class nRFArch(Enum):
     NRF51 = 1
     NRF52 = 2
+    NRF52840 = 3
 
 class nRFHex(intelhex.IntelHex):
     """
