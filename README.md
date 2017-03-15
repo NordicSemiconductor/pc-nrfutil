@@ -86,6 +86,9 @@ python setup.py install
 To generate a self-contained executable version of the utility:  
 ```
 pyinstaller nrfutil.spec
+
+// on Linux prefix with the full path:
+pyinstaller /full/path/to/nrfutil.spec
 ```
 
 **Note**: Some anti-virus programs will stop PyInstaller from executing correctly when it modifies the executable file.
