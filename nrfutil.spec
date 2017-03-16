@@ -11,8 +11,8 @@ mod_dir = os.path.dirname(module.__file__)
 shlib_dir = os.path.join(os.path.abspath(mod_dir), 'lib')
 hex_dir  = os.path.join(os.path.abspath(mod_dir), 'hex')
 
-a = Analysis(['nordicsemi\\__main__.py'],
-             binaries=[(shlib_dir, "lib"), (hex_dir, "pc_ble_driver_py\\hex")],
+a = Analysis(['nordicsemi/__main__.py'],
+             binaries=[(shlib_dir, "lib"), (hex_dir, "pc_ble_driver_py/hex")],
              datas=None,
              hiddenimports=[],
              hookspath=[],
