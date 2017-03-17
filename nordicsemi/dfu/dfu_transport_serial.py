@@ -127,6 +127,9 @@ class DFUAdapter(object):
             if byte:
                 (byte) = struct.unpack('B', byte)[0]
                 (finished, current_state, decoded_data) = Slip.decode_add_byte(byte, decoded_data, current_state)
+            else:
+                current_state = Slip.SLIP_STATE_CLEARING_INVALID_PACKET
+                return None
                 
         return decoded_data
 
@@ -136,7 +139,7 @@ class DfuTransportSerial(DfuTransport):
     DEFAULT_FLOW_CONTROL = True
     DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
     DEFAULT_PRN                 = 0
-    
+
     OP_CODE = {
         'CreateObject'          : 0x01,
         'SetPRN'                : 0x02,
@@ -146,6 +149,7 @@ class DfuTransportSerial(DfuTransport):
         'ReadObject'            : 0x06,
         'GetSerialMTU'          : 0x07,
         'WriteObject'           : 0x08,
+        'Ping'                  : 0x09,
         'Response'              : 0x60,
     }
 
@@ -159,6 +163,7 @@ class DfuTransportSerial(DfuTransport):
         self.prn         = prn
         self.serial_port = None
         self.dfu_adapter = None
+        self.ping_id     = 0
         
         self.mtu         = 0
 
@@ -173,7 +178,20 @@ class DfuTransportSerial(DfuTransport):
             self.dfu_adapter = DFUAdapter(self.serial_port)
         except Exception, e:
             raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
-            
+
+        if self.__ping() == False:
+            raise NordicSemiException("No ping response after opening COM port")
+
+        ping_success = False
+        start = datetime.now()
+        while datetime.now() - start < timedelta(seconds=self.timeout):
+            if self.__ping() == True:
+                ping_success = True
+            time.sleep(1)
+
+        if ping_success == False:
+            raise NordicSemiException("No ping response after opening COM port")
+
         self.__set_prn()
         self.__get_mtu()
 
@@ -262,18 +280,42 @@ class DfuTransportSerial(DfuTransport):
                 raise NordicSemiException("Failed to send firmware")
             
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
-            
+
     def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['SetPRN']] + map(ord, struct.pack('<H', self.prn)))
         self.__get_response(DfuTransportSerial.OP_CODE['SetPRN'])
-        
+
     def __get_mtu(self):
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['GetSerialMTU']])
         response = self.__get_response(DfuTransportSerial.OP_CODE['GetSerialMTU'])
 
         self.mtu = struct.unpack('<H', bytearray(response))[0]
-    
+
+    def __ping(self):
+        self.ping_id = (self.ping_id + 1) % 256
+
+        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['Ping'], self.ping_id])
+        resp = self.dfu_adapter.get_message() # Receive raw reponse to check return code
+
+        if (resp == None):
+            print "No response"
+
+        if resp[0] != DfuTransportSerial.OP_CODE['Response']:
+            raise NordicSemiException('No Response: 0x{:02X}'.format(resp[0]))
+
+        if resp[1] != DfuTransportSerial.OP_CODE['Ping']:
+            raise NordicSemiException('Unexpected Executed OP_CODE.\n' \
+                                    + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
+
+        if resp[2] != DfuTransport.RES_CODE['Success']:
+            return True # Returning an error code is seen as good enough. The bootloader is up and running
+        else:
+            if struct.unpack('B', bytearray(resp[3:]))[0] == self.ping_id:
+                return True
+            else:
+                return False
+
     def __create_command(self, size):
         self.__create_object(0x01, size)
 
@@ -354,6 +396,9 @@ class DfuTransportSerial(DfuTransport):
 
         resp = self.dfu_adapter.get_message()
 
+        if resp == None:
+            return None
+
         if resp[0] != DfuTransportSerial.OP_CODE['Response']:
             raise NordicSemiException('No Response: 0x{:02X}'.format(resp[0]))
 
@@ -363,4 +408,5 @@ class DfuTransportSerial(DfuTransport):
 
         if resp[2] == DfuTransport.RES_CODE['Success']:
             return resp[3:]
+
 
