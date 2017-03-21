@@ -137,6 +137,7 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_3.0.0`    | 0x8C
 `s132_nrf52_3.1.0`    | 0x91
 `s132_nrf52_4.0.0`    | 0x95
+`s132_nrf52_4.0.2`    | 0x98
 
 Not all combinations of Bootloader, SoftDevice and Application are possible when generating a package. The table below summarizes the support for different combinations.
 
