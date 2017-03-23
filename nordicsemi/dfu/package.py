@@ -223,7 +223,7 @@ class Package(object):
       |
       |- op_code: {4}
       |- signature_type: {5}
-      |- signature: {6}
+      |- signature (little-endian): {6}
       |
       |- fw_version: 0x{7:08X} ({7})
       |- hw_version 0x{8:08X} ({8})
@@ -234,7 +234,7 @@ class Package(object):
       |- app_size: {13}
       |
       |- hash_type: {14}
-      |- hash: {15}
+      |- hash (little-endian): {15}
       |
       |- is_debug: {16}
 
