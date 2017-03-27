@@ -51,6 +51,7 @@ from nordicsemi.dfu import intelhex
 from nordicsemi.dfu.intelhex import IntelHexError
 from nordicsemi.dfu.nrfhex import *
 from nordicsemi.dfu.package import Package
+from pc_ble_driver_py.exceptions import NordicSemiException
 
 logger = logging.getLogger(__name__)
 
@@ -233,7 +234,7 @@ class BLDFUSettings(object):
                     self.probe_settings(BLDFUSettings.bl_sett_52840_addr)
                     self.set_arch('NRF52840')
                 except Exception as e:
-                    return "Failed to parse .hex file: {0}".format(e)
+                    raise NordicSemiException("Failed to parse .hex file: {0}".format(e))
        
     def __str__(self):
         s = """

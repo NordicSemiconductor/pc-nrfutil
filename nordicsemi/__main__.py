@@ -242,7 +242,11 @@ def generate(hex_file,
 def display(hex_file): 
 
     sett = BLDFUSettings()
-    sett.fromhexfile(hex_file)
+    try:
+        sett.fromhexfile(hex_file)
+    except NordicSemiException as err:
+        click.echo(err)
+        return
 
     click.echo("{0}".format(str(sett)))
 
