@@ -106,6 +106,7 @@ class Package(object):
     DEFAULT_APP_VERSION = 0xFFFFFFFF
     DEFAULT_BL_VERSION = 0xFFFFFFFF
     DEFAULT_SD_REQ = [0xFFFE]
+    DEFAULT_SD_ID = [0xFFFE]
     DEFAULT_DFU_VER = 0.5
     MANIFEST_FILENAME = "manifest.json"
 
@@ -115,6 +116,7 @@ class Package(object):
                  app_version=DEFAULT_APP_VERSION,
                  bl_version=DEFAULT_BL_VERSION,
                  sd_req=DEFAULT_SD_REQ,
+                 sd_id=DEFAULT_SD_ID,
                  app_fw=None,
                  bootloader_fw=None,
                  softdevice_fw=None,
@@ -127,6 +129,7 @@ class Package(object):
         :param int app_version: App version init-packet field
         :param int bl_version: Bootloader version init-packet field
         :param list sd_req: Softdevice Requirement init-packet field
+        :param list sd_id: Softdevice Requirement init-packet field for the Application if softdevice_fw is set
         :param str app_fw: Path to application firmware file
         :param str bootloader_fw: Path to bootloader firmware file
         :param str softdevice_fw: Path to softdevice firmware file
@@ -141,8 +144,8 @@ class Package(object):
         if hw_version is not None:
             init_packet_vars[PacketField.HW_VERSION] = hw_version
 
-        if sd_req is not None:
-            init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
+        if sd_id is not None:
+            init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_id
 
         self.firmwares_data = {}
 
@@ -151,6 +154,9 @@ class Package(object):
                                      firmware_version=app_version,
                                      filename=app_fw,
                                      init_packet_data=init_packet_vars)
+
+        if sd_req is not None:
+            init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
 
         if bootloader_fw:
             self.__add_firmware_info(firmware_type=HexType.BOOTLOADER,
