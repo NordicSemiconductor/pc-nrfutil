@@ -1,3 +1,1 @@
-deps/scapy-2.3.3.dev41-53a22.tar.gz#egg=scapy-2.3.3.dev41
 deps/txThings-0.2.0-b0775.tar.gz#egg=txThings-0.2.0
-deps/spinel-1.0.0a1-3c1d6.tar.gz#egg=spinel-1.0.0a1
