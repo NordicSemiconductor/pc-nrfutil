@@ -38,12 +38,13 @@ import time
 import logging
 import ipaddress
 
+import io
+import spinel.common
+import spinel.ipv6
+
 from spinel.stream import StreamOpen
 from spinel.codec import WpanApi
 from spinel.const import SPINEL
-from scapy.layers.inet import UDP
-from scapy.packet import Raw
-from scapy.layers.inet6 import IPv6
 
 logger = logging.getLogger(__name__)
 
@@ -51,14 +52,25 @@ class Proxy:
     CFG_KEY_CHANNEL = 'channel'
     CFG_KEY_PANID = 'panid'
     CFG_KEY_RESET = 'reset'
-
+    
+    udp6_parser = spinel.ipv6.IPv6PacketFactory(
+        ulpf = {
+            17: spinel.ipv6.UDPDatagramFactory(
+                udp_header_factory = spinel.ipv6.UDPHeaderFactory(),
+                dst_port_factories = {
+                    5683: spinel.ipv6.UDPBytesPayloadFactory()
+                }
+            ),
+        }
+    )
+    
     def __init__(self, stream_descriptor, config = None, recv_callback = None):
         assert recv_callback is not None
         self._stream_descriptor = stream_descriptor.split(":")
         self._receive_callback = recv_callback
         self._attached = False
         self._config = config if config is not None else self.get_default_config()
-
+        
     @staticmethod
     def _propid_to_str(propid):
         for name, value in SPINEL.__dict__.iteritems():
@@ -101,11 +113,27 @@ class Proxy:
 
         if prop == SPINEL.PROP_STREAM_NET:
             consumed = True
-            pkt = IPv6(value[2:])
-            if (UDP in pkt):
-                self._receive_callback(pkt.src, pkt[UDP].sport, pkt.dst, pkt[UDP].dport, pkt[Raw].load)
+            try:
+                pkt = self.udp6_parser.parse(io.BytesIO(value[2:]),
+                                             spinel.common.MessageInfo())
+                
+                #TODO: Remove conversion from IPV6 to string once twisted
+                #      is removed.
+                self._receive_callback(str(pkt.ipv6_header.source_address),
+                                       pkt.upper_layer_protocol.header.src_port,
+                                       str(pkt.ipv6_header.destination_address),
+                                       pkt.upper_layer_protocol.header.dst_port,
+                                       str(pkt.upper_layer_protocol.payload.to_bytes()))
+            except Exception as e:
+                logging.exception(e)
 
         return consumed
+
+    def _build_udp_datagram(self, saddr, sport, daddr, dport, payload):
+        return spinel.ipv6.IPv6Packet(spinel.ipv6.IPv6Header(saddr, daddr), 
+                                      spinel.ipv6.UDPDatagram(
+                                          spinel.ipv6.UDPHeader(sport, dport),
+                                          spinel.ipv6.UDPBytesPayload(payload)))
 
     @staticmethod
     def get_default_config():
@@ -134,8 +162,12 @@ class Proxy:
         logger.debug("Sending datagram {} {} {} {}".format(src, sport, dst, dport))
         if (src is None):
             src = self._src_addr
-        datagram = IPv6(src=src, dst=dst)/UDP(sport=sport, dport = dport)/Raw(load = payload)
-        self._wpan.ip_send(str(datagram))
+        try:
+            datagram = self._build_udp_datagram(src, sport, dst, dport, payload)
+        except Exception as e:
+            logging.exception('Sending failed')          
+        
+        self._wpan.ip_send(str(datagram.to_bytes()))
 
     def print_addresses(self):
         for addr in self._wpan.get_ipaddrs():
