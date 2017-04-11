@@ -83,8 +83,10 @@ install_reqs = parse_requirements("requirements.txt", session=False)
 reqs = [str(ir.req) for ir in install_reqs]
 
 def make_uri(dep):
-    uri = 'file://' + os.path.dirname(os.path.abspath(__file__)) + '/' + dep.rstrip()
-    return uri.replace('/', os.sep)
+    if dep.startswith('./'):
+        uri = 'file://' + os.path.dirname(os.path.abspath(__file__)) + '/' + dep.rstrip()[2:]
+        dep = uri.replace('/', os.sep)
+    return dep
 
 with open('dependency_links.txt', 'r') as f:
     dep_links = [make_uri(dep) for dep in f.readlines()]

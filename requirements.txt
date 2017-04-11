@@ -7,6 +7,5 @@ behave
 protobuf
 pc_ble_driver_py >= 0.8.1
 tqdm
--e git+http://projecttools.nordicsemi.no/stash/scm/krknwk/spinel-cli.git#egg=spinel-cli
-scapy
+spinel
 txThings
