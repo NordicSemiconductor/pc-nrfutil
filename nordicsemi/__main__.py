@@ -112,6 +112,11 @@ def int_as_text_to_int(value):
     except ValueError:
         raise NordicSemiException('%s is not a valid integer' % value)
 
+def pause():
+    try:
+        raw_input()
+    except (KeyboardInterrupt, EOFError):
+        pass
 
 class BasedIntOrNoneParamType(click.ParamType):
     name = 'Integer'
@@ -806,12 +811,12 @@ def thread(package, port, address, server_port, prefix, panid, channel, jlink_sn
 
         dfu.start()
         dfu.trigger(address, 3)
-        click.echo("Press any key to terminate")
-        click.getchar()
+        click.echo("Press <ENTER> terminate")
+        pause()
         click.echo("Terminating")
 
     except Exception as e:
-        logger.error(e.args[0])
+        logger.exception(e)
     finally:
         dfu.stop()
 
