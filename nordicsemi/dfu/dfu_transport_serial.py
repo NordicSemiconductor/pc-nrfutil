@@ -282,7 +282,7 @@ class DfuTransportSerial(DfuTransport):
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
 
     def __set_prn(self):
-        logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
+        logger.debug("Serial: Set Packet Receipt Notification {}".format(self.prn))
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['SetPRN']] + map(ord, struct.pack('<H', self.prn)))
         self.__get_response(DfuTransportSerial.OP_CODE['SetPRN'])
 
@@ -345,13 +345,13 @@ class DfuTransportSerial(DfuTransport):
         return self.__select_object(0x02)
 
     def __select_object(self, object_type):
-        logger.debug("BLE: Selecting Object: type:{}".format(object_type))
+        logger.debug("Serial: Selecting Object: type:{}".format(object_type))
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['ReadObject'], object_type])
 
         response = self.__get_response(DfuTransportSerial.OP_CODE['ReadObject'])
         (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
         
-        logger.debug("BLE: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
+        logger.debug("Serial: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
         return {'max_size': max_size, 'offset': offset, 'crc': crc}
         
     def __get_checksum_response(self):
@@ -361,7 +361,7 @@ class DfuTransportSerial(DfuTransport):
         return {'offset': offset, 'crc': crc}
         
     def __stream_data(self, data, crc=0, offset=0):
-        logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
+        logger.debug("Serial: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
         def validate_crc():
             if (crc != response['crc']):
                 raise ValidationException('Failed CRC validation.\n'\
