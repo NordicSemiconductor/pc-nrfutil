@@ -124,6 +124,8 @@ class Proxy:
                                        str(pkt.ipv6_header.destination_address),
                                        pkt.upper_layer_protocol.header.dst_port,
                                        str(pkt.upper_layer_protocol.payload.to_bytes()))
+            except RuntimeError:
+                pass
             except Exception as e:
                 logging.exception(e)
 
