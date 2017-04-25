@@ -40,242 +40,381 @@ import time
 from datetime import datetime, timedelta
 import binascii
 import logging
+import struct
 
 # Python 3rd party imports
 from serial import Serial
 
 # Nordic Semiconductor imports
-from nordicsemi.dfu.util import slip_parts_to_four_bytes, slip_encode_esc_chars, int16_to_bytes, int32_to_bytes
-from nordicsemi.dfu import crc16
-from pc_ble_driver_py.exceptions import NordicSemiException
-from nordicsemi.dfu.dfu_transport import DfuTransport, DfuEvent
+from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent
+from pc_ble_driver_py.exceptions    import NordicSemiException, IllegalStateException
+
+class ValidationException(NordicSemiException):
+    """"
+    Exception used when validation failed
+    """
+    pass
 
 
 logger = logging.getLogger(__name__)
 
+class Slip(object):
+    SLIP_BYTE_END             = 0300
+    SLIP_BYTE_ESC             = 0333
+    SLIP_BYTE_ESC_END         = 0334
+    SLIP_BYTE_ESC_ESC         = 0335
+    
+    SLIP_STATE_DECODING                 = 1
+    SLIP_STATE_ESC_RECEIVED             = 2
+    SLIP_STATE_CLEARING_INVALID_PACKET  = 3
+    
+    @staticmethod
+    def encode(data):
+        newData = []
+        for elem in data:
+            if elem == Slip.SLIP_BYTE_END:
+                newData.append(Slip.SLIP_BYTE_ESC)
+                newData.append(Slip.SLIP_BYTE_ESC_END)
+            elif elem == Slip.SLIP_BYTE_ESC:
+                newData.append(Slip.SLIP_BYTE_ESC)
+                newData.append(Slip.SLIP_BYTE_ESC_ESC)
+            else:
+                newData.append(elem)
+        newData.append(Slip.SLIP_BYTE_END)
+        return newData
+        
+    @staticmethod
+    def decode_add_byte(c, decoded_data, current_state):
+        finished = False
+        if current_state == Slip.SLIP_STATE_DECODING:
+            if c == Slip.SLIP_BYTE_END:
+                finished = True
+            elif c == Slip.SLIP_BYTE_ESC:
+                current_state = Slip.SLIP_STATE_ESC_RECEIVED
+            else:
+                decoded_data.append(c)
+        elif current_state == Slip.SLIP_STATE_ESC_RECEIVED:
+            if c == Slip.SLIP_BYTE_ESC_END:
+                decoded_data.append(Slip.SLIP_BYTE_END)
+                current_state = Slip.SLIP_STATE_DECODING
+            elif c == Slip.SLIP_BYTE_ESC_ESC:
+                decoded_data.append(Slip.SLIP_BYTE_ESC)
+                current_state = Slip.SLIP_STATE_DECODING
+            else:
+                current_state = Slip.SLIP_STATE_CLEARING_INVALID_PACKET
+        elif current_state == Slip.SLIP_STATE_CLEARING_INVALID_PACKET:
+            if c == Slip.SLIP_BYTE_END:
+                current_state = Slip.SLIP_STATE_DECODING
+                decoded_data = []     
+        
+        return (finished, current_state, decoded_data)
+
+class DFUAdapter(object):
+    def __init__(self, serial_port):
+        self.serial_port = serial_port
+
+    def send_message(self, data):
+        packet = Slip.encode(data)
+        self.serial_port.write(packet)
+        
+    def get_message(self):
+        current_state = Slip.SLIP_STATE_DECODING
+        finished = False
+        decoded_data = []
+        
+        while finished == False:
+            byte = self.serial_port.read(1)
+            if byte:
+                (byte) = struct.unpack('B', byte)[0]
+                (finished, current_state, decoded_data) = Slip.decode_add_byte(byte, decoded_data, current_state)
+            else:
+                current_state = Slip.SLIP_STATE_CLEARING_INVALID_PACKET
+                return None
+                
+        return decoded_data
 
 class DfuTransportSerial(DfuTransport):
 
-    DEFAULT_BAUD_RATE = 38400
-    DEFAULT_FLOW_CONTROL = False
+    DEFAULT_BAUD_RATE = 115200
+    DEFAULT_FLOW_CONTROL = True
     DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
-    ACK_PACKET_TIMEOUT = 1.0  # Timeout time for for ACK packet received before reporting timeout through event system
-    SEND_INIT_PACKET_WAIT_TIME = 1.0  # Time to wait before communicating with bootloader after init packet is sent
-    SEND_START_DFU_WAIT_TIME = 10.0  # Time to wait before communicating with bootloader after start DFU packet is sent
-    DFU_PACKET_MAX_SIZE = 512  # The DFU packet max size
+    DEFAULT_PRN                 = 0
 
-    def __init__(self, com_port, baud_rate=DEFAULT_BAUD_RATE, flow_control=DEFAULT_FLOW_CONTROL, timeout=DEFAULT_SERIAL_PORT_TIMEOUT):
+    OP_CODE = {
+        'CreateObject'          : 0x01,
+        'SetPRN'                : 0x02,
+        'CalcChecSum'           : 0x03,
+        'Execute'               : 0x04,
+        'ReadError'             : 0x05,
+        'ReadObject'            : 0x06,
+        'GetSerialMTU'          : 0x07,
+        'WriteObject'           : 0x08,
+        'Ping'                  : 0x09,
+        'Response'              : 0x60,
+    }
+
+    def __init__(self, com_port, baud_rate=DEFAULT_BAUD_RATE, flow_control=DEFAULT_FLOW_CONTROL, timeout=DEFAULT_SERIAL_PORT_TIMEOUT, prn=DEFAULT_PRN):
+
         super(DfuTransportSerial, self).__init__()
         self.com_port = com_port
         self.baud_rate = baud_rate
         self.flow_control = 1 if flow_control else 0
         self.timeout = timeout
+        self.prn         = prn
         self.serial_port = None
+        self.dfu_adapter = None
+        self.ping_id     = 0
+        
+        self.mtu         = 0
+
         """:type: serial.Serial """
+
 
     def open(self):
         super(DfuTransportSerial, self).open()
 
         try:
             self.serial_port = Serial(port=self.com_port, baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
+            self.dfu_adapter = DFUAdapter(self.serial_port)
         except Exception, e:
             raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
+
+        if self.__ping() == False:
+            raise NordicSemiException("No ping response after opening COM port")
+
+        ping_success = False
+        start = datetime.now()
+        while datetime.now() - start < timedelta(seconds=self.timeout):
+            if self.__ping() == True:
+                ping_success = True
+            time.sleep(1)
+
+        if ping_success == False:
+            raise NordicSemiException("No ping response after opening COM port")
+
+        self.__set_prn()
+        self.__get_mtu()
 
     def close(self):
         super(DfuTransportSerial, self).close()
         self.serial_port.close()
 
-    def is_open(self):
-        super(DfuTransportSerial, self).is_open()
-
-        if self.serial_port is None:
-            return False
-
-        return self.serial_port.isOpen()
-
-    def send_validate_firmware(self):
-        super(DfuTransportSerial, self).send_validate_firmware()
-        return True
-
     def send_init_packet(self, init_packet):
-        super(DfuTransportSerial, self).send_init_packet(init_packet)
+        def try_to_recover():
+            if response['offset'] == 0 or response['offset'] > len(init_packet):
+                # There is no init packet or present init packet is too long.
+                return False
 
-        frame = int32_to_bytes(DFU_INIT_PACKET)
-        frame += init_packet
-        frame += int16_to_bytes(0x0000)  # Padding required
+            expected_crc = (binascii.crc32(init_packet[:response['offset']]) & 0xFFFFFFFF)
 
-        packet = HciPacket(frame)
-        self.send_packet(packet)
-        time.sleep(DfuTransportSerial.SEND_INIT_PACKET_WAIT_TIME)
+            if expected_crc != response['crc']:
+                # Present init packet is invalid.
+                return False
 
-    def send_start_dfu(self, mode, softdevice_size=None, bootloader_size=None, app_size=None):
-        super(DfuTransportSerial, self).send_start_dfu(mode, softdevice_size, bootloader_size, app_size)
+            if len(init_packet) > response['offset']:
+                # Send missing part.
+                try:
+                    self.__stream_data(data     = init_packet[response['offset']:],
+                                       crc      = expected_crc,
+                                       offset   = response['offset'])
+                except ValidationException:
+                    return False
 
-        frame = int32_to_bytes(DFU_START_PACKET)
-        frame += int32_to_bytes(mode)
-        frame += DfuTransport.create_image_size_packet(softdevice_size, bootloader_size, app_size)
+            self.__execute()
+            return True
+        
+        response = self.__select_command()
+        assert len(init_packet) <= response['max_size'], 'Init command is too long'
 
-        packet = HciPacket(frame)
-        self.send_packet(packet)
-        time.sleep(DfuTransportSerial.SEND_START_DFU_WAIT_TIME)
+        if try_to_recover():
+            return
 
-    def send_activate_firmware(self):
-        super(DfuTransportSerial, self).send_activate_firmware()
-
+        try:
+            self.__create_command(len(init_packet))
+            self.__stream_data(data=init_packet)
+            self.__execute()
+        except ValidationException:
+            raise NordicSemiException("Failed to send init packet")
+            
     def send_firmware(self, firmware):
-        super(DfuTransportSerial, self).send_firmware(firmware)
+        def try_to_recover():
+            if response['offset'] == 0:
+                # Nothing to recover
+                return
 
-        def progress_percentage(part, whole):
-            return int(100 * float(part)/float(whole))
+            expected_crc = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
+            remainder    = response['offset'] % response['max_size']
 
-        frames = []
-        self._send_event(DfuEvent.PROGRESS_EVENT, progress=0, done=False, log_message="")
+            if expected_crc != response['crc']:
+                # Invalid CRC. Remove corrupted data.
+                response['offset'] -= remainder if remainder != 0 else response['max_size']
+                response['crc']     = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
+                return
 
-        for i in range(0, len(firmware), DfuTransportSerial.DFU_PACKET_MAX_SIZE):
-            data_packet = HciPacket(int32_to_bytes(DFU_DATA_PACKET) + firmware[i:i + DfuTransportSerial.DFU_PACKET_MAX_SIZE])
-            frames.append(data_packet)
+            if (remainder != 0) and (response['offset'] != len(firmware)):
+                # Send rest of the page.
+                try:
+                    to_send             = firmware[response['offset'] : response['offset'] + response['max_size'] - remainder]
+                    response['crc']     = self.__stream_data(data   = to_send,
+                                                             crc    = response['crc'],
+                                                             offset = response['offset'])
+                    response['offset'] += len(to_send)
+                except ValidationException:
+                    # Remove corrupted data.
+                    response['offset'] -= remainder
+                    response['crc']     = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
+                    return
 
-        frames_count = len(frames)
+            self.__execute()
+            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=response['offset'])
 
-        # Send firmware packets
-        for count, pkt in enumerate(frames):
-            self.send_packet(pkt)
-            self._send_event(DfuEvent.PROGRESS_EVENT,
-                             log_message="",
-                             progress=progress_percentage(count, frames_count),
-                             done=False)
+        response = self.__select_data()
+        try_to_recover()
+        for i in range(response['offset'], len(firmware), response['max_size']):
+            data = firmware[i:i+response['max_size']]
+            try:
+                self.__create_data(len(data))
+                response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
+                self.__execute()
+            except ValidationException:
+                raise NordicSemiException("Failed to send firmware")
+            
+            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
 
-        # Send data stop packet
-        frame = int32_to_bytes(DFU_STOP_DATA_PACKET)
-        packet = HciPacket(frame)
-        self.send_packet(packet)
+    def __set_prn(self):
+        logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
+        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['SetPRN']] + map(ord, struct.pack('<H', self.prn)))
+        self.__get_response(DfuTransportSerial.OP_CODE['SetPRN'])
 
-        self._send_event(DfuEvent.PROGRESS_EVENT, progress=100, done=False, log_message="")
+    def __get_mtu(self):
+        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['GetSerialMTU']])
+        response = self.__get_response(DfuTransportSerial.OP_CODE['GetSerialMTU'])
 
-    def send_packet(self, pkt):
-        attempts = 0
-        last_ack = None
-        packet_sent = False
+        self.mtu = struct.unpack('<H', bytearray(response))[0]
 
-        logger.debug("PC -> target: {0}".format(pkt))
+    def __ping(self):
+        self.ping_id = (self.ping_id + 1) % 256
 
-        while not packet_sent:
-            self.serial_port.write(pkt.data)
-            attempts += 1
-            ack = self.get_ack_nr()
+        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['Ping'], self.ping_id])
+        resp = self.dfu_adapter.get_message() # Receive raw reponse to check return code
 
-            if last_ack is None:
-                break
+        if (resp == None):
+            print "No response"
 
-            if ack == (last_ack + 1) % 8:
-                last_ack = ack
-                packet_sent = True
+        if resp[0] != DfuTransportSerial.OP_CODE['Response']:
+            raise NordicSemiException('No Response: 0x{:02X}'.format(resp[0]))
 
-                if attempts > 3:
-                    raise Exception("Three failed tx attempts encountered on packet {0}".format(pkt.sequence_number))
+        if resp[1] != DfuTransportSerial.OP_CODE['Ping']:
+            raise NordicSemiException('Unexpected Executed OP_CODE.\n' \
+                                    + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
 
-    def get_ack_nr(self):
-        def is_timeout(start_time, timeout_sec):
-            return not (datetime.now() - start_time <= timedelta(0, timeout_sec))
-
-        uart_buffer = ''
-        start = datetime.now()
-
-        while uart_buffer.count('\xC0') < 2:
-            # Disregard first of the two C0
-            temp = self.serial_port.read(6)
-
-            if temp:
-                uart_buffer += temp
-
-            if is_timeout(start, DfuTransportSerial.ACK_PACKET_TIMEOUT):
-                # reset HciPacket numbering back to 0
-                HciPacket.sequence_number = 0
-                self._send_event(DfuEvent.TIMEOUT_EVENT,
-                                 log_message="Timed out waiting for acknowledgement from device.")
-
-                # quit loop
-                break
-
-                # read until you get a new C0
-                # RESUME_WORK
-
-        if len(uart_buffer) < 2:
-            raise NordicSemiException("No data received on serial port. Not able to proceed.")
-
-        logger.debug("PC <- target: {0}".format(binascii.hexlify(uart_buffer)))
-        data = self.decode_esc_chars(uart_buffer)
-
-        # Remove 0xC0 at start and beginning
-        data = data[1:-1]
-
-        # Extract ACK number from header
-        return (data[0] >> 3) & 0x07
-
-    @staticmethod
-    def decode_esc_chars(data):
-        """Replace 0xDBDC with 0xCO and 0xDBDD with 0xDB"""
-        result = []
-
-        data = bytearray(data)
-
-        while len(data):
-            char = data.pop(0)
-
-            if char == 0xDB:
-                char2 = data.pop(0)
-
-                if char2 == 0xDC:
-                    result.append(0xC0)
-                elif char2 == 0xDD:
-                    result.append(0xDB)
-                else:
-                    raise Exception('Char 0xDB NOT followed by 0xDC or 0xDD')
+        if resp[2] != DfuTransport.RES_CODE['Success']:
+            return True # Returning an error code is seen as good enough. The bootloader is up and running
+        else:
+            if struct.unpack('B', bytearray(resp[3:]))[0] == self.ping_id:
+                return True
             else:
-                result.append(char)
+                return False
 
-        return result
+    def __create_command(self, size):
+        self.__create_object(0x01, size)
 
-DATA_INTEGRITY_CHECK_PRESENT = 1
-RELIABLE_PACKET = 1
-HCI_PACKET_TYPE = 14
+    def __create_data(self, size):
+        self.__create_object(0x02, size)
+        
+    def __create_object(self, object_type, size):
+        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['CreateObject'], object_type]\
+                                            + map(ord, struct.pack('<L', size)))
+        self.__get_response(DfuTransportSerial.OP_CODE['CreateObject'])
+        
+    def __calculate_checksum(self):
+        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['CalcChecSum']])
+        response = self.__get_response(DfuTransportSerial.OP_CODE['CalcChecSum'])
 
-DFU_INIT_PACKET = 1
-DFU_START_PACKET = 3
-DFU_DATA_PACKET = 4
-DFU_STOP_DATA_PACKET = 5
+        (offset, crc) = struct.unpack('<II', bytearray(response))
+        return {'offset': offset, 'crc': crc}
+        
+    def __execute(self):
+        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['Execute']])
+        self.__get_response(DfuTransportSerial.OP_CODE['Execute'])
+        
+    def __select_command(self):
+        return self.__select_object(0x01)
 
-DFU_UPDATE_MODE_NONE = 0
-DFU_UPDATE_MODE_SD = 1
-DFU_UPDATE_MODE_BL = 2
-DFU_UPDATE_MODE_APP = 4
+    def __select_data(self):
+        return self.__select_object(0x02)
 
+    def __select_object(self, object_type):
+        logger.debug("BLE: Selecting Object: type:{}".format(object_type))
+        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['ReadObject'], object_type])
 
-class HciPacket(object):
-    """Class representing a single HCI packet"""
+        response = self.__get_response(DfuTransportSerial.OP_CODE['ReadObject'])
+        (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
+        
+        logger.debug("BLE: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
+        return {'max_size': max_size, 'offset': offset, 'crc': crc}
+        
+    def __get_checksum_response(self):
+        response = self.dfu_adapter.get_message(DfuTransportSerial.OP_CODE['CalcChecSum'])
 
-    sequence_number = 0
+        (offset, crc) = struct.unpack('<II', bytearray(response))
+        return {'offset': offset, 'crc': crc}
+        
+    def __stream_data(self, data, crc=0, offset=0):
+        logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
+        def validate_crc():
+            if (crc != response['crc']):
+                raise ValidationException('Failed CRC validation.\n'\
+                                + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
+            if (offset != response['offset']):
+                raise ValidationException('Failed offset validation.\n'\
+                                + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
+        
+        current_pnr     = 0
 
-    def __init__(self, data=''):
-        HciPacket.sequence_number = (HciPacket.sequence_number + 1) % 8
-        self.temp_data = ''
-        self.temp_data += slip_parts_to_four_bytes(HciPacket.sequence_number,
-                                                   DATA_INTEGRITY_CHECK_PRESENT,
-                                                   RELIABLE_PACKET,
-                                                   HCI_PACKET_TYPE,
-                                                   len(data))
-        self.temp_data += data
-        # Add escape characters
-        crc = crc16.calc_crc16(self.temp_data, crc=0xffff)
+        for i in range(0, len(data), (self.mtu-1)/2 - 1):
+            # append the write data opcode to the front
+            # here the maximum data size is self.mtu/2 due to the slip encoding which at maximum doubles the size
+            to_transmit = data[i:i + (self.mtu-1)/2 - 1 ]
+            to_transmit = struct.pack('B',DfuTransportSerial.OP_CODE['WriteObject']) + to_transmit
+            
+            self.dfu_adapter.send_message(map(ord, to_transmit))
+            crc     = binascii.crc32(to_transmit[1:], crc) & 0xFFFFFFFF
+            offset += len(to_transmit) - 1
+            current_pnr    += 1
+            if self.prn == current_pnr:
+                current_pnr = 0
+                response    = self.__get_checksum_response()
+                validate_crc()
+        response = self.__calculate_checksum()
+        validate_crc()
+        return crc
 
-        self.temp_data += chr(crc & 0xFF)
-        self.temp_data += chr((crc & 0xFF00) >> 8)
+    def __get_response(self, operation):
+        def get_dict_key(dictionary, value):
+            return next((key for key, val in dictionary.items() if val == value), None)
 
-        self.temp_data = slip_encode_esc_chars(self.temp_data)
+        resp = self.dfu_adapter.get_message()
 
-        self.data = chr(0xc0)
-        self.data += self.temp_data
-        self.data += chr(0xc0)
+        if resp == None:
+            return None
 
-    def __str__(self):
-        return binascii.hexlify(self.data)
+        if resp[0] != DfuTransportSerial.OP_CODE['Response']:
+            raise NordicSemiException('No Response: 0x{:02X}'.format(resp[0]))
+
+        if resp[1] != operation:
+            raise NordicSemiException('Unexpected Executed OP_CODE.\n' \
+                                    + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
+
+        if resp[2] == DfuTransport.RES_CODE['Success']:
+            return resp[3:]
+            
+        elif resp[2] == DfuTransport.RES_CODE['ExtendedError']:
+            try:
+                data = DfuTransport.EXT_ERROR_CODE[resp[3]]
+            except IndexError:
+                data = "Unsupported extended error type {}".format(resp[3])
+            raise NordicSemiException('Extended Error 0x{:02X}: {}'.format(resp[3], data))
+        else:
+            raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
+
