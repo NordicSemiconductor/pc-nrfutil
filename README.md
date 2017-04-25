@@ -41,7 +41,7 @@ This will also retrieve and install all additional required packages.
 
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
-**Note**: To use the `dfu ble` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/tree/self_contained_driver#hardware-setup). 
+**Note**: To use the `dfu ble` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver#hardware-setup). 
 
 ## Running and installing from source
 
@@ -86,6 +86,9 @@ python setup.py install
 To generate a self-contained executable version of the utility:  
 ```
 pyinstaller nrfutil.spec
+
+// on Linux prefix with the full path:
+pyinstaller /full/path/to/nrfutil.spec
 ```
 
 **Note**: Some anti-virus programs will stop PyInstaller from executing correctly when it modifies the executable file.
@@ -118,8 +121,9 @@ nrfutil pkg generate --debug-mode --application app.hex --key-file key.pem app_d
 ```
 When using debug mode you don't need to specify versions for hardware and firmware, so you can develop without having to worry about versioning your application. If you want to generate a package for production, you will need to do so without the `--debug-mode` parameter and specify the versions:
 ```
-nrfutil pkg generate --hw-version 1 --sd-req 0x80 --application-version 4 --application app.hex --key-file key.pem app_dfu_package.zip
+nrfutil pkg generate --hw-version 51 --sd-req 0x80 --application-version 4 --application app.hex --key-file key.pem app_dfu_package.zip
 ```
+The option `--hw-version` must correspond to the nRF5x IC used, i.e. 51 for nRF51x22 ICs and 52 for nRF52xxx  ICs
 
 The following table lists the FWIDs which are used to identify the SoftDevice versions both included in the package and installed on the target device to perform the required SoftDevice version check:
 
@@ -131,6 +135,9 @@ SoftDevice            | FWID (sd-req)
 `s130_nrf51_2.0.1`    | 0x87
 `s132_nrf52_2.0.1`    | 0x88
 `s132_nrf52_3.0.0`    | 0x8C
+`s132_nrf52_3.1.0`    | 0x91
+`s132_nrf52_4.0.0`    | 0x95
+`s132_nrf52_4.0.2`    | 0x98
 
 Not all combinations of Bootloader, SoftDevice and Application are possible when generating a package. The table below summarizes the support for different combinations.
 
@@ -164,22 +171,20 @@ Perform a full DFU procedure over a BLE connection. This command takes several o
 ```
 nrfutil dfu ble --help
 ```
-Below is an example of the execution of a DFU procedure of the file generated above over BLE using a connectivity IC connected to COM3, where the remote BLE device to be upgraded is called "MyDevice":
+Below is an example of the execution of a DFU procedure of the file generated above over BLE using an nRF52 connectivity IC connected to COM3, where the remote BLE device to be upgraded is called "MyDevice":
 ```
-nrfutil dfu ble -pkg app_dfu_package.zip -p COM3 -n "MyDevice" -f
+nrfutil dfu ble -ic NRF52 -pkg app_dfu_package.zip -p COM3 -n "MyDevice" -f
 ```
 The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a serialized SoftDevice. Use with caution as this will overwrite the contents of the IC's flash memory.
 
 ##### serial
-**Note**: DFU over a serial line is currently disabled
-
 Perform a full DFU procedure over a serial (UART) line. This command takes several options that you can list using:
 ```
 nrfutil dfu serial --help
 ```
-Below is an example of the execution of a DFU procedure of the file generated above over COM3 at 115200 bits per second:
+Below is an example of the execution of a DFU procedure of the file generated above over COM3:
 ```
-nrfutil dfu serial -pkg app_dfu_package.zip -p COM3 -b 115200
+nrfutil dfu serial -pkg app_dfu_package.zip -p COM3
 ```
 
 #### keys
@@ -246,6 +251,10 @@ Note that if you modify the format of the Init Packet, you *will need to do the 
 ### Modifying the Protocol Buffers file
 
 Edit `dfu-cc.proto` and modify the Init packet to suit your needs. Additional information on the format of `.proto` files can be found [here](https://developers.google.com/protocol-buffers/).
+
+### Protocol Buffers versions
+
+Both versions 2 and 3 of Protocol Buffers library can be used, but make sure that the *language version* is version 2, a.k.a **proto2**. A new *syntax* keyword was added in Protocol Buffers v3 to specify language version of a .proto file. If `syntax = "proto3";` is *not* included, then **proto2** language version will be used.
 
 ### Compiling the Protocol Buffers file
 

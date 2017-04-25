@@ -45,11 +45,16 @@ import binascii
 
 from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent
 from pc_ble_driver_py.exceptions    import NordicSemiException, IllegalStateException
-from pc_ble_driver_py.ble_driver    import BLEDriver, BLEDriverObserver, BLEUUIDBase, BLEUUID, BLEAdvData, BLEGapConnParams, NordicSemiException
+from pc_ble_driver_py.ble_driver    import BLEDriver, BLEDriverObserver, BLEEnableParams, BLEUUIDBase, BLEUUID, BLEAdvData, BLEGapConnParams, NordicSemiException
+from pc_ble_driver_py.ble_driver    import ATT_MTU_DEFAULT
 from pc_ble_driver_py.ble_adapter   import BLEAdapter, BLEAdapterObserver, EvtSync
 
 logger  = logging.getLogger(__name__)
 #logger.setLevel(logging.DEBUG)
+
+from pc_ble_driver_py import config
+global nrf_sd_ble_api_ver
+nrf_sd_ble_api_ver = config.sd_api_ver_get()
 
 
 class ValidationException(NordicSemiException):
@@ -66,6 +71,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     CP_UUID     = BLEUUID(0x0001, BASE_UUID)
     DP_UUID     = BLEUUID(0x0002, BASE_UUID)
 
+    LOCAL_ATT_MTU     = 23
 
     def __init__(self, adapter):
         super(DFUAdapter, self).__init__()
@@ -79,7 +85,16 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
     def open(self):
         self.adapter.driver.open()
-        self.adapter.driver.ble_enable()
+        ble_enable_params = BLEEnableParams(vs_uuid_count      = 10,
+                                            service_changed    = False,
+                                            periph_conn_count  = 0,
+                                            central_conn_count = 1,
+                                            central_sec_count  = 1)
+        if nrf_sd_ble_api_ver >= 3:
+            logger.info("\nBLE: ble_enable with local ATT MTU: {}".format(DFUAdapter.LOCAL_ATT_MTU))
+            ble_enable_params.att_mtu = DFUAdapter.LOCAL_ATT_MTU
+
+        self.adapter.driver.ble_enable(ble_enable_params)
         self.adapter.driver.ble_vs_uuid_add(DFUAdapter.BASE_UUID)
 
     def connect(self, target_device_name, target_device_addr):
@@ -90,9 +105,18 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter.driver.ble_gap_scan_start()
         self.conn_handle = self.evt_sync.wait('connected')
         if self.conn_handle is None:
-            raise NordicSemiException('Timeout. Device not found.')
+            raise NordicSemiException('Timeout. Target device not found.')
         logger.info('BLE: Connected to target')
         logger.debug('BLE: Service Discovery')
+
+        if nrf_sd_ble_api_ver >= 3:
+            if DFUAdapter.LOCAL_ATT_MTU > ATT_MTU_DEFAULT:
+                logger.info('BLE: Enabling longer ATT MTUs')
+                self.att_mtu = self.adapter.att_mtu_exchange(self.conn_handle)
+                logger.info('BLE: ATT MTU: {}'.format(self.att_mtu))
+            else:
+                logger.info('BLE: Using default ATT MTU')
+
         self.adapter.service_discovery(conn_handle=self.conn_handle)
         logger.debug('BLE: Enabling Notifications')
         self.adapter.enable_notification(conn_handle=self.conn_handle, uuid=DFUAdapter.CP_UUID)
@@ -114,7 +138,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter.write_cmd(self.conn_handle, DFUAdapter.DP_UUID, data)
 
 
-    def on_gap_evt_connected(self, ble_driver, conn_handle, peer_addr, own_addr, role, conn_params):
+    def on_gap_evt_connected(self, ble_driver, conn_handle, peer_addr, role, conn_params):
         self.evt_sync.notify(evt = 'connected', data = conn_handle)
         logger.info('BLE: Connected to {}'.format(peer_addr))
 
@@ -135,7 +159,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
         dev_name        = "".join(chr(e) for e in dev_name_list)
         address_string  = "".join("{0:02X}".format(b) for b in peer_addr.addr)
-        logger.debug('Received advertisment report, address: 0x{}, device_name: {}'.format(address_string, dev_name))
+        logger.debug('Received advertisement report, address: 0x{}, device_name: {}'.format(address_string, dev_name))
 
         if (dev_name == self.target_device_name) or (address_string == self.target_device_addr):
             conn_params = BLEGapConnParams(min_conn_interval_ms = 15,
@@ -156,6 +180,14 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         #logger.debug(data)
         self.notifications_q.put(data)
 
+
+    def on_att_mtu_exchanged(self, ble_driver, conn_handle, att_mtu):
+        logger.info('ATT MTU exchanged: conn_handle={} att_mtu={}'.format(conn_handle, att_mtu))
+
+
+    def on_gattc_evt_exchange_mtu_rsp(self, ble_driver, conn_handle, **kwargs):
+        logger.info('ATT MTU exchange response: conn_handle={}'.format(conn_handle))
+    
 
 
 class DfuTransportBle(DfuTransport):
@@ -376,22 +408,6 @@ class DfuTransportBle(DfuTransport):
 
         return crc
 
-    def __read_error(self):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['ReadError']])
-        response = self.__get_response(DfuTransportBle.OP_CODE['ReadError'])
-
-        (err_code, size) = struct.unpack('<HH', bytearray(response))
-        data             = response[4:]
-
-        while size < len(data):
-            try:
-                new = self.dfu_adapter.notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
-                data.extend(new)
-            except Queue.Empty:
-                raise NordicSemiException('Timeout Error Read')
-
-        return {'err_code': err_code, 'data': data}
-
 
     def __get_response(self, operation):
         def get_dict_key(dictionary, value):
@@ -415,8 +431,11 @@ class DfuTransportBle(DfuTransport):
 
 
         elif resp[2] == DfuTransport.RES_CODE['ExtendedError']:
-            error = self.__read_error()
-            raise NordicSemiException('Extended Error {:X}: {}'.format(error['err_code'], error['data']))
+            try:
+                data = DfuTransport.EXT_ERROR_CODE[resp[3]]
+            except IndexError:
+                data = "Unsupported extended error type {}".format(resp[3])
+            raise NordicSemiException('Extended Error 0x{:02X}: {}'.format(resp[3], data))
         else:
             raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
 
