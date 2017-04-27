@@ -45,31 +45,33 @@ import spinel.ipv6
 from spinel.stream import StreamOpen
 from spinel.codec import WpanApi
 from spinel.const import SPINEL
+import collections
 
 logger = logging.getLogger(__name__)
 
-class Proxy:
+class NCPTransport():
+    '''A CoAP Toolkit compatible transport'''
     CFG_KEY_CHANNEL = 'channel'
     CFG_KEY_PANID = 'panid'
     CFG_KEY_RESET = 'reset'
     
-    udp6_parser = spinel.ipv6.IPv6PacketFactory(
-        ulpf = {
-            17: spinel.ipv6.UDPDatagramFactory(
-                udp_header_factory = spinel.ipv6.UDPHeaderFactory(),
-                dst_port_factories = {
-                    5683: spinel.ipv6.UDPBytesPayloadFactory()
-                }
-            ),
-        }
-    )
-    
-    def __init__(self, stream_descriptor, config = None, recv_callback = None):
-        assert recv_callback is not None
+    def __init__(self, port, stream_descriptor, config = None):
+        self._port = port
         self._stream_descriptor = stream_descriptor.split(":")
-        self._receive_callback = recv_callback
-        self._attached = False
         self._config = config if config is not None else self.get_default_config()
+        self._attached = False
+        
+        self._udp6_parser = spinel.ipv6.IPv6PacketFactory(
+                            ulpf = {
+                                17: spinel.ipv6.UDPDatagramFactory(
+                                    udp_header_factory = spinel.ipv6.UDPHeaderFactory(),
+                                    dst_port_factories = {
+                                        port: spinel.ipv6.UDPBytesPayloadFactory()
+                                        }
+                                    ),
+                            })
+        
+        self._receivers = []     
         
     @staticmethod
     def _propid_to_str(propid):
@@ -79,10 +81,10 @@ class Proxy:
 
     def _set_property(self, *args):
         for propid, value, py_format in args:
-            logger.debug("Setting property %s to %s", Proxy._propid_to_str(propid), str(value))
+            logger.debug("Setting property %s to %s", self.__class__._propid_to_str(propid), str(value))
             result = self._wpan.prop_set_value(propid, value, py_format)
             if (result is None):
-                raise Exception("Failed to set property {}".format(Proxy._propid_to_str(propid)))
+                raise Exception("Failed to set property {}".format(self.__class__._propid_to_str(propid)))
             else:
                 logger.debug("Done")
 
@@ -92,8 +94,8 @@ class Proxy:
     def _attach_to_network(self):
         props = [
             (SPINEL.PROP_IPv6_ICMP_PING_OFFLOAD, 1, 'B'),
-            (SPINEL.PROP_PHY_CHAN, self._config[Proxy.CFG_KEY_CHANNEL], 'H'),
-            (SPINEL.PROP_MAC_15_4_PANID, self._config[Proxy.CFG_KEY_PANID], 'H'),
+            (SPINEL.PROP_PHY_CHAN, self._config[self.CFG_KEY_CHANNEL], 'H'),
+            (SPINEL.PROP_MAC_15_4_PANID, self._config[self.CFG_KEY_PANID], 'H'),
             (SPINEL.PROP_NET_IF_UP, 1, 'B'),
             (SPINEL.PROP_NET_STACK_UP, 2, 'B'),
         ]
@@ -108,22 +110,25 @@ class Proxy:
 
         return False
 
-    def _receive(self, prop, value, tid):
+    def _wpan_receive(self, prop, value, tid):
         consumed = False
 
         if prop == SPINEL.PROP_STREAM_NET:
             consumed = True
             try:
-                pkt = self.udp6_parser.parse(io.BytesIO(value[2:]),
-                                             spinel.common.MessageInfo())
+                pkt = self._udp6_parser.parse(io.BytesIO(value[2:]),
+                                              spinel.common.MessageInfo())
                 
-                #TODO: Remove conversion from IPV6 to string once twisted
-                #      is removed.
-                self._receive_callback(str(pkt.ipv6_header.source_address),
-                                       pkt.upper_layer_protocol.header.src_port,
-                                       str(pkt.ipv6_header.destination_address),
-                                       pkt.upper_layer_protocol.header.dst_port,
-                                       str(pkt.upper_layer_protocol.payload.to_bytes()))
+                endpoint = collections.namedtuple('endpoint', 'addr port')
+                payload = str(pkt.upper_layer_protocol.payload.to_bytes())
+                src = endpoint(pkt.ipv6_header.source_address,
+                               pkt.upper_layer_protocol.header.src_port)
+                dst = endpoint(pkt.ipv6_header.destination_address,
+                               pkt.upper_layer_protocol.header.dst_port)
+                
+                for receiver in self._receivers:
+                    receiver.receive(payload, src, dst)
+                    
             except RuntimeError:
                 pass
             except Exception as e:
@@ -137,11 +142,11 @@ class Proxy:
                                           spinel.ipv6.UDPHeader(sport, dport),
                                           spinel.ipv6.UDPBytesPayload(payload)))
 
-    @staticmethod
-    def get_default_config():
-        return {Proxy.CFG_KEY_CHANNEL: 11,
-                Proxy.CFG_KEY_PANID:   0xabcd,
-                Proxy.CFG_KEY_RESET:   True}
+    @classmethod
+    def get_default_config(cls):
+        return {cls.CFG_KEY_CHANNEL: 11,
+                cls.CFG_KEY_PANID:   0xabcd,
+                cls.CFG_KEY_RESET:   True}
 
     def add_ip_address(self, ipaddr):
         valid = 1
@@ -159,32 +164,47 @@ class Proxy:
 
         self._wpan.prop_insert_value(SPINEL.PROP_IPV6_ADDRESS_TABLE, arr, str(len(arr)) + 's')
         logger.debug("Added")
-
-    def send(self, src, sport, dst, dport, payload):
-        logger.debug("Sending datagram {} {} {} {}".format(src, sport, dst, dport))
-        if (src is None):
-            src = self._src_addr
-        try:
-            datagram = self._build_udp_datagram(src, sport, dst, dport, payload)
-        except Exception as e:
-            logging.exception('Sending failed')          
         
-        self._wpan.ip_send(str(datagram.to_bytes()))
-
     def print_addresses(self):
         for addr in self._wpan.get_ipaddrs():
             logger.info(unicode(addr))
+        
+    def send(self, payload, dest):
+        logger.debug("Sending datagram {} {} {} {}".format(self._src_addr,
+                                                           self._port,
+                                                           dest.addr,
+                                                           dest.port))
+        try:
+            datagram = self._build_udp_datagram(self._src_addr,
+                                                self._port,
+                                                dest.addr,
+                                                dest.port,
+                                                payload)
+        except Exception as e:
+            logging.exception(e)          
+        
+        self._wpan.ip_send(str(datagram.to_bytes()))
 
-    def connect(self):
+    def register_receiver(self, callback):
+        '''Registers a reciever, that will get all the data received from the transport.
+           The callback function shall be in format:
+           receive_callback(src_addr, src_port, dest_port, dest_addr, payload)'''
+        self._receivers.append(callback)
+
+    def remove_receiver(self, callback):
+        '''Remove a receiver callback'''
+        self._receivers.remove(callback)
+
+    def open(self):
+        '''Opens transport for communication.'''
         self._stream = StreamOpen(self._stream_descriptor[0], self._stream_descriptor[1])
         # FIXME: remove node id from constructor after WpanAPI is refactored
         self._wpan = WpanApi(self._stream, 666)
         self._wpan.queue_register(SPINEL.HEADER_DEFAULT)
         self._wpan.queue_register(SPINEL.HEADER_ASYNC)
-        self._wpan.callback_register(SPINEL.PROP_STREAM_NET, self._receive)
+        self._wpan.callback_register(SPINEL.PROP_STREAM_NET, self._wpan_receive)     
 
-
-        if (self._config[Proxy.CFG_KEY_RESET]) and not self._wpan.cmd_reset():
+        if (self._config[NCPTransport.CFG_KEY_RESET]) and not self._wpan.cmd_reset():
             raise Exception('Failed to reset NCP. Please flash connectvity firmware.')
 
         logger.info('Attaching to the network')
@@ -192,12 +212,13 @@ class Proxy:
             logger.error("Failed to attach to the network")
             raise Exception('Unable to attach')
 
-        self._src_addr = str(ipaddress.IPv6Address(self._wpan.prop_get_value(SPINEL.PROP_IPV6_ML_ADDR)))
+        self._src_addr = ipaddress.ip_address(self._wpan.prop_get_value(SPINEL.PROP_IPV6_ML_ADDR))
 
         logger.info("Done")
 
         self.print_addresses()
 
-    def disconnect(self):
+    def close(self):
+        '''Closes transport for communication.'''
         self._wpan.cmd_reset()
         self._stream.close()

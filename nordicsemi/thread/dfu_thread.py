@@ -39,8 +39,7 @@ import os.path
 import logging
 
 from nordicsemi.dfu.package import Package
-from nordicsemi.thread.dfu_server import DfuServer
-import time
+from nordicsemi.thread.dfu_server import ThreadDfuServer
 
 logger = logging.getLogger(__name__)
 
@@ -60,39 +59,25 @@ def _get_manifest_items(manifest):
 
 	return result
 
-class ThreadDFU:
-	def __init__(self, transport_factory, zip_file_path, prefix):
-		self.temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_")
-		self.unpacked_zip_path = os.path.join(self.temp_dir, 'unpacked_zip')
-		self.manifest = Package.unpack_package(zip_file_path, self.unpacked_zip_path)
+def _get_file_names(manifest):
+	data_attrs = _get_manifest_items(manifest)
+	if (len(data_attrs) > 1):
+		raise RuntimeError("More than one image present in manifest")
+	data_attrs = data_attrs[0]
+	firmware = data_attrs[1]
+	logger.info("Image type {} found".format(data_attrs[0]))
+	return firmware.dat_file, firmware.bin_file
 
-		init_file, image_file = self._get_paths(self.manifest)
-		self.server = DfuServer(transport_factory, init_file, image_file, prefix)
+def create_dfu_server(transport, zip_file_path, prefix):
+	temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_")
+	unpacked_zip_path = os.path.join(temp_dir, 'unpacked_zip')
+	manifest = Package.unpack_package(zip_file_path, unpacked_zip_path)
 
-	def start(self):
-		self.server.start()
-
-	def stop(self):
-		self.server.stop()
-
-	def __enter__(self):
-		self.start()
-		return self
-
-	def __exit__(self, exc_type, exc_value, traceback):
-		self.stop()
-
-	def _get_abs_path(self, f):
-		return os.path.join(self.unpacked_zip_path, f)
-
-	def _get_paths(self, manifest):
-		data_attrs = _get_manifest_items(manifest)
-		if (len(data_attrs) > 1):
-			raise RuntimeError("More than one image present in manifest")
-		data_attrs = data_attrs[0]
-		firmware = data_attrs[1]
-		logger.info("Image type {} found".format(data_attrs[0]))
-		return self._get_abs_path(firmware.dat_file), self._get_abs_path(firmware.bin_file)
-
-	def trigger(self, address, num_of_requests = 3):
-		self.server.trigger(address, num_of_requests)
+	init_file, image_file = _get_file_names(manifest)
+	
+	with open(os.path.join(unpacked_zip_path, init_file), 'rb') as f:
+		init_data = f.read()
+	with open(os.path.join(unpacked_zip_path, image_file), 'rb') as f:
+		image_data = f.read()
+		
+	return ThreadDfuServer(transport, init_data, image_data, prefix)

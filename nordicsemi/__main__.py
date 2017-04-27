@@ -36,6 +36,7 @@
 #
 import ipaddress
 import signal
+from nordicsemi.thread.dfu_server import ThreadDfuServer
 
 """nrfutil command line tool."""
 import os
@@ -750,9 +751,9 @@ def convert_version_string_to_int(s):
               is_flag=True)
 def thread(package, port, address, server_port, prefix, panid, channel, jlink_snr, flash_connectivity, sim):
     ble_driver_init('NRF52')
-    from nordicsemi.thread import ncp
-    from nordicsemi.thread.dfu_thread import ThreadDFU
-    from nordicsemi.thread.ncp_transport import NcpTransport
+    from nordicsemi.thread import tncp
+    from nordicsemi.thread.dfu_thread import create_dfu_server
+    from nordicsemi.thread.tncp import NCPTransport
     from nordicsemi.thread.ncp_flasher import NCPFlasher
 
     """Perform a Device Firmware Update on a device with a bootloader that supports Thread DFU."""
@@ -797,16 +798,16 @@ def thread(package, port, address, server_port, prefix, panid, channel, jlink_sn
         # Delay is required because NCP needs time to initialize.
         time.sleep(1.0)
 
-    config = ncp.Proxy.get_default_config()
+    config = tncp.NCPTransport.get_default_config()
     if (panid):
-        config[ncp.Proxy.CFG_KEY_PANID] = panid
+        config[tncp.NCPTransport.CFG_KEY_PANID] = panid
     if (channel):
-        config[ncp.Proxy.CFG_KEY_CHANNEL] = channel
+        config[tncp.NCPTransport.CFG_KEY_CHANNEL] = channel
     if (flash_connectivity):
-        config[ncp.Proxy.CFG_KEY_RESET] = False
+        config[tncp.NCPTransport.CFG_KEY_RESET] = False
 
-    factory = lambda endpoint : NcpTransport(server_port, endpoint, stream_descriptor, config)
-    dfu = ThreadDFU(factory, package, prefix)
+    transport = NCPTransport(server_port, stream_descriptor, config)
+    dfu = create_dfu_server(transport, package, prefix)
 
     try:
         sighandler = lambda signum, frame : dfu.stop
