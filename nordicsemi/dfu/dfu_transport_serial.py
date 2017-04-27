@@ -355,17 +355,9 @@ class DfuTransportSerial(DfuTransport):
         return {'max_size': max_size, 'offset': offset, 'crc': crc}
         
     def __get_checksum_response(self):
-        resp = self.dfu_adapter.get_message()
-        if resp[0] != DfuTransportSerial.OP_CODE['Response']:
-            raise ValidationException('Failed to receive response.\n'\
-                                + 'Expected opcode: {} Recieved: {}.'.format(resp[0], DfuTransportSerial.OP_CODE['Response']))
-        if resp[1] != DfuTransportSerial.OP_CODE['CalcChecSum']:
-            raise ValidationException('Failed to receive checksum response.\n'\
-                                + 'Expected opcode: {} Recieved: {}.'.format(resp[1], DfuTransportSerial.OP_CODE['CalcChecSum']))
-        if resp[2] != DfuTransport.RES_CODE['Success']:
-            raise ValidationException('Checksum response code was {}.'.format(resp[2]))
+        resp = self.__get_response(DfuTransportSerial.OP_CODE['CalcChecSum'])
 
-        (offset, crc) = struct.unpack('<II', bytearray(resp[3:]))
+        (offset, crc) = struct.unpack('<II', bytearray(resp))
         return {'offset': offset, 'crc': crc}
         
     def __stream_data(self, data, crc=0, offset=0):
