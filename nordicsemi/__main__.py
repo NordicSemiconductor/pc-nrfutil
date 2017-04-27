@@ -592,7 +592,8 @@ def serial(package, port, flow_control, packet_receipt_notification, baud_rate):
         baud_rate = DfuTransportSerial.DEFAULT_BAUD_RATE
 
     logger.info("Using board at serial port: {}".format(port))    
-    serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate, flow_control=flow_control, prn=packet_receipt_notification)
+    serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate, 
+                    flow_control=flow_control, prn=packet_receipt_notification)
     serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
 

@@ -126,7 +126,8 @@ class DFUAdapter(object):
             byte = self.serial_port.read(1)
             if byte:
                 (byte) = struct.unpack('B', byte)[0]
-                (finished, current_state, decoded_data) = Slip.decode_add_byte(byte, decoded_data, current_state)
+                (finished, current_state, decoded_data) \
+                   = Slip.decode_add_byte(byte, decoded_data, current_state)
             else:
                 current_state = Slip.SLIP_STATE_CLEARING_INVALID_PACKET
                 return None
@@ -153,7 +154,12 @@ class DfuTransportSerial(DfuTransport):
         'Response'              : 0x60,
     }
 
-    def __init__(self, com_port, baud_rate=DEFAULT_BAUD_RATE, flow_control=DEFAULT_FLOW_CONTROL, timeout=DEFAULT_SERIAL_PORT_TIMEOUT, prn=DEFAULT_PRN):
+    def __init__(self, 
+                 com_port, 
+                 baud_rate=DEFAULT_BAUD_RATE, 
+                 flow_control=DEFAULT_FLOW_CONTROL, 
+                 timeout=DEFAULT_SERIAL_PORT_TIMEOUT, 
+                 prn=DEFAULT_PRN):
 
         super(DfuTransportSerial, self).__init__()
         self.com_port = com_port
@@ -174,10 +180,12 @@ class DfuTransportSerial(DfuTransport):
         super(DfuTransportSerial, self).open()
 
         try:
-            self.serial_port = Serial(port=self.com_port, baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
+            self.serial_port = Serial(port=self.com_port, 
+                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
             self.dfu_adapter = DFUAdapter(self.serial_port)
         except Exception, e:
-            raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
+            raise NordicSemiException("Serial port could not be opened on {0}" 
+            + ". Reason: {1}".format(self.com_port, e.message))
 
         if self.__ping() == False:
             raise NordicSemiException("No ping response after opening COM port")
@@ -248,13 +256,15 @@ class DfuTransportSerial(DfuTransport):
             if expected_crc != response['crc']:
                 # Invalid CRC. Remove corrupted data.
                 response['offset'] -= remainder if remainder != 0 else response['max_size']
-                response['crc']     = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
+                response['crc']     = \
+                        binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
                 return
 
             if (remainder != 0) and (response['offset'] != len(firmware)):
                 # Send rest of the page.
                 try:
-                    to_send             = firmware[response['offset'] : response['offset'] + response['max_size'] - remainder]
+                    to_send             = firmware[response['offset'] : response['offset'] 
+                                                + response['max_size'] - remainder]
                     response['crc']     = self.__stream_data(data   = to_send,
                                                              crc    = response['crc'],
                                                              offset = response['offset'])
@@ -262,7 +272,8 @@ class DfuTransportSerial(DfuTransport):
                 except ValidationException:
                     # Remove corrupted data.
                     response['offset'] -= remainder
-                    response['crc']     = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
+                    response['crc']     = \
+                        binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
                     return
 
             self.__execute()
@@ -283,7 +294,8 @@ class DfuTransportSerial(DfuTransport):
 
     def __set_prn(self):
         logger.debug("Serial: Set Packet Receipt Notification {}".format(self.prn))
-        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['SetPRN']] + map(ord, struct.pack('<H', self.prn)))
+        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['SetPRN']] 
+            + map(ord, struct.pack('<H', self.prn)))
         self.__get_response(DfuTransportSerial.OP_CODE['SetPRN'])
 
     def __get_mtu(self):
@@ -306,10 +318,11 @@ class DfuTransportSerial(DfuTransport):
 
         if resp[1] != DfuTransportSerial.OP_CODE['Ping']:
             raise NordicSemiException('Unexpected Executed OP_CODE.\n' \
-                                    + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
+                              + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
 
         if resp[2] != DfuTransport.RES_CODE['Success']:
-            return True # Returning an error code is seen as good enough. The bootloader is up and running
+            # Returning an error code is seen as good enough. The bootloader is up and running
+            return True 
         else:
             if struct.unpack('B', bytearray(resp[3:]))[0] == self.ping_id:
                 return True
@@ -351,7 +364,8 @@ class DfuTransportSerial(DfuTransport):
         response = self.__get_response(DfuTransportSerial.OP_CODE['ReadObject'])
         (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
         
-        logger.debug("Serial: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
+        logger.debug("Serial: Object selected: " +
+            " max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
         return {'max_size': max_size, 'offset': offset, 'crc': crc}
         
     def __get_checksum_response(self):
@@ -361,7 +375,8 @@ class DfuTransportSerial(DfuTransport):
         return {'offset': offset, 'crc': crc}
         
     def __stream_data(self, data, crc=0, offset=0):
-        logger.debug("Serial: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
+        logger.debug("Serial: Streaming Data: " + 
+            "len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
         def validate_crc():
             if (crc != response['crc']):
                 raise ValidationException('Failed CRC validation.\n'\
@@ -374,7 +389,8 @@ class DfuTransportSerial(DfuTransport):
 
         for i in range(0, len(data), (self.mtu-1)/2 - 1):
             # append the write data opcode to the front
-            # here the maximum data size is self.mtu/2 due to the slip encoding which at maximum doubles the size
+            # here the maximum data size is self.mtu/2,
+            # due to the slip encoding which at maximum doubles the size
             to_transmit = data[i:i + (self.mtu-1)/2 - 1 ]
             to_transmit = struct.pack('B',DfuTransportSerial.OP_CODE['WriteObject']) + to_transmit
             
@@ -404,7 +420,7 @@ class DfuTransportSerial(DfuTransport):
 
         if resp[1] != operation:
             raise NordicSemiException('Unexpected Executed OP_CODE.\n' \
-                                    + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
+                             + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
 
         if resp[2] == DfuTransport.RES_CODE['Success']:
             return resp[3:]
@@ -416,5 +432,6 @@ class DfuTransportSerial(DfuTransport):
                 data = "Unsupported extended error type {}".format(resp[3])
             raise NordicSemiException('Extended Error 0x{:02X}: {}'.format(resp[3], data))
         else:
-            raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
+            raise NordicSemiException('Response Code {}'.format(
+                get_dict_key(DfuTransport.RES_CODE, resp[2])))
 
