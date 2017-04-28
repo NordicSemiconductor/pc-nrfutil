@@ -1,2 +1,2 @@
 ./deps/txThings-0.2.0-b0775.tar.gz#egg=txThings-0.2.0
-git+http://projecttools.nordicsemi.no/stash/scm/krknwk/spinel-cli.git#egg=spinel
+git+https://github.com/NordicSemiconductor/pyspinel.git@release/thread-sdk/v0.9.0#egg=pyspinel

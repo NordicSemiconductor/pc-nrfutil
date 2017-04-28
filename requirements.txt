@@ -7,5 +7,5 @@ behave
 protobuf
 pc_ble_driver_py >= 0.8.1
 tqdm
-spinel
+pyspinel
 txThings

@@ -791,7 +791,11 @@ def thread(package, port, address, server_port, prefix, panid, channel, jlink_sn
             click.echo("Flashing connectivity firmware...")
             flasher.fw_flash()
             click.echo("Connectivity firmware flashed.")
+
         flasher.reset()
+
+        # Delay is required because NCP needs time to initialize.
+        time.sleep(1.0)
 
     config = ncp.Proxy.get_default_config()
     if (panid):
