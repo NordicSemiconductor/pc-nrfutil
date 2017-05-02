@@ -563,7 +563,19 @@ def dfu():
               help='Serial port COM port to which the device is connected.',
               type=click.STRING,
               required=True)
-def serial(package, port):
+@click.option('-fc', '--flow-control',
+              help='To enable flow control set this flag to 1',
+              type=click.BOOL,
+              required=False)
+@click.option('-prn', '--packet-receipt-notification',
+              help='Set the packet receipt notification value',
+              type=click.INT,
+              required=False)
+@click.option('-b', '--baud-rate',
+              help='Set the baud rate',
+              type=click.INT,
+              required=False)
+def serial(package, port, flow_control, packet_receipt_notification, baud_rate):
     """Perform a Device Firmware Update on a device with a bootloader that supports serial DFU."""
     #raise NotImplementedException('Serial transport currently is not supported')
     """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
@@ -571,9 +583,17 @@ def serial(package, port):
     if port is None:
         click.echo("Please specify serial port.")
         return
+        
+    if flow_control is None:
+        flow_control = DfuTransportSerial.DEFAULT_FLOW_CONTROL
+    if packet_receipt_notification is None:
+        packet_receipt_notification = DfuTransportSerial.DEFAULT_PRN
+    if baud_rate is None:
+        baud_rate = DfuTransportSerial.DEFAULT_BAUD_RATE
 
-    logger.info("Using board at serial port: {}".format(port))
-    serial_backend = DfuTransportSerial(com_port=str(port))
+    logger.info("Using board at serial port: {}".format(port))    
+    serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate, 
+                    flow_control=flow_control, prn=packet_receipt_notification)
     serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
 
