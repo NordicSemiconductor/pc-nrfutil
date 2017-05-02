@@ -231,7 +231,9 @@ class DfuTransportBle(DfuTransport):
             raise IllegalStateException('DFU Adapter is already closed')
         super(DfuTransportBle, self).close()
         self.dfu_adapter.close()
-        self.dfu_adapter = None
+        if self.dfu_adapter is not None:
+            self.dfu_adapter = None
+        logger.info('Close the DFU adapter')
 
 
     def send_init_packet(self, init_packet):
