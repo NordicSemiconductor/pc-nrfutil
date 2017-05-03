@@ -380,7 +380,8 @@ def pkg():
                    '\n|s132_nrf52_3.0.0|0x8C|'
                    '\n|s132_nrf52_3.1.0|0x91|'
                    '\n|s132_nrf52_4.0.0|0x95|'
-                   '\n|s132_nrf52_4.0.2|0x98|',
+                   '\n|s132_nrf52_4.0.2|0x98|'
+                   '\n|s132_nrf52_4.0.3|0x99|',
               type=click.STRING,
               multiple=True)
 @click.option('--softdevice',
