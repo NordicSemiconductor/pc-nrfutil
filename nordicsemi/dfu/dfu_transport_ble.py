@@ -127,6 +127,10 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             logger.info('BLE: Disconnecting from target')
             self.adapter.disconnect(self.conn_handle)
             self.evt_sync.wait('disconnected')
+        self.conn_handle    = None
+        self.evt_sync       = None
+        self.adapter.observer_unregister(self)
+        self.adapter.driver.observer_unregister(self)
         self.adapter.driver.close()
 
 
