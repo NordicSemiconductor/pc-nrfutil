@@ -124,7 +124,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
     def close(self):
         if self.conn_handle is not None:
-            logger.info('BLE: Wait for disconnecting from target')
+            logger.info('BLE: Disconnecting from target')
             self.adapter.disconnect(self.conn_handle)
             self.evt_sync.wait('disconnected')
         self.conn_handle    = None
