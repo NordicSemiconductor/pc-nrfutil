@@ -98,8 +98,6 @@ class Dfu(object):
         logger.info("Image sent in {0}s".format(end_time - start_time))
 
         self.dfu_transport.close()
-        logger.info("Finish sending image.")
-
 
     def dfu_send_images(self):
         """

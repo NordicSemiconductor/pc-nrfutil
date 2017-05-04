@@ -124,9 +124,13 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
     def close(self):
         if self.conn_handle is not None:
-            logger.info('BLE: Disconnecting from target')
+            logger.info('BLE: Wait for disconnecting from target')
             self.adapter.disconnect(self.conn_handle)
             self.evt_sync.wait('disconnected')
+        self.conn_handle    = None
+        self.evt_sync       = None
+        self.adapter.observer_unregister(self)
+        self.adapter.driver.observer_unregister(self)
         self.adapter.driver.close()
 
 
@@ -231,9 +235,7 @@ class DfuTransportBle(DfuTransport):
             raise IllegalStateException('DFU Adapter is already closed')
         super(DfuTransportBle, self).close()
         self.dfu_adapter.close()
-        if self.dfu_adapter is not None:
-            self.dfu_adapter = None
-        logger.info('Close the DFU adapter')
+        self.dfu_adapter = None
 
 
     def send_init_packet(self, init_packet):
