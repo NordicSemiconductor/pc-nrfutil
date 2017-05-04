@@ -99,6 +99,7 @@ class Dfu(object):
 
         self.dfu_transport.close()
 
+
     def dfu_send_images(self):
         """
         Does DFU for all firmware images in the stored manifest.
