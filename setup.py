@@ -41,7 +41,7 @@ import platform
 
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
-from setuptools_behave import behave_test
+from pip.req import parse_requirements
 
 from nordicsemi import version
 
@@ -74,6 +74,10 @@ dll_excludes = [
 build_dir = os.environ.get("NRFUTIL_BUILD_DIR", "./{}".format(version.NRFUTIL_VERSION))
 description = """A Python package that includes the nrfutil utility and the nordicsemi library"""
 
+# parse_requirements() returns generator of pip.req.InstallRequirement objects
+install_reqs = parse_requirements("requirements.txt", session=False)
+# reqs is a list of requirements as strings
+reqs = [str(ir.req) for ir in install_reqs]
 
 class NoseTestCommand(TestCommand):
     def finalize_options(self):
@@ -85,8 +89,6 @@ class NoseTestCommand(TestCommand):
         import nose
         nose.run_exit(argv=['nosetests', '--with-xunit', '--xunit-file=test-reports/unittests.xml'])
 
-common_requirements=[]
-
 setup(
     name="nrfutil",
     version=version.NRFUTIL_VERSION,
@@ -95,9 +97,10 @@ setup(
     description="Nordic Semiconductor nrfutil utility and Python library",
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
-    include_package_data=False,
-    install_requires=common_requirements,
-    setup_requires=common_requirements,
+    package_data={
+        '': ['../requirements.txt']
+    },
+    install_requires=reqs,
     zipfile=None,
     tests_require=[
         "nose >= 1.3.4",
