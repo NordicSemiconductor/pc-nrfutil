@@ -185,7 +185,7 @@ nrfutil dfu ble -ic NRF52 -pkg app_dfu_package.zip -p COM3 -n "MyDevice" -f
 ```
 The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a serialized SoftDevice. Use with caution as this will overwrite the contents of the IC's flash memory.
 
-##### ble
+##### Thread
 **Note**: DFU over Thread is experimental
 
 Perform a full DFU procedure over a Thread. This command takes several options that you can list using:
