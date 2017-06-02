@@ -225,7 +225,7 @@ You can generate a .hex file with Bootloader DFU settings matching a particular 
 nrfutil settings generate --family NRF52 --application app.hex --application-version 3 --bootloader-version 2 --bl-settings-version 1 sett.hex
 ```
 
-The `--family` setting depends the nRF IC:
+The `--family` setting depends on the nRF IC that you are targeting:
 
 nRF IC    | Family Setting
 --------- | --------------
