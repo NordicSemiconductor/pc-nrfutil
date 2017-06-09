@@ -111,7 +111,7 @@ setup(
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
     package_data = {
-                '': ['../requirements.txt', '../dependency_links.txt', 'thread/hex/ncp.hex', '../deps/*.tar.gz']
+                '': ['../requirements.txt', '../dependency_links.txt', 'thread/hex/ncp.hex']
     },
     install_requires=reqs,
     dependency_links=dep_links,
