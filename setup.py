@@ -82,15 +82,6 @@ install_reqs = parse_requirements("requirements.txt", session=False)
 # reqs is a list of requirements as strings
 reqs = [str(ir.req) for ir in install_reqs]
 
-def make_uri(dep):
-    if dep.startswith('./'):
-        uri = 'file://' + os.path.dirname(os.path.abspath(__file__)) + '/' + dep.rstrip()[2:]
-        dep = uri.replace('/', os.sep)
-    return dep
-
-with open('dependency_links.txt', 'r') as f:
-    dep_links = [make_uri(dep) for dep in f.readlines()]
-
 class NoseTestCommand(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
@@ -111,10 +102,9 @@ setup(
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
     package_data = {
-                '': ['../requirements.txt', '../dependency_links.txt', 'thread/hex/ncp.hex']
+                '': ['../requirements.txt', 'thread/hex/ncp.hex']
     },
     install_requires=reqs,
-    dependency_links=dep_links,
     zipfile=None,
     tests_require=[
         "nose >= 1.3.4",
