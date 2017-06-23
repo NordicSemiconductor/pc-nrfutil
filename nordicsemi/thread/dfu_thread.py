@@ -34,7 +34,50 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import tempfile
+import os.path
+import logging
 
-""" Version definition for nrfutil. """
+from nordicsemi.dfu.package import Package
+from nordicsemi.thread.dfu_server import ThreadDfuServer
 
-NRFUTIL_VERSION = "3.0.0"
+logger = logging.getLogger(__name__)
+
+def _get_manifest_items(manifest):
+	import inspect
+	result = []
+
+	for key, value in inspect.getmembers(manifest):
+		if (key.startswith('__')):
+			continue
+		if not value:
+			continue
+		if inspect.ismethod(value) or inspect.isfunction(value):
+			continue
+
+		result.append((key, value))
+
+	return result
+
+def _get_file_names(manifest):
+	data_attrs = _get_manifest_items(manifest)
+	if (len(data_attrs) > 1):
+		raise RuntimeError("More than one image present in manifest")
+	data_attrs = data_attrs[0]
+	firmware = data_attrs[1]
+	logger.info("Image type {} found".format(data_attrs[0]))
+	return firmware.dat_file, firmware.bin_file
+
+def create_dfu_server(transport, zip_file_path, prefix):
+	temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_")
+	unpacked_zip_path = os.path.join(temp_dir, 'unpacked_zip')
+	manifest = Package.unpack_package(zip_file_path, unpacked_zip_path)
+
+	init_file, image_file = _get_file_names(manifest)
+	
+	with open(os.path.join(unpacked_zip_path, init_file), 'rb') as f:
+		init_data = f.read()
+	with open(os.path.join(unpacked_zip_path, image_file), 'rb') as f:
+		image_data = f.read()
+		
+	return ThreadDfuServer(transport, init_data, image_data, prefix)

@@ -33,8 +33,34 @@
 # ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
+import os
+import re
+import subprocess
+from pc_ble_driver_py.ble_driver import Flasher
 
-""" Version definition for nrfutil. """
+class NCPFlasher(Flasher):
+    ERROR_CODE_VERIFY_ERROR = 55
 
-NRFUTIL_VERSION = "3.0.0"
+    def __init__(self, serial_port = None, snr = None):
+        Flasher.__init__(self, serial_port, snr)
+
+    def __get_hex_path(self):
+        return os.path.join(os.path.dirname(__file__), 'hex', 'ncp.hex')
+
+    def verify(self, path):
+        args = ['--verify', path]
+        return self.call_cmd(args)
+
+    def fw_check(self):
+        try:
+            result = self.verify(self.__get_hex_path())
+        except subprocess.CalledProcessError as e:
+            if (e.returncode == NCPFlasher.ERROR_CODE_VERIFY_ERROR):
+                return False
+            else:
+                raise
+        return (re.search('^Verified OK.$', result, re.MULTILINE) != None)
+
+    def fw_flash(self):
+        self.erase()
+        self.program(self.__get_hex_path())

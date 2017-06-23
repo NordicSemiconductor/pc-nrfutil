@@ -13,6 +13,7 @@ This application and its library offer the following features:
 * Cryptographic key generation, management and storage
 * Bootloader DFU settings generation and display
 * Device Firmware Update procedure over Bluetooth Low Energy
+* Device Firmware Update procedure over Thread
 
 ## License
 
@@ -41,7 +42,7 @@ This will also retrieve and install all additional required packages.
 
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
-**Note**: To use the `dfu ble` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
+**Note**: To use the `dfu ble` or `dfu thread` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
 
 ## Downloading precompiled Windows executable
 
@@ -99,11 +100,11 @@ pyinstaller /full/path/to/nrfutil.spec
 
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
-**Note**: To use the `dfu ble` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup). 
+**Note**: To use the `dfu ble` or `dfu thread` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup). 
 
 ## Usage
 
-To get info on usage of nrfutil:  
+To get info on usage of nrfutil:
 ```
 nrfutil --help
 ```
@@ -144,6 +145,8 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_4.0.2`    | 0x98
 `s132_nrf52_4.0.3`    | 0x99
 
+**Note**: The Thread stack doesn't use a SoftDevice but --sd-req option is required for compatibility reasons. You can provide any value for the option as it is ignored during DFU.
+
 Not all combinations of Bootloader, SoftDevice and Application are possible when generating a package. The table below summarizes the support for different combinations.
 
 The following conventions are used on the table:
@@ -169,7 +172,7 @@ nrfutil pkg display package.zip
 ```
 
 #### dfu
-This set of commands allow you to perform an actual firmware update over a serial or BLE connection.
+This set of commands allow you to perform an actual firmware update over a serial, BLE, or Thread connection.
 
 ##### ble
 Perform a full DFU procedure over a BLE connection. This command takes several options that you can list using:
@@ -181,6 +184,19 @@ Below is an example of the execution of a DFU procedure of the file generated ab
 nrfutil dfu ble -ic NRF52 -pkg app_dfu_package.zip -p COM3 -n "MyDevice" -f
 ```
 The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a serialized SoftDevice. Use with caution as this will overwrite the contents of the IC's flash memory.
+
+##### Thread
+**Note**: DFU over Thread is experimental
+
+Perform a full DFU procedure over a Thread. This command takes several options that you can list using:
+```
+nrfutil dfu thread --help
+```
+Below is an example of the execution of a DFU procedure on all devices in a Thread network using a file generated above and a connectivity IC connected to COM3.
+```
+nrfutil dfu ble -pkg app_dfu_package.zip -p COM3 -f
+```
+The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a network co-processor (NCP). Use with caution as this will overwrite the contents of the IC's flash memory.
 
 ##### serial
 Perform a full DFU procedure over a serial (UART) line. This command takes several options that you can list using:
