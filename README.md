@@ -240,6 +240,15 @@ You can generate a .hex file with Bootloader DFU settings matching a particular 
 ```
 nrfutil settings generate --family NRF52 --application app.hex --application-version 3 --bootloader-version 2 --bl-settings-version 1 sett.hex
 ```
+
+The `--family` setting depends on the nRF IC that you are targeting:
+
+nRF IC    | Family Setting
+--------- | --------------
+nRF51xxx  | NRF51
+nRF52832  | NRF52
+nRF52840  | NRF52840
+
 The `--bl-settings-version` depends on the SDK version used. Check the following table to find out which version to use:
 
 SDK Version   | BL Settings Version
