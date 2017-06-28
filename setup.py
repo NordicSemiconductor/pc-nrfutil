@@ -35,7 +35,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-
 """
 Setup script for nrfutil.
 
@@ -102,8 +101,8 @@ setup(
     description="Nordic Semiconductor nrfutil utility and Python library",
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
-    package_data = { 
-                '': ['../requirements.txt']
+    package_data = {
+                '': ['../requirements.txt', 'thread/hex/ncp.hex']
     },
     install_requires=reqs,
     zipfile=None,
@@ -116,7 +115,7 @@ setup(
         'Development Status :: 4 - Beta',
 
         'Intended Audience :: Developers',
-        
+
         'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX :: Linux',
@@ -124,7 +123,7 @@ setup(
         'Topic :: System :: Networking',
         'Topic :: System :: Hardware :: Hardware Drivers',
         'Topic :: Software Development :: Embedded Systems',
-        
+
         'License :: Other/Proprietary License',
 
         'Programming Language :: Python :: 2.7',

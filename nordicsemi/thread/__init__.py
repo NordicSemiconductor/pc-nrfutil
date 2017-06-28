@@ -35,6 +35,9 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-""" Version definition for nrfutil. """
+"""Package marker file."""
 
-NRFUTIL_VERSION = "3.1.0"
+import sys
+from os.path import dirname
+
+sys.path.append(dirname(__file__))

@@ -5,4 +5,7 @@ click >= 6.0
 ecdsa >= 0.13
 behave
 protobuf
-pc_ble_driver_py >= 0.8.0
+pc_ble_driver_py >= 0.8.1
+tqdm
+piccata
+pyspinel
