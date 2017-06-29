@@ -56,7 +56,7 @@ You will need to clone the present repository first to run or install nrfutil fr
 
 To install nrfutil from source the following prerequisites must be satisfied:
 
-* [Python 2.7 (2.7.6 or newer, not Python 3)](https://www.python.org/downloads/)
+* [Python 2.7 (2.7.10 or newer, not Python 3)](https://www.python.org/downloads/)
 * [pip](https://pip.pypa.io/en/stable/installing.html)
 * setuptools (upgrade to latest version): `pip install -U setuptools`
 
