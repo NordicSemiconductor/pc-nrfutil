@@ -390,7 +390,7 @@ def pkg():
                    '\n|s132_nrf52_4.0.0|0x95|'
                    '\n|s132_nrf52_4.0.2|0x98|'
                    '\n|s132_nrf52_4.0.3|0x99|'
-                   '\n|s132_nrf52_5.0.0|0x9D|'
+                   '\n|s132_nrf52_5.0.0|0x9D|',
               type=click.STRING,
               multiple=True)
 @click.option('--sd-id',
