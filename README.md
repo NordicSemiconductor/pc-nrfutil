@@ -144,6 +144,7 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_4.0.0`    | 0x95
 `s132_nrf52_4.0.2`    | 0x98
 `s132_nrf52_4.0.3`    | 0x99
+`s132_nrf52_5.0.0`    | 0x9D
 
 **Note**: The Thread stack doesn't use a SoftDevice but --sd-req option is required for compatibility reasons. You can provide any value for the option as it is ignored during DFU.
 
@@ -158,12 +159,16 @@ The following conventions are used on the table:
 Combination   | Supported | Notes
 --------------| ----------|-------
 BL            | Yes       |
-SD            | Yes       | **SD must be of the same Major Version**
+SD            | Yes       | **See notes 1 and 2 below**
 APP           | Yes       |
 BL + SD       | Yes       |
 BL + APP      | No        | Create two .zip packages instead
-BL + SD + APP | Yes       |
-SD + APP      | Yes       | **SD must be of the same Major Version**
+BL + SD + APP | Yes       | **See note 1 below**
+SD + APP      | Yes       | **See notes 1 and 2 below**
+
+**Note 1:** SD must be of the same Major Version as the old BL may not be compatible with the new SD.
+
+**Note 2:** When updating BL + SD + APP the update is done in 2 following connections, unless a custom bootloader is used. First the BL + SD is updated, then the bootloader will disconnect and the new BL will start advertising. Second connection to the new bootloader will update the APP. However, the two SDs may have different IDs. The first update requires --sd-req to be set to the ID of the old SD while update of the APP requires the ID of the new SD. In that case the new ID can be set using ```--sd-id``` parameter.
 
 ##### display
 Use this option to display the contents of a DFU package in a .zip file.

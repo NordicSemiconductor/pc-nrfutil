@@ -389,7 +389,13 @@ def pkg():
                    '\n|s132_nrf52_3.1.0|0x91|'
                    '\n|s132_nrf52_4.0.0|0x95|'
                    '\n|s132_nrf52_4.0.2|0x98|'
-                   '\n|s132_nrf52_4.0.3|0x99|',
+                   '\n|s132_nrf52_4.0.3|0x99|'
+                   '\n|s132_nrf52_5.0.0|0x9D|',
+              type=click.STRING,
+              multiple=True)
+@click.option('--sd-id',
+              help='The new SoftDevice ID to be used as --sd-req for the Application update in case the ZIP '
+                   'contains a SoftDevice and an Application.',
               type=click.STRING,
               multiple=True)
 @click.option('--softdevice',
@@ -408,6 +414,7 @@ def generate(zipfile,
            bootloader_version,
            hw_version,
            sd_req,
+           sd_id,
            softdevice,
            key_file):
     """
@@ -470,6 +477,16 @@ def generate(zipfile,
         if sd_req == 'none':
             sd_req = None
 
+    if len(sd_id) > 1:
+        click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-id 0xXXXX,0xYYYY,...")
+        return
+    elif len(sd_id) == 0:
+        sd_id = None
+    else:
+        sd_id = sd_id[0]
+        if sd_id == 'none':
+            sd_id = None
+
     # Initial consistency checks
     if application_version_internal is not None and application is None:
         click.echo("Error: Application version with no image.")
@@ -520,6 +537,18 @@ def generate(zipfile,
             raise NordicSemiException("Could not parse value for --sd-req. "
                                       "Hex values should be prefixed with 0x.")
 
+    sd_id_list = []
+    if sd_id is not None:
+        try:
+            # This will parse any string starting with 0x as base 16.
+            sd_id_list = sd_id.split(',')
+            sd_id_list = map(int_as_text_to_int, sd_id_list)
+        except ValueError:
+            raise NordicSemiException("Could not parse value for --sd-id. "
+                                      "Hex values should be prefixed with 0x.")
+    else:
+        sd_id_list = sd_req_list
+
     signer = Signing()
     default_key = signer.load_key(key_file)
     if default_key:
@@ -530,6 +559,7 @@ def generate(zipfile,
                       application_version_internal,
                       bootloader_version,
                       sd_req_list,
+                      sd_id_list,
                       application,
                       bootloader,
                       softdevice,
