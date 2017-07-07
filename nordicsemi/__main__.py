@@ -390,6 +390,7 @@ def pkg():
                    '\n|s132_nrf52_4.0.0|0x95|'
                    '\n|s132_nrf52_4.0.2|0x98|'
                    '\n|s132_nrf52_4.0.3|0x99|'
+                   '\n|s132_nrf52_4.0.4|0x9E|'
                    '\n|s132_nrf52_5.0.0|0x9D|',
               type=click.STRING,
               multiple=True)
@@ -527,6 +528,10 @@ def generate(zipfile,
         click.echo("Error: --bootloader-version required with bootloader image.")
         return
 
+    if application is not None and softdevice is not None and sd_id is None:
+        click.echo("Error: --sd-id required with softdevice and application images.")
+        return
+
     sd_req_list = []
     if sd_req is not None:
         try:
@@ -543,6 +548,14 @@ def generate(zipfile,
             # This will parse any string starting with 0x as base 16.
             sd_id_list = sd_id.split(',')
             sd_id_list = map(int_as_text_to_int, sd_id_list)
+
+            # Copy all IDs from sd_id_list to sd_req_list, without duplicates.
+            # This ensures that the softdevice update can be repeated in case
+            # SD+(BL)+App update terminates during application update after the
+            # softdevice was already updated (with new ID). Such update would 
+            # have to be repeated and the softdevice would have to be sent again,
+            # this time updating itself.
+            sd_req_list += set(sd_id_list) - set(sd_req_list)
         except ValueError:
             raise NordicSemiException("Could not parse value for --sd-id. "
                                       "Hex values should be prefixed with 0x.")
