@@ -45,9 +45,6 @@ from pip.req import parse_requirements
 
 from nordicsemi import version
 
-if platform.system() == 'Windows':
-    import py2exe  # Required even if it is not used in this file. This import adds py2exe to distutils.
-
 excludes = ["Tkconstants",
             "Tkinter",
             "tcl",
