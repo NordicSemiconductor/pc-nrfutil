@@ -36,7 +36,6 @@
 #
 import ipaddress
 import signal
-from nordicsemi.thread.dfu_server import ThreadDfuServer
 
 """nrfutil command line tool."""
 import os
