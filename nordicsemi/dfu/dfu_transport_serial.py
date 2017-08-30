@@ -187,9 +187,6 @@ class DfuTransportSerial(DfuTransport):
             raise NordicSemiException("Serial port could not be opened on {0}" 
             + ". Reason: {1}".format(self.com_port, e.message))
 
-        if self.__ping() == False:
-            raise NordicSemiException("No ping response after opening COM port")
-
         ping_success = False
         start = datetime.now()
         while datetime.now() - start < timedelta(seconds=self.timeout):
