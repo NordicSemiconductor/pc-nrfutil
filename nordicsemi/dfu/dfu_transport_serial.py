@@ -187,9 +187,6 @@ class DfuTransportSerial(DfuTransport):
             raise NordicSemiException("Serial port could not be opened on {0}" 
             + ". Reason: {1}".format(self.com_port, e.message))
 
-        if self.__ping() == False:
-            raise NordicSemiException("No ping response after opening COM port")
-
         ping_success = False
         start = datetime.now()
         while datetime.now() - start < timedelta(seconds=self.timeout):
@@ -311,14 +308,17 @@ class DfuTransportSerial(DfuTransport):
         resp = self.dfu_adapter.get_message() # Receive raw reponse to check return code
 
         if (resp == None):
-            raise NordicSemiException('No ping response')
+            logger.debug('Serial: No ping response')
+            return False
 
         if resp[0] != DfuTransportSerial.OP_CODE['Response']:
-            raise NordicSemiException('No Response: 0x{:02X}'.format(resp[0]))
+            logger.debug('Serial: No Response: 0x{:02X}'.format(resp[0]))
+            return False
 
         if resp[1] != DfuTransportSerial.OP_CODE['Ping']:
-            raise NordicSemiException('Unexpected Executed OP_CODE.\n' \
-                              + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
+            logger.debug('Serial: Unexpected Executed OP_CODE.\n' \
+                + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(DfuTransportSerial.OP_CODE['Ping'], resp[1]))
+            return False
 
         if resp[2] != DfuTransport.RES_CODE['Success']:
             # Returning an error code is seen as good enough. The bootloader is up and running
