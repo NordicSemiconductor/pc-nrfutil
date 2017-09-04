@@ -173,8 +173,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             logger.info('BLE: Found target advertiser, address: 0x{}, name: {}'.format(address_string, dev_name))
             logger.info('BLE: Connecting to 0x{}'.format(address_string))
             self.adapter.connect(address = peer_addr, conn_params = conn_params)
-            # store the name and address for subsequent connections
-            self.target_device_name = dev_name
+            # store the address for subsequent connections
             self.target_device_addr = address_string
 
 
