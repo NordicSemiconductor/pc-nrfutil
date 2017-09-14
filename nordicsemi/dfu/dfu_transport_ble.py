@@ -347,7 +347,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
         if (dev_name == self.target_device_name) or (address_string == self.target_device_addr):
             conn_params = BLEGapConnParams(min_conn_interval_ms = 15,
-                                           max_conn_interval_ms = 20,
+                                           max_conn_interval_ms = 30,
                                            conn_sup_timeout_ms  = 4000,
                                            slave_latency        = 0)
             logger.info('BLE: Found target advertiser, address: 0x{}, name: {}'.format(address_string, dev_name))
