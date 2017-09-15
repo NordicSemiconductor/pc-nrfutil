@@ -82,7 +82,6 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     CP_UUID     = BLEUUID(0x0001, BASE_UUID)
     DP_UUID     = BLEUUID(0x0002, BASE_UUID)
 
-    SUPPORTED_CONN_HANDLE = 0
     CONNECTION_ATTEMPTS   = 3
     ERROR_CODE_POS        = 2
     LOCAL_ATT_MTU         = 247
@@ -220,10 +219,10 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
         """
         self.conn_handle = self.evt_sync.wait('connected')
-        if self.conn_handle == DFUAdapter.SUPPORTED_CONN_HANDLE:
+        if self.conn_handle is not None:
             retries = DFUAdapter.CONNECTION_ATTEMPTS
             while retries:
-                if not self.evt_sync.wait('disconnected', timeout=1) == DFUAdapter.SUPPORTED_CONN_HANDLE:
+                if self.evt_sync.wait('disconnected', timeout=1) is None:
                     break
 
                 logger.warning("Received 0x3e, trying to re-connect to: {}".format(self.target_device_addr))
@@ -234,7 +233,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
                 self.conn_handle = self.evt_sync.wait('connected')
                 retries -= 1
             else:
-                if self.evt_sync.wait('disconnected', timeout=1) == DFUAdapter.SUPPORTED_CONN_HANDLE:
+                if self.evt_sync.wait('disconnected', timeout=1) is not None:
                     raise Exception("Failure - Connection failed due to 0x3e")
 
             logger.info("Successfully Connected")
@@ -324,25 +323,6 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
                                             self.keyset.keys_peer.p_enc_key.enc_info)
         self.evt_sync.wait('conn_sec_update')
 
-    def set_dle(self, dle):
-        """ Set data length extension.
-
-        Args:
-            dle: Data length to set.
-
-        """
-        opt             = driver.ble_opt_t()
-        gap_opt         = driver.ble_gap_opt_t()
-        gap_opt_ext_len = driver.ble_gap_opt_ext_len_t()
-
-        gap_opt_ext_len.rxtx_max_pdu_payload_size = dle
-        gap_opt.ext_len                           = gap_opt_ext_len
-        opt.gap_opt                               = gap_opt
-
-        opt_id = driver.BLE_GAP_OPT_EXT_LEN
-
-        self.adapter.driver.ble_opt_set(opt_id, opt)
-
     def write_control_point(self, data):
         self.adapter.write_req(self.conn_handle, DFUAdapter.CP_UUID, data)
 
@@ -383,7 +363,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         logger.info('Received advertisement report, address: 0x{}, device_name: {}'.format(address_string, dev_name))
 
         if (dev_name == self.target_device_name) or (address_string == self.target_device_addr):
-            self.conn_params = BLEGapConnParams(min_conn_interval_ms = 15,
+            self.conn_params = BLEGapConnParams(min_conn_interval_ms = 7.5,
                                                 max_conn_interval_ms = 30,
                                                 conn_sup_timeout_ms  = 4000,
                                                 slave_latency        = 0)
@@ -411,9 +391,6 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         logger.info('ATT MTU exchanged: conn_handle={} att_mtu={}'.format(conn_handle, att_mtu))
         self.att_mtu = att_mtu
         self.packet_size = att_mtu - 3
-
-        # Set DLE to att_mtu + 4
-        self.set_dle(self.att_mtu + 4)
 
     def on_gattc_evt_exchange_mtu_rsp(self, ble_driver, conn_handle, **kwargs):
         pass
