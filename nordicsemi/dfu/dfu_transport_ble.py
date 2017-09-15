@@ -211,8 +211,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter.service_discovery(conn_handle=self.conn_handle)
 
     def verify_stable_connection(self):
-        """ Verify connection, and verify that
-        ConnectionFailedToBeEstablished (0x3e) is not received.
+        """ Verify connection event, and verify that unexpected disconnect
+         events are not received.
 
         Returns:
             True if connected, else False.
@@ -225,7 +225,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
                 if self.evt_sync.wait('disconnected', timeout=1) is None:
                     break
 
-                logger.warning("Received 0x3e, trying to re-connect to: {}".format(self.target_device_addr))
+                logger.warning("Received unexpected disconnect event, "
+                               "trying to re-connect to: {}".format(self.target_device_addr))
                 time.sleep(1)
 
                 self.adapter.connect(address=self.target_device_addr_type,
