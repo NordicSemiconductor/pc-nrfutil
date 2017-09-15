@@ -38,6 +38,7 @@
 # Python standard library
 import os
 import sys
+import time
 import wrapt
 import Queue
 import struct
@@ -81,8 +82,10 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     CP_UUID     = BLEUUID(0x0001, BASE_UUID)
     DP_UUID     = BLEUUID(0x0002, BASE_UUID)
 
-    ERROR_CODE_POS    = 2
-    LOCAL_ATT_MTU     = 247
+    SUPPORTED_CONN_HANDLE = 0
+    CONNECTION_ATTEMPTS   = 3
+    ERROR_CODE_POS        = 2
+    LOCAL_ATT_MTU         = 247
 
     def __init__(self, adapter, bonded=False, keyset=None):
         super(DFUAdapter, self).__init__()
@@ -94,6 +97,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.bonded             = bonded
         self.keyset             = keyset
         self.notifications_q    = Queue.Queue()
+        self.indication_q       = Queue.Queue()
         self.att_mtu            = ATT_MTU_DEFAULT
         self.packet_size        = self.att_mtu - 3
         self.adapter.observer_register(self)
@@ -136,7 +140,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
         logger.info('BLE: Scanning for {}'.format(self.target_device_name))
         self.adapter.driver.ble_gap_scan_start()
-        self.conn_handle = self.evt_sync.wait('connected')
+        self.verify_stable_connection()
         if self.conn_handle is None:
             raise NordicSemiException('Timeout. Target device not found.')
 
@@ -179,6 +183,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         else:
             logger.info("Un-bonded Buttonless characteristic discovered -> Increment target device addr")
             self.target_device_addr = "{:X}".format(int(self.target_device_addr, 16) + 1)
+            self.target_device_addr_type.addr[-1] += 1
 
         # Enable indication for Buttonless DFU Service
         self.adapter.enable_indication(self.conn_handle, buttonless_uuid)
@@ -188,7 +193,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
         # Enter DFU mode
         self.adapter.write_req(self.conn_handle, buttonless_uuid, [0x01])
-        response = self.notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
+        response = self.indication_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
         if response[DFUAdapter.ERROR_CODE_POS] != 0x01:
             raise Exception("Error - Unexpected response")
 
@@ -198,13 +203,45 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         # Reconnect
         self.target_device_name = None
         self.adapter.driver.ble_gap_scan_start()
-        self.conn_handle = self.evt_sync.wait('connected')
+        self.verify_stable_connection()
         if self.conn_handle is None:
             raise NordicSemiException('Timeout. Target device not found.')
         logger.info('BLE: Connected to target')
 
         logger.debug('BLE: Service Discovery')
         self.adapter.service_discovery(conn_handle=self.conn_handle)
+
+    def verify_stable_connection(self):
+        """ Verify connection, and verify that
+        ConnectionFailedToBeEstablished (0x3e) is not received.
+
+        Returns:
+            True if connected, else False.
+
+        """
+        self.conn_handle = self.evt_sync.wait('connected')
+        if self.conn_handle == DFUAdapter.SUPPORTED_CONN_HANDLE:
+            retries = DFUAdapter.CONNECTION_ATTEMPTS
+            while retries:
+                if not self.evt_sync.wait('disconnected', timeout=1) == DFUAdapter.SUPPORTED_CONN_HANDLE:
+                    break
+
+                logger.warning("Received 0x3e, trying to re-connect to: {}".format(self.target_device_addr))
+                time.sleep(1)
+
+                self.adapter.connect(address=self.target_device_addr_type,
+                                     conn_params=self.conn_params)
+                self.conn_handle = self.evt_sync.wait('connected')
+                retries -= 1
+            else:
+                if self.evt_sync.wait('disconnected', timeout=1) == DFUAdapter.SUPPORTED_CONN_HANDLE:
+                    raise Exception("Failure - Connection failed due to 0x3e")
+
+            logger.info("Successfully Connected")
+            return
+
+        self.adapter.driver.ble_gap_scan_stop()
+        raise Exception("Connection Failure - Device not found!")
 
     def setup_keyset(self):
         """ Setup keyset structure.
@@ -331,7 +368,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     def on_gap_evt_disconnected(self, ble_driver, conn_handle, reason):
         self.evt_sync.notify(evt = 'disconnected', data = conn_handle)
         self.conn_handle = None
-        logger.info('BLE: Disconnected')
+        logger.info('BLE: Disconnected with reason: {}'.format(reason))
 
     def on_gap_evt_adv_report(self, ble_driver, conn_handle, peer_addr, rssi, adv_type, adv_data):
         dev_name_list = []
@@ -346,23 +383,29 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         logger.info('Received advertisement report, address: 0x{}, device_name: {}'.format(address_string, dev_name))
 
         if (dev_name == self.target_device_name) or (address_string == self.target_device_addr):
-            conn_params = BLEGapConnParams(min_conn_interval_ms = 15,
-                                           max_conn_interval_ms = 30,
-                                           conn_sup_timeout_ms  = 4000,
-                                           slave_latency        = 0)
+            self.conn_params = BLEGapConnParams(min_conn_interval_ms = 15,
+                                                max_conn_interval_ms = 30,
+                                                conn_sup_timeout_ms  = 4000,
+                                                slave_latency        = 0)
             logger.info('BLE: Found target advertiser, address: 0x{}, name: {}'.format(address_string, dev_name))
             logger.info('BLE: Connecting to 0x{}'.format(address_string))
-            self.adapter.connect(address = peer_addr, conn_params = conn_params)
+            self.adapter.connect(address = peer_addr, conn_params = self.conn_params)
             # store the address for subsequent connections
             self.target_device_addr = address_string
+            self.target_device_addr_type = peer_addr
 
     def on_notification(self, ble_adapter, conn_handle, uuid, data):
         if self.conn_handle         != conn_handle: return
-        if DFUAdapter.CP_UUID.value != uuid.value and \
-           DFUAdapter.BLE_DFU_BUTTONLESS_BONDED_CHAR_UUID.value != uuid.value and \
-           DFUAdapter.BLE_DFU_BUTTONLESS_CHAR_UUID.value != uuid.value:
+        if DFUAdapter.CP_UUID.value != uuid.value:
             return
         self.notifications_q.put(data)
+
+    def on_indication(self, ble_adapter, conn_handle, uuid, data):
+        if self.conn_handle         != conn_handle: return
+        if DFUAdapter.BLE_DFU_BUTTONLESS_BONDED_CHAR_UUID.value != uuid.value and \
+           DFUAdapter.BLE_DFU_BUTTONLESS_CHAR_UUID.value != uuid.value:
+            return
+        self.indication_q.put(data)
 
     def on_att_mtu_exchanged(self, ble_driver, conn_handle, att_mtu):
         logger.info('ATT MTU exchanged: conn_handle={} att_mtu={}'.format(conn_handle, att_mtu))
