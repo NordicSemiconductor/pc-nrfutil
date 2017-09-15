@@ -408,23 +408,15 @@ class DfuBLEDriver(BLEDriver):
         assert isinstance(sec_params, (BLEGapSecParams, NoneType)), 'Invalid argument type'
         assert isinstance(peer_keys, NoneType), 'NOT IMPLEMENTED'
 
-        self.__keyset = own_keys
-
         return driver.sd_ble_gap_sec_params_reply(self.rpc_adapter,
                                                   conn_handle,
                                                   sec_status.value,
                                                   sec_params.to_c() if sec_params else None,
-                                                  self.__keyset)
-
-    @NordicSemiErrorCheck
-    @wrapt.synchronized(BLEDriver.api_lock)
-    def ble_opt_set(self, opt_id, opt):
-        return driver.sd_ble_opt_set(self.rpc_adapter, opt_id, opt)
+                                                  own_keys)
 
 
 class DfuTransportBle(DfuTransport):
 
-    DATA_PACKET_SIZE    = 20
     DEFAULT_TIMEOUT     = 20
     RETRIES_NUMBER      = 3
 
@@ -665,4 +657,3 @@ class DfuTransportBle(DfuTransport):
             raise NordicSemiException('Extended Error 0x{:02X}: {}'.format(resp[3], data))
         else:
             raise NordicSemiException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
-
