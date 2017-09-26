@@ -187,8 +187,9 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         # Enable indication for Buttonless DFU Service
         self.adapter.enable_indication(self.conn_handle, buttonless_uuid)
 
-        # Enable indication for Service changed Service
-        self.adapter.enable_indication(self.conn_handle, DFUAdapter.SERVICE_CHANGED_UUID)
+        # Enable indication for Service changed Service, if present.
+        if self.adapter.db_conns[self.conn_handle].get_char_handle(DFUAdapter.SERVICE_CHANGED_UUID):
+            self.adapter.enable_indication(self.conn_handle, DFUAdapter.SERVICE_CHANGED_UUID)
 
         # Enter DFU mode
         self.adapter.write_req(self.conn_handle, buttonless_uuid, [0x01])
