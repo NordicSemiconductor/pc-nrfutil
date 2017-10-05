@@ -711,8 +711,7 @@ def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity)
         click.echo("No target selected. Default device name: {} is used.".format(name))
 
     if port is None and jlink_snr is not None:
-        click.echo("Please specify also serial port.")
-        return
+        port = get_port_by_snr(jlink_snr)
 
     elif port is None:
         port = enumerate_ports()
