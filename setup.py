@@ -47,7 +47,6 @@ import platform
 
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
-from pip.req import parse_requirements
 
 from nordicsemi import version
 
@@ -77,10 +76,8 @@ dll_excludes = [
 build_dir = os.environ.get("NRFUTIL_BUILD_DIR", "./{}".format(version.NRFUTIL_VERSION))
 description = """A Python package that includes the nrfutil utility and the nordicsemi library"""
 
-# parse_requirements() returns generator of pip.req.InstallRequirement objects
-install_reqs = parse_requirements("requirements.txt", session=False)
-# reqs is a list of requirements as strings
-reqs = [str(ir.req) for ir in install_reqs]
+with open("requirements.txt") as reqs_file:
+    reqs = reqs_file.readlines()
 
 class NoseTestCommand(TestCommand):
     def finalize_options(self):
