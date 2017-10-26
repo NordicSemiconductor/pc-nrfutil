@@ -37,6 +37,7 @@
 import time
 import logging
 import ipaddress
+import struct
 
 import io
 import spinel.common
@@ -94,6 +95,7 @@ class NCPTransport():
     def _attach_to_network(self):
         props = [
             (SPINEL.PROP_IPv6_ICMP_PING_OFFLOAD, 1, 'B'),
+            (SPINEL.PROP_THREAD_RLOC16_DEBUG_PASSTHRU, 1, 'B'),
             (SPINEL.PROP_PHY_CHAN, self._config[self.CFG_KEY_CHANNEL], 'H'),
             (SPINEL.PROP_MAC_15_4_PANID, self._config[self.CFG_KEY_PANID], 'H'),
             (SPINEL.PROP_NET_IF_UP, 1, 'B'),
@@ -133,6 +135,8 @@ class NCPTransport():
                 pass
             except Exception as e:
                 logging.exception(e)
+        else:
+            logger.warn("Unexpected property received (PROP_ID: {})".format(prop))
 
         return consumed
 
@@ -170,12 +174,18 @@ class NCPTransport():
             logger.info(unicode(addr))
         
     def send(self, payload, dest):
-        logger.debug("Sending datagram {} {} {} {}".format(self._src_addr,
+        if (dest.addr.is_multicast):            
+            rloc16 = self._wpan.prop_get_value(SPINEL.PROP_THREAD_RLOC16)
+            src_addr = ipaddress.ip_address(self._ml_prefix + '\x00\x00\x00\xff\xfe\x00' + struct.pack('>H', rloc16))
+        else:
+            src_addr = self._ml_eid
+
+        logger.debug("Sending datagram {} {} {} {}".format(src_addr,
                                                            self._port,
                                                            dest.addr,
                                                            dest.port))
         try:
-            datagram = self._build_udp_datagram(self._src_addr,
+            datagram = self._build_udp_datagram(src_addr,
                                                 self._port,
                                                 dest.addr,
                                                 dest.port,
@@ -197,7 +207,7 @@ class NCPTransport():
 
     def open(self):
         '''Opens transport for communication.'''
-        self._stream = StreamOpen(self._stream_descriptor[0], self._stream_descriptor[1])
+        self._stream = StreamOpen(self._stream_descriptor[0], self._stream_descriptor[1], False)
         # FIXME: remove node id from constructor after WpanAPI is refactored
         self._wpan = WpanApi(self._stream, 666)
         self._wpan.queue_register(SPINEL.HEADER_DEFAULT)
@@ -212,7 +222,8 @@ class NCPTransport():
             logger.error("Failed to attach to the network")
             raise Exception('Unable to attach')
 
-        self._src_addr = ipaddress.ip_address(self._wpan.prop_get_value(SPINEL.PROP_IPV6_ML_ADDR))
+        self._ml_eid = ipaddress.ip_address(self._wpan.prop_get_value(SPINEL.PROP_IPV6_ML_ADDR))
+        self._ml_prefix = self._wpan.prop_get_value(SPINEL.PROP_IPV6_ML_PREFIX)
 
         logger.info("Done")
 

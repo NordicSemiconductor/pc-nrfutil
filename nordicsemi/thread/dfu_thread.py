@@ -37,6 +37,7 @@
 import tempfile
 import os.path
 import logging
+import piccata
 
 from nordicsemi.dfu.package import Package
 from nordicsemi.thread.dfu_server import ThreadDfuServer
@@ -68,10 +69,13 @@ def _get_file_names(manifest):
 	logger.info("Image type {} found".format(data_attrs[0]))
 	return firmware.dat_file, firmware.bin_file
 
-def create_dfu_server(transport, zip_file_path, prefix):
+def create_dfu_server(transport, zip_file_path, opts):
 	temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_")
 	unpacked_zip_path = os.path.join(temp_dir, 'unpacked_zip')
 	manifest = Package.unpack_package(zip_file_path, unpacked_zip_path)
+	
+	protocol = piccata.core.Coap(transport)
+	transport.register_receiver(protocol)
 
 	init_file, image_file = _get_file_names(manifest)
 	
@@ -80,4 +84,4 @@ def create_dfu_server(transport, zip_file_path, prefix):
 	with open(os.path.join(unpacked_zip_path, image_file), 'rb') as f:
 		image_data = f.read()
 		
-	return ThreadDfuServer(transport, init_data, image_data, prefix)
+	return ThreadDfuServer(protocol, init_data, image_data, opts)

@@ -36,6 +36,7 @@
 #
 import ipaddress
 import signal
+from ipaddress import ip_address
 
 """nrfutil command line tool."""
 import os
@@ -148,7 +149,10 @@ TEXT_OR_NONE = TextOrNoneParamType()
 @click.option('-v', '--verbose',
               help='Show verbose information.',
               count=True)
-def cli(verbose):
+@click.option('-o', '--output',
+              help='Log output to file',
+              metavar='<filename>')
+def cli(verbose, output):
     #click.echo('verbosity: %s' % verbose)
     if verbose == 0:
         log_level = logging.ERROR
@@ -157,7 +161,14 @@ def cli(verbose):
     else:
         log_level = logging.DEBUG
 
-    logging.basicConfig(format='%(message)s', level=log_level)
+    logging.basicConfig(format='%(asctime)s %(message)s', level=log_level)
+
+    if (output):
+        root = logging.getLogger('')
+        fh = logging.FileHandler(output)
+        fh.setLevel(log_level)
+        fh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+        root.addHandler(fh)
 
 @cli.command()
 def version():
@@ -793,16 +804,13 @@ def convert_version_string_to_int(s):
               type=click.STRING)
 @click.option('-a', '--address',
               help='Device IPv6 address. If address is not specified then perform DFU'
-                   + 'on all capable devices.',
+                   + 'on all capable devices. If multicast address is specified (FF03::1),'
+                   + 'perform multicast DFU.',
               type=click.STRING)
 @click.option('-sp', '--server_port',
               help='UDP port to which the DFU server binds. If not specified the 5683 is used.',
               type=click.INT,
               default=5683)
-@click.option('--prefix',
-              help='URI prefix used added to DFU resources. Defaults to ''dfu''.',
-              type=click.STRING,
-              default='dfu')
 @click.option('--panid',
               help='802.15.4 PAN ID. If not specified then 1234 is used as PAN ID.',
               type=click.INT)
@@ -820,49 +828,78 @@ def convert_version_string_to_int(s):
               help='Use software NCP and connect to the OT simulator.',
               type=click.BOOL,
               is_flag=True)
-def thread(package, port, address, server_port, prefix, panid, channel, jlink_snr, flash_connectivity, sim):
+@click.option('-r', '--rate',
+              help="Multicast upload rate in blocks per second.",
+              type=click.FLOAT)
+@click.option('-d', '--diag',
+              help='Request and print diagnostic information.' +
+                   'Option value determines how many times the diagnostic request is sent. ' +
+                   'Output is printed irrespective of -nv option',
+              default = 0,
+              type = click.INT)
+@click.option('-da', '--diag_addr',
+              help = 'Request diagnostic information from nodes with given addresses.',
+              multiple = True)
+@click.option('-nv', '--non_verbose',
+              help='Disables logger output.',
+              is_flag=True)
+@click.option('-rs', '--reset_suppress',
+              help='Suppress device reset after finishing DFU for a given number of milliseconds. ' +
+                   'If -1 is given then suppress indefinatelly.',
+              type = click.INT,
+              metavar = '<delay_in_ms>')
+
+def thread(package, port, address, server_port, panid, channel, jlink_snr, flash_connectivity,
+           sim, rate, diag, diag_addr, non_verbose, reset_suppress):
     ble_driver_init('NRF52')
     from nordicsemi.thread import tncp
     from nordicsemi.thread.dfu_thread import create_dfu_server
     from nordicsemi.thread.tncp import NCPTransport
     from nordicsemi.thread.ncp_flasher import NCPFlasher
 
+    def _echo(str):
+        if (not non_verbose):
+            click.echo(str)
+
+    mcast_dfu = False
+
     """Perform a Device Firmware Update on a device with a bootloader that supports Thread DFU."""
     if address is None:
         address = ipaddress.ip_address(u"ff03::1")
-        click.echo("Address not specified. Using ff03::1 (all Thread nodes)")
+        _echo("Address not specified. Using ff03::1 (all Thread nodes)")
     else:
         try:
             address = ipaddress.ip_address(address)
+            mcast_dfu = address.is_multicast
         except:
-            click.echo("Invalid IPv6 address")
-            return
+            _echo("Invalid IPv6 address")
+            return 1
 
     if (not sim):
         if port is None and jlink_snr is None:
-            click.echo("Please specify serial port or Jlink serial number.")
-            return
+            _echo("Please specify serial port or Jlink serial number.")
+            return 2
 
         elif port is None:
             port = get_port_by_snr(jlink_snr)
             if port is None:
-                click.echo("\nNo Segger USB CDC ports found, please connect your board.")
-                return
+                _echo("\nNo Segger USB CDC ports found, please connect your board.")
+                return 3
 
         stream_descriptor = 'u:' + port
-        logger.info("Using connectivity board at serial port: {}".format(port))
+        _echo("Using connectivity board at serial port: {}".format(port))
     else:
         stream_descriptor = 'p:' + Flasher.which('ot-ncp') + ' 30'
-        logger.info("Using ot-ncp binary: {}".format(stream_descriptor))
+        _echo("Using ot-ncp binary: {}".format(stream_descriptor))
 
     if flash_connectivity:
         flasher = NCPFlasher(serial_port=port, snr = jlink_snr)
         if flasher.fw_check():
-            click.echo("Board already flashed with connectivity firmware.")
+            _echo("Board already flashed with connectivity firmware.")
         else:
-            click.echo("Flashing connectivity firmware...")
+            _echo("Flashing connectivity firmware...")
             flasher.fw_flash()
-            click.echo("Connectivity firmware flashed.")
+            _echo("Connectivity firmware flashed.")
 
         flasher.reset()
 
@@ -877,24 +914,39 @@ def thread(package, port, address, server_port, prefix, panid, channel, jlink_sn
     if (flash_connectivity):
         config[tncp.NCPTransport.CFG_KEY_RESET] = False
 
+    opts = type('DFUServerOptions', (object,), {})()
+    opts.rate = rate
+    opts.diag = diag
+    opts.diag_addr = map(lambda addr : ipaddress.ip_address(addr), diag_addr)
+    opts.non_verbose = non_verbose
+    opts.reset_suppress = reset_suppress
+    opts.mcast_dfu = mcast_dfu
+
+    print(opts.diag_addr)
+
+    if (non_verbose):
+        logging.disable(logging.CRITICAL)
+
     transport = NCPTransport(server_port, stream_descriptor, config)
-    dfu = create_dfu_server(transport, package, prefix)
+    dfu = create_dfu_server(transport, package, opts)
 
     try:
         sighandler = lambda signum, frame : dfu.stop
         signal.signal(signal.SIGINT, sighandler)
         signal.signal(signal.SIGTERM, sighandler)
 
-        dfu.start()
-        dfu.trigger(address, 3)
-        click.echo("Press <ENTER> terminate")
+        transport.open()
+        # Delay DFU trigger until NCP promotes to a router (5 seconds by default)
+        time.sleep(6.0)
+        dfu.trigger(ip_address(address), 3)
+        _echo("Press <ENTER> terminate")
         pause()
-        click.echo("Terminating")
+        _echo("Terminating")
 
     except Exception as e:
         logger.exception(e)
     finally:
-        dfu.stop()
+        transport.close()
 
 if __name__ == '__main__':
     cli()
