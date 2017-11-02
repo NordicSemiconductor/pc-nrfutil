@@ -169,7 +169,7 @@ def version():
 @cli.group(short_help='Generate and display Bootloader DFU settings.')
 def settings():
     """
-    This set of commands supports creating and displaying bootloader settings. 
+    This set of commands supports creating and displaying bootloader settings.
     """
     pass
 
@@ -230,11 +230,11 @@ def generate(hex_file,
     if bootloader_version is None:
         click.echo("Error: Bootloader version required.")
         return
- 
+
     if bl_settings_version is None:
         click.echo("Error: Bootloader DFU settings version required.")
         return
-       
+
     sett = BLDFUSettings()
     sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version)
     sett.tohexfile(hex_file)
@@ -246,7 +246,7 @@ def generate(hex_file,
 @settings.command(short_help='Display the contents of a .hex file with Bootloader DFU settings.')
 @click.argument('hex_file', required=True, type=click.Path())
 
-def display(hex_file): 
+def display(hex_file):
 
     sett = BLDFUSettings()
     try:
@@ -269,10 +269,10 @@ def keys():
 
 @keys.command(short_help='Generate a private key and store it in a file in PEM format.')
 @click.argument('key_file', required=True, type=click.Path())
-              
+
 def generate(key_file):
     signer = Signing()
-    
+
     if os.path.exists(key_file):
         if not query_func("File found at %s. Do you want to overwrite the file?" % key_file):
             click.echo('Key generation aborted.')
@@ -329,7 +329,7 @@ def display(key_file, key, format, out_file):
 
     if key == "pk":
         kstr = signer.get_vk(format, dbg)
-    elif key == "sk": 
+    elif key == "sk":
         kstr = "\nWARNING: Security risk! Do not share the private key.\n\n"
         kstr = kstr + signer.get_sk(format, dbg)
 
@@ -430,7 +430,7 @@ def generate(zipfile,
     * SD only: Supported (SD of same Major Version).
 
     * APP only: Supported.
-   
+
     * BL + SD: Supported.
 
     * BL + APP: Not supported (use two packages instead).
@@ -514,16 +514,16 @@ def generate(zipfile,
         click.echo("Error: --hw-version required.")
         return
 
-    if sd_req is None: 
+    if sd_req is None:
         click.echo("Error: --sd-req required.")
         return
 
-    if application is not None and application_version_internal is None: 
+    if application is not None and application_version_internal is None:
         click.echo('Error: --application-version or --application-version-string'
                    'required with application image.')
         return
 
-    if bootloader is not None and bootloader_version is None: 
+    if bootloader is not None and bootloader_version is None:
         click.echo("Error: --bootloader-version required with bootloader image.")
         return
 
@@ -551,7 +551,7 @@ def generate(zipfile,
             # Copy all IDs from sd_id_list to sd_req_list, without duplicates.
             # This ensures that the softdevice update can be repeated in case
             # SD+(BL)+App update terminates during application update after the
-            # softdevice was already updated (with new ID). Such update would 
+            # softdevice was already updated (with new ID). Such update would
             # have to be repeated and the softdevice would have to be sent again,
             # this time updating itself.
             sd_req_list += set(sd_id_list) - set(sd_req_list)
@@ -585,7 +585,7 @@ def generate(zipfile,
 @pkg.command(short_help='Display the contents of a .zip package file.')
 @click.argument('zip_file', required=True, type=click.Path())
 
-def display(zip_file): 
+def display(zip_file):
 
     package = Package()
     package.parse_package(zip_file, preserve_work_dir=True)
@@ -603,6 +603,63 @@ def dfu():
     This set of commands supports Device Firmware Upgrade procedures over both BLE and serial transports.
     """
     pass
+
+def do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, ping):
+
+    if flow_control is None:
+        flow_control = DfuTransportSerial.DEFAULT_FLOW_CONTROL
+    if packet_receipt_notification is None:
+        packet_receipt_notification = DfuTransportSerial.DEFAULT_PRN
+    if baud_rate is None:
+        baud_rate = DfuTransportSerial.DEFAULT_BAUD_RATE
+    if ping is None:
+        ping = False
+
+    logger.info("Using board at serial port: {}".format(port))
+    serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate,
+                    flow_control=flow_control, prn=packet_receipt_notification, do_ping=ping)
+    serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
+
+    if logger.getEffectiveLevel() > logging.INFO:
+        with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
+            global global_bar
+            global_bar = bar
+            dfu.dfu_send_images()
+    else:
+        dfu.dfu_send_images()
+
+    click.echo("Device programmed.")
+
+@dfu.command(short_help="Update the firmware on a device over a USB serial connection.")
+@click.option('-pkg', '--package',
+              help='Filename of the DFU package.',
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
+              required=True)
+@click.option('-p', '--port',
+              help='USB Serial COM port to which the device is connected.',
+              type=click.STRING,
+              required=True)
+@click.option('-fc', '--flow-control',
+              help='To enable flow control set this flag to 1',
+              type=click.BOOL,
+              required=False)
+@click.option('-prn', '--packet-receipt-notification',
+              help='Set the packet receipt notification value',
+              type=click.INT,
+              required=False)
+@click.option('-b', '--baud-rate',
+              help='Set the baud rate',
+              type=click.INT,
+              required=False)
+@click.option('-P', '--ping',
+              help='Ping the device after opening the connection',
+              type=click.BOOL,
+              required=False)
+def usb_serial(package, port, flow_control, packet_receipt_notification, baud_rate, ping):
+    """Perform a Device Firmware Update on a device with a bootloader that supports USB serial DFU."""
+
+    do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, ping)
 
 
 @dfu.command(short_help="Update the firmware on a device over a serial connection.")
@@ -628,35 +685,8 @@ def dfu():
               required=False)
 def serial(package, port, flow_control, packet_receipt_notification, baud_rate):
     """Perform a Device Firmware Update on a device with a bootloader that supports serial DFU."""
-    #raise NotImplementedException('Serial transport currently is not supported')
-    """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
 
-    if port is None:
-        click.echo("Please specify serial port.")
-        return
-        
-    if flow_control is None:
-        flow_control = DfuTransportSerial.DEFAULT_FLOW_CONTROL
-    if packet_receipt_notification is None:
-        packet_receipt_notification = DfuTransportSerial.DEFAULT_PRN
-    if baud_rate is None:
-        baud_rate = DfuTransportSerial.DEFAULT_BAUD_RATE
-
-    logger.info("Using board at serial port: {}".format(port))    
-    serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate, 
-                    flow_control=flow_control, prn=packet_receipt_notification)
-    serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
-
-    if logger.getEffectiveLevel() > logging.INFO:
-        with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
-            global global_bar
-            global_bar = bar
-            dfu.dfu_send_images()
-    else:
-        dfu.dfu_send_images()
-
-    click.echo("Device programmed.")
+    do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, True)
 
 
 def enumerate_ports():
@@ -720,7 +750,7 @@ def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity)
             return
 
     if flash_connectivity:
-        flasher = Flasher(serial_port=port, snr = jlink_snr) 
+        flasher = Flasher(serial_port=port, snr = jlink_snr)
         if flasher.fw_check():
             click.echo("Board already flashed with connectivity firmware.")
         else:
@@ -737,7 +767,7 @@ def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity)
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend)
 
-    if logger.getEffectiveLevel() > logging.INFO: 
+    if logger.getEffectiveLevel() > logging.INFO:
         with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
             global global_bar
             global_bar = bar
