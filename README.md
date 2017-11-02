@@ -102,7 +102,7 @@ pyinstaller /full/path/to/nrfutil.spec
 
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
-**Note**: To use the `dfu ble` or `dfu thread` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup). 
+**Note**: To use the `dfu ble` or `dfu thread` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
 
 ## Usage
 
@@ -171,7 +171,7 @@ SD + APP      | Yes       | **See notes 1 and 2 below**
 
 **Note 1:** SD must be of the same Major Version as the old BL may not be compatible with the new SD.
 
-**Note 2:** When updating SD (+ BL) + APP the update is done in 2 following connections, unless a custom bootloader is used. First the SD (+ BL) is updated, then the bootloader will disconnect and the (new) BL will start advertising. Second connection to the bootloader will update the APP. However, the two SDs may have different IDs. The first update requires `--sd-req` to be set to the ID of the old SD. Update of the APP requires the ID of the new SD. In that case the new ID must be set using `--sd-id` parameter. This parameter is 
+**Note 2:** When updating SD (+ BL) + APP the update is done in 2 following connections, unless a custom bootloader is used. First the SD (+ BL) is updated, then the bootloader will disconnect and the (new) BL will start advertising. Second connection to the bootloader will update the APP. However, the two SDs may have different IDs. The first update requires `--sd-req` to be set to the ID of the old SD. Update of the APP requires the ID of the new SD. In that case the new ID must be set using `--sd-id` parameter. This parameter is
 was added in nrfutil 3.1.0 and is required since 3.2.0 in case the package should contain SD (+ BL) + APP. Also, since version 3.2.0 the new ID is copied to `--sd-req` list so that
 in case of a link loss during APP update the DFU process can be restarted. In that case the new SD would overwrite itself, so `--sd-req` must contain also the ID of the new SD.
 
@@ -216,6 +216,16 @@ nrfutil dfu serial --help
 Below is an example of the execution of a DFU procedure of the file generated above over COM3:
 ```
 nrfutil dfu serial -pkg app_dfu_package.zip -p COM3
+```
+
+##### usb_serial
+Perform a full DFU procedure over a serial (UART) line. This command is the same as `serial` but initial ping is not performed. It provides the possibility of enabling the ping feature, which is always performed in case of `serial`.
+```
+nrfutil dfu usb_serial --help
+```
+Below is an example of the execution of a DFU procedure of the file generated above over COM3:
+```
+nrfutil dfu usb_serial -pkg app_dfu_package.zip -p COM3
 ```
 
 #### keys
@@ -315,4 +325,3 @@ Refer to [init_packet_pb.py](nordicsemi/dfu/init_packet_pb.py) and [package.py](
 ### Adapting the bootloader to the new Init Packet format
 
 Since you have modified the Init Packet format you will have to do the same with the embedded bootloader, which can be found in the Nordic nRF5 SDK under `examples/dfu/bootloader_secure`.
-
