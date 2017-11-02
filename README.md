@@ -257,6 +257,7 @@ nRF IC    | Family Setting
 --------- | --------------
 nRF51xxx  | NRF51
 nRF52832  | NRF52
+nRF52832-QFAB | NRF52QFAB
 nRF52840  | NRF52840
 
 The `--bl-settings-version` depends on the SDK version used. Check the following table to find out which version to use:

@@ -176,8 +176,8 @@ def settings():
 @settings.command(short_help='Generate a .hex file with Bootloader DFU settings.')
 @click.argument('hex_file', required=True, type=click.Path())
 @click.option('--family',
-              help='nRF IC family: NRF51 or NRF52 or NRF52840',
-              type=click.Choice(['NRF51', 'NRF52', 'NRF52840']))
+              help='nRF IC family: NRF51 or NRF52 or NRF52QFAB or NRF52840',
+              type=click.Choice(['NRF51', 'NRF52', 'NRF52QFAB', 'NRF52840']))
 @click.option('--application',
               help='The application firmware file. This can be omitted if'
                     'the target IC does not contain an application in flash.'
