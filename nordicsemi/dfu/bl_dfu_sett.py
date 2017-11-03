@@ -73,11 +73,13 @@ class BLDFUSettingsStructV1(object):
 class BLDFUSettings(object):
     """ Class to abstract a bootloader and its settings """
 
-    flash_page_51_sz = 0x400
-    flash_page_52_sz = 0x1000
-    bl_sett_51_addr= 0x0003FC00
-    bl_sett_52_addr= 0x0007F000
-    bl_sett_52840_addr= 0x000FF000
+    flash_page_51_sz     = 0x400
+    flash_page_52_sz     = 0x1000
+    bl_sett_51_addr      = 0x0003FC00
+    bl_sett_52_addr      = 0x0007F000
+    bl_sett_52_qfab_addr = 0x0003F000
+    bl_sett_52810_addr   = 0x0002F000
+    bl_sett_52840_addr   = 0x000FF000
 
 
     def __init__(self, ):
@@ -100,17 +102,27 @@ class BLDFUSettings(object):
         if arch == 'NRF51':
             self.arch = nRFArch.NRF51
             self.arch_str = 'nRF51'
-            self.flash_page_sz = BLDFUSettings.flash_page_51_sz 
+            self.flash_page_sz = BLDFUSettings.flash_page_51_sz
             self.bl_sett_addr = BLDFUSettings.bl_sett_51_addr
         elif arch == 'NRF52':
             self.arch = nRFArch.NRF52
             self.arch_str = 'nRF52'
-            self.flash_page_sz = BLDFUSettings.flash_page_52_sz 
+            self.flash_page_sz = BLDFUSettings.flash_page_52_sz
             self.bl_sett_addr = BLDFUSettings.bl_sett_52_addr
+        elif arch == 'NRF52QFAB':
+            self.arch = nRFArch.NRF52
+            self.arch_str = 'nRF52QFAB'
+            self.flash_page_sz = BLDFUSettings.flash_page_52_sz
+            self.bl_sett_addr = BLDFUSettings.bl_sett_52_qfab_addr
+        elif arch == 'NRF52810':
+            self.arch = nRFArch.NRF52
+            self.arch_str = 'NRF52810'
+            self.flash_page_sz = BLDFUSettings.flash_page_52_sz
+            self.bl_sett_addr = BLDFUSettings.bl_sett_52810_addr
         elif arch == 'NRF52840':
             self.arch = nRFArch.NRF52840
             self.arch_str = 'NRF52840'
-            self.flash_page_sz = BLDFUSettings.flash_page_52_sz 
+            self.flash_page_sz = BLDFUSettings.flash_page_52_sz
             self.bl_sett_addr = BLDFUSettings.bl_sett_52840_addr
         else:
             raise RuntimeError("Unknown architecture")
@@ -123,7 +135,7 @@ class BLDFUSettings(object):
             self.setts = BLDFUSettingsStructV1()
         else:
             raise NordicSemiException("Unknown bootloader settings version")
-        
+
         self.bl_sett_ver = bl_sett_ver & 0xffffffff
         self.bl_ver = bl_ver & 0xffffffff
 
@@ -160,10 +172,10 @@ class BLDFUSettings(object):
         arr[self.setts.offs_bank_current] = self.bank_current
         arr[self.setts.offs_bank0_img_sz] = self.app_sz
         arr[self.setts.offs_bank0_img_crc] = self.app_crc
-        arr[self.setts.offs_bank0_bank_code] = self.bank0_bank_code 
+        arr[self.setts.offs_bank0_bank_code] = self.bank0_bank_code
 
         # calculate the CRC32 from the filled-in settings
-        crc_format_str = '<' + ('I' * (self.setts.uint32_count - 1)) 
+        crc_format_str = '<' + ('I' * (self.setts.uint32_count - 1))
         crc_arr = arr[1:]
         crc_data = struct.pack(crc_format_str, *crc_arr)
         self.crc = binascii.crc32(crc_data) & 0xffffffff
@@ -171,16 +183,16 @@ class BLDFUSettings(object):
         # fill in the calculated CRC32
         arr[self.setts.offs_crc] = self.crc
 
-        format_str = '<' + ('I' * self.setts.uint32_count) 
+        format_str = '<' + ('I' * self.setts.uint32_count)
 
         # Get the packed data to insert into the hex instance
         data = struct.pack(format_str, *arr)
-        
+
         # insert the data at the correct address
         self.ihex.puts(self.bl_sett_addr, data)
 
     def probe_settings(self, base):
-        
+
         # Unpack CRC and version
         fmt = '<I'
 
@@ -191,7 +203,7 @@ class BLDFUSettings(object):
             self.setts = BLDFUSettingsStructV1()
         else:
             raise RuntimeError("Unknown Bootloader DFU settings version: {0}".format(ver))
-        
+
         # calculate the CRC32 over the data
         crc_data = self.ihex.gets(base + 4, (self.setts.uint32_count - 1) * 4)
         _crc = binascii.crc32(crc_data) & 0xffffffff
@@ -201,9 +213,9 @@ class BLDFUSettings(object):
 
         self.crc = crc
 
-        fmt = '<' + ('I' * (self.setts.uint32_count)) 
+        fmt = '<' + ('I' * (self.setts.uint32_count))
         arr = struct.unpack(fmt, self.ihex.gets(base, (self.setts.uint32_count) * 4))
- 
+
         self.bl_sett_ver = arr[self.setts.offs_sett_ver] & 0xffffffff
         self.app_ver = arr[self.setts.offs_app_ver] & 0xffffffff
         self.bl_ver = arr[self.setts.offs_bl_ver] & 0xffffffff
@@ -212,7 +224,7 @@ class BLDFUSettings(object):
         self.app_sz = arr[self.setts.offs_bank0_img_sz] & 0xffffffff
         self.app_crc = arr[self.setts.offs_bank0_img_crc] & 0xffffffff
         self.bank0_bank_code = arr[self.setts.offs_bank0_bank_code] & 0xffffffff
-       
+
 
     def fromhexfile(self, f, arch=None):
         self.hex_file = f
@@ -231,11 +243,19 @@ class BLDFUSettings(object):
                 self.set_arch('NRF52')
             except Exception as e:
                 try:
-                    self.probe_settings(BLDFUSettings.bl_sett_52840_addr)
-                    self.set_arch('NRF52840')
+                    self.probe_settings(BLDFUSettings.bl_sett_52_qfab_addr)
+                    self.set_arch('NRF52QFAB')
                 except Exception as e:
-                    raise NordicSemiException("Failed to parse .hex file: {0}".format(e))
-       
+                    try:
+                        self.probe_settings(BLDFUSettings.bl_sett_52810_addr)
+                        self.set_arch('NRF52810')
+                    except Exception as e:
+                        try:
+                            self.probe_settings(BLDFUSettings.bl_sett_52840_addr)
+                            self.set_arch('NRF52840')
+                        except Exception as e:
+                            raise NordicSemiException("Failed to parse .hex file: {0}".format(e))
+
     def __str__(self):
         s = """
 Bootloader DFU Settings:
@@ -256,4 +276,3 @@ Bootloader DFU Settings:
     def tohexfile(self, f):
         self.hex_file = f
         self.ihex.tofile(f, format='hex')
-
