@@ -78,6 +78,7 @@ class BLDFUSettings(object):
     bl_sett_51_addr      = 0x0003FC00
     bl_sett_52_addr      = 0x0007F000
     bl_sett_52_qfab_addr = 0x0003F000
+    bl_sett_52810_addr   = 0x0002F000
     bl_sett_52840_addr   = 0x000FF000
 
 
@@ -113,6 +114,11 @@ class BLDFUSettings(object):
             self.arch_str = 'nRF52QFAB'
             self.flash_page_sz = BLDFUSettings.flash_page_52_sz
             self.bl_sett_addr = BLDFUSettings.bl_sett_52_qfab_addr
+        elif arch == 'NRF52810':
+            self.arch = nRFArch.NRF52
+            self.arch_str = 'NRF52810'
+            self.flash_page_sz = BLDFUSettings.flash_page_52_sz
+            self.bl_sett_addr = BLDFUSettings.bl_sett_52810_addr
         elif arch == 'NRF52840':
             self.arch = nRFArch.NRF52840
             self.arch_str = 'NRF52840'
@@ -241,10 +247,14 @@ class BLDFUSettings(object):
                     self.set_arch('NRF52QFAB')
                 except Exception as e:
                     try:
-                        self.probe_settings(BLDFUSettings.bl_sett_52840_addr)
-                        self.set_arch('NRF52840')
+                        self.probe_settings(BLDFUSettings.bl_sett_52810_addr)
+                        self.set_arch('NRF52810')
                     except Exception as e:
-                        raise NordicSemiException("Failed to parse .hex file: {0}".format(e))
+                        try:
+                            self.probe_settings(BLDFUSettings.bl_sett_52840_addr)
+                            self.set_arch('NRF52840')
+                        except Exception as e:
+                            raise NordicSemiException("Failed to parse .hex file: {0}".format(e))
 
     def __str__(self):
         s = """
