@@ -210,12 +210,12 @@ The `-f` option instructs nrfutil to actually program the board connected to COM
 
 ##### serial
 
-Perform a full DFU procedure over an UART serial line. The DFU target shall be configured to use some of its digital I/O pins as an UART.
+Perform a full DFU procedure over a UART serial line. The DFU target shall be configured to use some of its digital I/O pins as UART.
 
 Please note that most Nordic development kit boards have an [interface MCU](http://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.nrf52%2Fdita%2Fnrf52%2Fdevelopment%2Fnrf52_dev_kit%2Finterf_mcu.html&cp=2_1_4_4)
 which transparently [maps digital pins 6 and 8 into a CDC ACM USB interface (A.K.A. "USB virtual serial port")](http://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.nrf52%2Fdita%2Fnrf52%2Fdevelopment%2Fnrf52_dev_kit%2Fvir_com_port.html&cp=2_1_4_4_1).
 Use `serial` DFU mode when communicating with a nRF chip in this way. Otherwise you may
-connect the digital I/O pins to a RS232 connector.
+connect the digital I/O pins to an RS232 connector.
 
 This command takes several options that you can list using:
 
