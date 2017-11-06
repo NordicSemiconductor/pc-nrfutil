@@ -53,7 +53,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-def _make_trigger(init_data, image_data, mcast_mode = 0, reset_suppress = 0):
+def _make_trigger(init_data, image_data, mcast_mode = False, reset_suppress = 0):
     '''Create a trigger payload from given init and image data'''
 
     TRIGGER_VERSION    = 1
@@ -103,14 +103,6 @@ def _bmp_to_str(bitmap):
         s = s + '{:08b} '.format((bitmap >> 64 - 8*(i + 1)) & 0xff)
     return s[:len(s) - 1]
 
-def _spblk_start_block_num(spblk_size, num):
-    '''Calculate the first block number for a superblock which consists given block.
-
-        Example: given superblock size of 2 blocks and block number 3
-                 returns 2
-    '''
-    return (num & ~(spblk_size - 1))
-
 def _get_block_opt(request):
     if (request.opt.block1):
         return request.opt.block1
@@ -119,32 +111,12 @@ def _get_block_opt(request):
     else:
         return (0, False, constants.DEFAULT_BLOCK_SIZE_EXP)
 
-DiagnosticData = namedtuple('DiagnosticData',
-    [
-        'build_id',
-        'dfu_state',
-        'dfu_prev_state',
-        'init_block_requests',
-        'image_block_requests',
-        'triggers_recv',
-        'total_init_blocks_recv',
-        'total_image_blocks_recv',
-    ])
-
-# Monkey patch for fun and profit
-# Unpack DiagnosticData namedtuple from binary data
-DiagnosticData._unpack = classmethod(lambda cls, payload : cls._make(struct.unpack("!IBBHHHHH", payload)))
-# Change _asdict to return regular dictionary
-DiagnosticData._asdict = lambda self : { k : v for k, v in zip(self._fields, self)}
-
 class ThreadDfuClient:
     def __init__(self):
         '''Stores a reference to a progress bar object.'''
         self.progress_bar = None
         '''The number of a block most recently requested by a node.'''
         self.last_block = None
-        '''Diagnostic information'''
-        self.diag = None
 
 Resource = namedtuple('Resource', ['path', 'data'])
 
@@ -159,6 +131,11 @@ class ThreadDfuServer():
     SPBLK_FLUSH_DELAY = 1.0     # delay between superblocks
     POST_UPLOAD_DELAY = 5.0     # delay after uploading the last block, in seconds
 
+    IMAGE_URI = 'f'
+    INIT_URI = 'i'
+    TRIGGER_URI = 't'
+    BITMAP_URI = 'b'
+
     def __init__(self, protocol, init_data, image_data, opts):
         assert(protocol != None)
         assert(init_data != None)
@@ -168,7 +145,7 @@ class ThreadDfuServer():
         if (not opts or not opts.rate):
             self.opts.rate = self.SPBLK_UPLOAD_RATE
         if (not opts or not opts.mcast_dfu):
-            self.opts.mcast_dfu = 0
+            self.opts.mcast_dfu = False
         if (not opts or not opts.reset_suppress):
             self.opts.reset_suppress = 0
 
@@ -179,49 +156,47 @@ class ThreadDfuServer():
 
         self.missing_blocks = []
         self.bmp_received_event = threading.Event()
-        self.diag_event = threading.Event()
         self.upload_done_event = threading.Event()
         self.trig_done_event = threading.Event()
 
-        self.init_resource = Resource(("i",), init_data)
-        self.image_resource = Resource(("f",), image_data)
+        self.init_resource = Resource((ThreadDfuServer.INIT_URI,), init_data)
+        self.image_resource = Resource((ThreadDfuServer.IMAGE_URI,), image_data)
 
         self.clients = {}
 
     def _draw_token(self):
         return piccata.message.random_token(2)
 
-    def _update_progress_bar(self, address, client, block_num, block_count):
-        if (self.opts.non_verbose):
-            return
-
+    def _update_progress_bar(self, address, client, block_count, total_block_count):
         # If node didn't request any blocks yet then create a new progress
         # bar for it. Update otherwise.
         if (client.progress_bar is None):
             client.progress_bar = tqdm.tqdm(desc = str(address),
                                             position = len(self.clients),
-                                            initial = block_num,
-                                            total = block_count)
-        elif (block_num > client.last_block):
-            client.progress_bar.update(block_num - client.last_block)
+                                            initial = block_count,
+                                            total = total_block_count)
+        elif (block_count > client.last_block):
+            client.progress_bar.update(block_count - client.last_block)
 
-        if (block_num == block_count):
+        if (block_count == total_block_count):
             client.progress_bar.close()
             client.progress_bar = None
 
     def _handle_image_request(self, request):
-        #TODO: check if image can be requested without downloading
-        #      init first
         if (request.remote not in self.clients):
             self.clients[request.remote] = ThreadDfuClient()
 
         block_num, _, block_szx = _get_block_opt(request)
-        self.clients[request.remote].last_block = block_num
+
+        total_block_count = _block_count(len(self.image_resource.data), block_szx)
+
 
         self._update_progress_bar(request.remote.addr,
                                   self.clients[request.remote],
                                   block_num,
-                                  block_szx)
+                                  total_block_count)
+
+        self.clients[request.remote].last_block = block_num
 
         return piccata.block_transfer.create_block_2_response(self.image_resource.data, request)
 
@@ -253,44 +228,16 @@ class ThreadDfuServer():
                                                     self.opts.reset_suppress))
         return response
 
-    def _handle_diagnostic_response(self,  result, request, response, num_of_requests):
-        if (result == piccata.constants.RESULT_TIMEOUT) and (num_of_requests - 1 > 0):
-            self.protocol.request(request,
-                                  self._handle_diagnostic_response,
-                                  (num_of_requests - 1, ))
-            return
-
-        if (result == piccata.constants.RESULT_SUCCESS): # and response.remote not in self.clients):
-            client = self.clients.setdefault(response.remote, ThreadDfuClient())
-            client.diag = DiagnosticData._unpack(response.payload)
-            logger.debug("Diagnostic response received from {}".format(response.remote))
-
-        #self.diag_event.set()
-
-    def _request_diagnostics(self, remote, num_of_requests):
-        mtype = piccata.constants.NON if remote.addr.is_multicast else piccata.constants.CON
-        request = piccata.message.Message(mtype,
-                                          code = piccata.constants.GET,
-                                          token = self._draw_token())
-
-        request.opt.uri_path = ("d",)
-        request.remote = remote
-        request.timeout = ThreadDfuServer.SPBLK_BMP_TIMEOUT
-
-        logger.debug('Sending diagnostic request to {}'.format(remote))
-
-        self.protocol.request(request,
-                              self._handle_diagnostic_response,
-                              (num_of_requests, ))
-
-    def _handle_diagnostic_raport(self, request):
-        client = self.clients.setdefault(request.remote, ThreadDfuClient())
-        client.diag = DiagnosticData._unpack(request.payload)
-        logger.debug("Diagnostic report received from {}".format(request.remote))
-        return Message.AckMessage(request, piccata.constants.CREATED)
-
     def _send_block(self, remote, path, num, more, szx, payload):
-        '''Send a single block.'''
+        '''
+        Send a single block.
+        :param remote: An address of the remote endpoint.
+        :param path: An URI path to the block resource.
+        :param num: A block number. Part of the CoAP block option.
+        :param more: An information if more blocks are pending. Part of the CoAP block option.
+        :param szx: A block size, encoded in CoAP block option format. Part of the CoAP block option.
+        :param payload: A block payload.
+        '''
         logger.info('Sending block {} to {}'.format(num, remote.addr))
 
         request = piccata.message.Message(mtype = piccata.constants.NON,
@@ -306,7 +253,7 @@ class ThreadDfuServer():
     def _upload(self, remote, bitmap):
         while True:
             # Bitmap holds (resource, num) tuples. Sort them using path and block num.
-            bitmap.sort(key = lambda item : (item[0].path[0] == 'f', item[1]))
+            bitmap.sort(key = lambda item : (item[0].path[0] == ThreadDfuServer.IMAGE_URI, item[1]))
             resource, num = bitmap.pop(0)
 
             payload, more = extract_block(resource.data,
@@ -331,27 +278,9 @@ class ThreadDfuServer():
 
                 time.sleep(delay)
 
-                #self._update_progress_bar(remote.addr, self, num, block_count)
             else:
                 self.upload_done_event.set()
                 self.bmp_received_event.wait()
-
-    def _collect_diagnostics(self, remotes):
-        for remote in remotes:
-            self._request_diagnostics(remote, self.opts.diag)
-            self.diag_event.wait()
-            self.diag_event.clear()
-
-    def _dump_diagnostic_report(self):
-        # Create an intermediate structure as json module doesn't handle namedtuples.
-        result = []
-        for remote, client in self.clients.items():
-            if (client.diag):
-                result.append({str(remote.addr) : client.diag._asdict()})
-
-        # Output might be collected by test framework, so dump to stdout and flush.
-        sys.stdout.write(json.dumps(result) + "\n")
-        sys.stdout.flush()
 
     def _handle_reset_response(self, result, request, response, num_of_requests, delay):
         assert (result == piccata.constants.RESULT_TIMEOUT)
@@ -387,15 +316,14 @@ class ThreadDfuServer():
                                                                        num,
                                                                        _bmp_to_str(bmp)))
 
-        # TODO: fix me
-        if (path == 'i'):
+        if (path == ThreadDfuServer.INIT_URI):
             resource = self.init_resource
-        elif (path == 'f'):
+        elif (path == ThreadDfuServer.IMAGE_URI):
             resource = self.image_resource
 
-        for i in range(63):
+        for i in range(ThreadDfuServer.SPBLK_SIZE):
             item = (resource, num + i)
-            if (bmp & (1 << (63 - i)) and item not in self.missing_blocks):
+            if (bmp & (1 << (ThreadDfuServer.SPBLK_SIZE - 1 - i)) and item not in self.missing_blocks):
                 self.missing_blocks.append(item)
                 logger.debug("Added {} block {} to missing list".format(item[0].path, item[1]))
 
@@ -410,11 +338,10 @@ class ThreadDfuServer():
         #       but a request is received. How this should be handled?
 
         handlers = {
-            'f' : self._handle_image_request,
-            'i' : self._handle_init_request,
-            't' : self._handle_trigger_request,
-            'b' : self._handle_bitmap_request,
-            'd' : self._handle_diagnostic_raport,
+            ThreadDfuServer.IMAGE_URI : self._handle_image_request,
+            ThreadDfuServer.INIT_URI : self._handle_init_request,
+            ThreadDfuServer.TRIGGER_URI : self._handle_trigger_request,
+            ThreadDfuServer.BITMAP_URI : self._handle_bitmap_request,
         }
 
         for uri, handler in handlers.items():
@@ -439,14 +366,6 @@ class ThreadDfuServer():
         time.sleep(15)
         self.upload_done_event.wait()
 
-        if (self.opts.diag > 0):
-            remotes = map(lambda addr : piccata.types.Endpoint(addr, piccata.constants.COAP_PORT), self.opts.diag_addr) if self.opts.diag_addr else [remote]
-            self._collect_diagnostics(remotes)
-            self._dump_diagnostic_report()
-        elif (self.opts.diag == -1):
-            time.sleep(20)
-            self._dump_diagnostic_report()
-
         if (self.opts.reset_suppress > 0):
             self._send_reset_request(remote, num_of_requests, self.opts.reset_suppress)
 
@@ -456,7 +375,7 @@ class ThreadDfuServer():
                                           code = piccata.constants.POST,
                                           token = self._draw_token())
 
-        request.opt.uri_path = ("t",)
+        request.opt.uri_path = (ThreadDfuServer.TRIGGER_URI,)
         request.remote = remote
         request.timeout = ThreadDfuServer.SPBLK_BMP_TIMEOUT
         request.payload = _make_trigger(self.init_resource.data,
