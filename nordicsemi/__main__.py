@@ -631,13 +631,13 @@ def do_serial(package, port, flow_control, packet_receipt_notification, baud_rat
 
     click.echo("Device programmed.")
 
-@dfu.command(short_help="Update the firmware on a device over a USB serial connection.")
+@dfu.command(short_help="Update the firmware on a device over a USB serial connection. The DFU target must be a chip with USB pins (i.e. nRF52840) and provide a USB ACM CDC serial interface.")
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
               required=True)
 @click.option('-p', '--port',
-              help='USB Serial COM port to which the device is connected.',
+              help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
               required=True)
 @click.option('-fc', '--flow-control',
@@ -653,7 +653,7 @@ def do_serial(package, port, flow_control, packet_receipt_notification, baud_rat
               type=click.INT,
               required=False)
 @click.option('-P', '--ping',
-              help='Ping the device after opening the connection',
+              help='Ping the device after opening the connection.',
               type=click.BOOL,
               required=False)
 def usb_serial(package, port, flow_control, packet_receipt_notification, baud_rate, ping):
@@ -662,13 +662,13 @@ def usb_serial(package, port, flow_control, packet_receipt_notification, baud_ra
     do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, ping)
 
 
-@dfu.command(short_help="Update the firmware on a device over a serial connection.")
+@dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART. Note that ")
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
               required=True)
 @click.option('-p', '--port',
-              help='Serial port COM port to which the device is connected.',
+              help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
               required=True)
 @click.option('-fc', '--flow-control',

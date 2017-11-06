@@ -209,21 +209,39 @@ nrfutil dfu ble -pkg app_dfu_package.zip -p COM3 -f
 The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a network co-processor (NCP). Use with caution as this will overwrite the contents of the IC's flash memory.
 
 ##### serial
-Perform a full DFU procedure over a serial (UART) line. This command takes several options that you can list using:
+
+Perform a full DFU procedure over an UART serial line. The DFU target shall be configured to use some of its digital I/O pins as an UART.
+
+Please note that most Nordic development kit boards have an [interface MCU](http://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.nrf52%2Fdita%2Fnrf52%2Fdevelopment%2Fnrf52_dev_kit%2Finterf_mcu.html&cp=2_1_4_4)
+which transparently [maps digital pins 6 and 8 into a CDC ACM USB interface (A.K.A. "USB virtual serial port")](http://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.nrf52%2Fdita%2Fnrf52%2Fdevelopment%2Fnrf52_dev_kit%2Fvir_com_port.html&cp=2_1_4_4_1).
+Use `serial` DFU mode when communicating with a nRF chip in this way. Otherwise you may
+connect the digital I/O pins to a RS232 connector.
+
+This command takes several options that you can list using:
+
 ```
 nrfutil dfu serial --help
 ```
+
 Below is an example of the execution of a DFU procedure of the file generated above over COM3:
+
 ```
 nrfutil dfu serial -pkg app_dfu_package.zip -p COM3
 ```
 
 ##### usb_serial
-Perform a full DFU procedure over a serial (UART) line. This command is the same as `serial` but initial ping is not performed. It provides the possibility of enabling the ping feature, which is always performed in case of `serial`.
+
+Perform a full DFU procedure over a CDC ACM USB connection (A.K.A. "USB virtual serial port"). The DFU target shall be a chip with USB pins (i.e. nRF52840), and shall be running a bootloader enabling a USB-CDC interface.
+
+In the case of the nRF52840 development kit board, the `usb_serial` DFU mode is used when communicating with the board through the female USB port marked "nRF USB", which is wired
+to the USB pins in the nRF chip.
+
 ```
 nrfutil dfu usb_serial --help
 ```
+
 Below is an example of the execution of a DFU procedure of the file generated above over COM3:
+
 ```
 nrfutil dfu usb_serial -pkg app_dfu_package.zip -p COM3
 ```
