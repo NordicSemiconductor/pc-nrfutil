@@ -658,7 +658,7 @@ def usb_serial(package, port, flow_control, packet_receipt_notification, baud_ra
     do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, False)
 
 
-@dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART. Note that ")
+@dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART.")
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
