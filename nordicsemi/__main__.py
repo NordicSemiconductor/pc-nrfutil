@@ -662,17 +662,13 @@ def do_serial(package, port, flow_control, packet_receipt_notification, baud_rat
               help='Set the baud rate',
               type=click.INT,
               required=False)
-@click.option('-P', '--ping',
-              help='Ping the device after opening the connection.',
-              type=click.BOOL,
-              required=False)
-def usb_serial(package, port, flow_control, packet_receipt_notification, baud_rate, ping):
+def usb_serial(package, port, flow_control, packet_receipt_notification, baud_rate):
     """Perform a Device Firmware Update on a device with a bootloader that supports USB serial DFU."""
 
-    do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, ping)
+    do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, False)
 
 
-@dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART. Note that ")
+@dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART.")
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
