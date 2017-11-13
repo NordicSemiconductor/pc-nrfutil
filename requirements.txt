@@ -8,4 +8,4 @@ protobuf
 pc_ble_driver_py >= 0.11.3
 tqdm
 piccata
-pyspinel
+pyspinel == 1.0.0a1

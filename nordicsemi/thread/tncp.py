@@ -37,6 +37,7 @@
 import time
 import logging
 import ipaddress
+import struct
 
 import io
 import spinel.common
@@ -54,13 +55,13 @@ class NCPTransport():
     CFG_KEY_CHANNEL = 'channel'
     CFG_KEY_PANID = 'panid'
     CFG_KEY_RESET = 'reset'
-    
+
     def __init__(self, port, stream_descriptor, config = None):
         self._port = port
         self._stream_descriptor = stream_descriptor.split(":")
         self._config = config if config is not None else self.get_default_config()
         self._attached = False
-        
+
         self._udp6_parser = spinel.ipv6.IPv6PacketFactory(
                             ulpf = {
                                 17: spinel.ipv6.UDPDatagramFactory(
@@ -70,9 +71,9 @@ class NCPTransport():
                                         }
                                     ),
                             })
-        
-        self._receivers = []     
-        
+
+        self._receivers = []
+
     @staticmethod
     def _propid_to_str(propid):
         for name, value in SPINEL.__dict__.iteritems():
@@ -94,6 +95,7 @@ class NCPTransport():
     def _attach_to_network(self):
         props = [
             (SPINEL.PROP_IPv6_ICMP_PING_OFFLOAD, 1, 'B'),
+            (SPINEL.PROP_THREAD_RLOC16_DEBUG_PASSTHRU, 1, 'B'),
             (SPINEL.PROP_PHY_CHAN, self._config[self.CFG_KEY_CHANNEL], 'H'),
             (SPINEL.PROP_MAC_15_4_PANID, self._config[self.CFG_KEY_PANID], 'H'),
             (SPINEL.PROP_NET_IF_UP, 1, 'B'),
@@ -118,26 +120,28 @@ class NCPTransport():
             try:
                 pkt = self._udp6_parser.parse(io.BytesIO(value[2:]),
                                               spinel.common.MessageInfo())
-                
+
                 endpoint = collections.namedtuple('endpoint', 'addr port')
                 payload = str(pkt.upper_layer_protocol.payload.to_bytes())
                 src = endpoint(pkt.ipv6_header.source_address,
                                pkt.upper_layer_protocol.header.src_port)
                 dst = endpoint(pkt.ipv6_header.destination_address,
                                pkt.upper_layer_protocol.header.dst_port)
-                
+
                 for receiver in self._receivers:
                     receiver.receive(payload, src, dst)
-                    
+
             except RuntimeError:
                 pass
             except Exception as e:
                 logging.exception(e)
+        else:
+            logger.warn("Unexpected property received (PROP_ID: {})".format(prop))
 
         return consumed
 
     def _build_udp_datagram(self, saddr, sport, daddr, dport, payload):
-        return spinel.ipv6.IPv6Packet(spinel.ipv6.IPv6Header(saddr, daddr), 
+        return spinel.ipv6.IPv6Packet(spinel.ipv6.IPv6Header(saddr, daddr),
                                       spinel.ipv6.UDPDatagram(
                                           spinel.ipv6.UDPHeader(sport, dport),
                                           spinel.ipv6.UDPBytesPayload(payload)))
@@ -164,25 +168,32 @@ class NCPTransport():
 
         self._wpan.prop_insert_value(SPINEL.PROP_IPV6_ADDRESS_TABLE, arr, str(len(arr)) + 's')
         logger.debug("Added")
-        
+
     def print_addresses(self):
         for addr in self._wpan.get_ipaddrs():
             logger.info(unicode(addr))
-        
+
     def send(self, payload, dest):
-        logger.debug("Sending datagram {} {} {} {}".format(self._src_addr,
+        if (dest.addr.is_multicast):
+            rloc16 = self._wpan.prop_get_value(SPINEL.PROP_THREAD_RLOC16)
+            # Create an IPv6 Thread RLOC address from mesh-local prefix and RLOC16 MAC address.
+            src_addr = ipaddress.ip_address(self._ml_prefix + '\x00\x00\x00\xff\xfe\x00' + struct.pack('>H', rloc16))
+        else:
+            src_addr = self._ml_eid
+
+        logger.debug("Sending datagram {} {} {} {}".format(src_addr,
                                                            self._port,
                                                            dest.addr,
                                                            dest.port))
         try:
-            datagram = self._build_udp_datagram(self._src_addr,
+            datagram = self._build_udp_datagram(src_addr,
                                                 self._port,
                                                 dest.addr,
                                                 dest.port,
                                                 payload)
         except Exception as e:
-            logging.exception(e)          
-        
+            logging.exception(e)
+
         self._wpan.ip_send(str(datagram.to_bytes()))
 
     def register_receiver(self, callback):
@@ -197,12 +208,12 @@ class NCPTransport():
 
     def open(self):
         '''Opens transport for communication.'''
-        self._stream = StreamOpen(self._stream_descriptor[0], self._stream_descriptor[1])
+        self._stream = StreamOpen(self._stream_descriptor[0], self._stream_descriptor[1], False)
         # FIXME: remove node id from constructor after WpanAPI is refactored
         self._wpan = WpanApi(self._stream, 666)
         self._wpan.queue_register(SPINEL.HEADER_DEFAULT)
         self._wpan.queue_register(SPINEL.HEADER_ASYNC)
-        self._wpan.callback_register(SPINEL.PROP_STREAM_NET, self._wpan_receive)     
+        self._wpan.callback_register(SPINEL.PROP_STREAM_NET, self._wpan_receive)
 
         if (self._config[NCPTransport.CFG_KEY_RESET]) and not self._wpan.cmd_reset():
             raise Exception('Failed to reset NCP. Please flash connectvity firmware.')
@@ -212,7 +223,8 @@ class NCPTransport():
             logger.error("Failed to attach to the network")
             raise Exception('Unable to attach')
 
-        self._src_addr = ipaddress.ip_address(self._wpan.prop_get_value(SPINEL.PROP_IPV6_ML_ADDR))
+        self._ml_eid = ipaddress.ip_address(self._wpan.prop_get_value(SPINEL.PROP_IPV6_ML_ADDR))
+        self._ml_prefix = self._wpan.prop_get_value(SPINEL.PROP_IPV6_ML_PREFIX)
 
         logger.info("Done")
 
