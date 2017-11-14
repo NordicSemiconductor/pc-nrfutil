@@ -76,7 +76,7 @@ class InitPacketPB(object):
                  ):
 
         if from_bytes is not None:
-            # construct from a stream
+            # construct from a protobuf string/buffer
             self.packet = pb.Packet()
             self.packet.ParseFromString(from_bytes)
             self.signed_command = self.packet.signed_command
