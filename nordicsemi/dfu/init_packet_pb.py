@@ -116,7 +116,7 @@ class InitPacketPB(object):
 
         if self.init_command.fw_version < 0 or self.init_command.fw_version > 0xffffffff or \
            self.init_command.hw_version < 0 or self.init_command.hw_version > 0xffffffff:
-            raise RuntimeError("Invalid range of firmware argument. [0 - 0xffffff] is valid range")
+            raise RuntimeError("Invalid range of firmware argument. [0 - 0xffffffff] is valid range")
 
     def _is_valid(self):
         try:
