@@ -170,8 +170,7 @@ class Package(object):
                                      filename=softdevice_fw,
                                      init_packet_data=init_packet_vars)
 
-        if key_file:
-            self.key_file = key_file
+        self.key_file = key_file
 
         self.work_dir = None
         self.manifest = None
@@ -221,6 +220,15 @@ class Package(object):
         if len(sd_req) != 0:
             sd_req = sd_req[:-2]
 
+        if (initp.packet.HasField('signed_command')):
+            cmd = initp.packet.signed_command.command
+            signature_type = SigningTypes(initp.packet.signed_command.signature_type).name
+            signature_hex = binascii.hexlify(initp.packet.signed_command.signature)
+        else:
+            cmd = initp.packet.command
+            signature_type = 'UNSIGNED'
+            signature_hex = 'N/A'
+
         s = """|
 |- Image #{0}:
    |- Type: {1}
@@ -248,19 +256,19 @@ class Package(object):
         type_strs[hex_type],
         img.bin_file,
         img.dat_file,
-        CommandTypes(initp.signed_command.command.op_code).name,
-        SigningTypes(initp.signed_command.signature_type).name,
-        binascii.hexlify(initp.signed_command.signature),
-        initp.init_command.fw_version,
-        initp.init_command.hw_version,
+        CommandTypes(cmd.op_code).name,
+        signature_type,
+        signature_hex,
+        cmd.init.fw_version,
+        cmd.init.hw_version,
         sd_req,
-        DFUType(initp.init_command.type).name,
-        initp.init_command.sd_size,
-        initp.init_command.bl_size,
-        initp.init_command.app_size,
-        HashTypes(initp.init_command.hash.hash_type).name,
-        binascii.hexlify(initp.init_command.hash.hash),
-        initp.init_command.is_debug,
+        DFUType(cmd.init.type).name,
+        cmd.init.sd_size,
+        cmd.init.bl_size,
+        cmd.init.app_size,
+        HashTypes(cmd.init.hash.hash_type).name,
+        binascii.hexlify(cmd.init.hash.hash),
+        cmd.init.is_debug,
         )
 
         return s
@@ -369,10 +377,11 @@ DFU Package: <{0}>:
                             bl_size=bl_size,
                             sd_req=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.REQUIRED_SOFTDEVICES_ARRAY])
 
-            signer = Signing()
-            signer.load_key(self.key_file)
-            signature = signer.sign(init_packet.get_init_command_bytes())
-            init_packet.set_signature(signature, SigningTypes.ECDSA_P256_SHA256)
+            if (self.key_file is not None):
+                signer = Signing()
+                signer.load_key(self.key_file)
+                signature = signer.sign(init_packet.get_init_command_bytes())
+                init_packet.set_signature(signature, SigningTypes.ECDSA_P256_SHA256)
 
             # Store the .dat file in the work directory
             init_packet_filename = firmware_data[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")
