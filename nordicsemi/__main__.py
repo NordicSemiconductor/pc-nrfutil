@@ -839,7 +839,7 @@ def convert_version_string_to_int(s):
 def thread(package, port, address, server_port, panid, channel, jlink_snr, flash_connectivity,
            sim, rate, reset_suppress):
     """
-    Perform a Device Firmware Update on a device with a bootloader that supports Thread DFU.
+    Perform a Device Firmware Update on a device that supports Thread DFU.
     This requires a second nRF device, connected to this computer, with Thread Network
     CoProcessor (NCP) firmware loaded. The NCP device will perform the DFU procedure onto
     the target device.
