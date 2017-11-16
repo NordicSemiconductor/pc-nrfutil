@@ -406,9 +406,11 @@ def pkg():
               required=True,
               type=BASED_INT)
 @click.option('--sd-req',
-              help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs (1 or more) '
-                   'of which one must be present on the target device. Each item on the list must be in hex and prefixed with \"0x\".'
-                   'A list of the possible values to use with this option follows:'
+              help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs '
+                   '(1 or more) of which one must be present on the target device. Each item on the '
+                   'list must be a two- or four-digit hex number prefixed with \"0x\" (e.g. \"0x12\", '
+                   '\"0x1234\").\n'
+                   'A non-exhaustive list of well-known values to use with this option follows:'
                    '\n|s130_nrf51_1.0.0|0x67|'
                    '\n|s130_nrf51_2.0.0|0x80|'
                    '\n|s132_nrf52_2.0.0|0x81|'
