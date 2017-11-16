@@ -76,18 +76,27 @@ class InitPacketPB(object):
                  ):
 
         if from_bytes is not None:
-            # construct from a stream
+            # construct from a protobuf string/buffer
             self.packet = pb.Packet()
             self.packet.ParseFromString(from_bytes)
-            self.signed_command = self.packet.signed_command
-            self.init_command = self.signed_command.command.init
+
+            if self.packet.HasField('signed_command'):
+                self.init_command = self.packet.signed_command.command.init
+            else:
+                self.init_command = self.packet.command.init
+
         else:
             # construct from input variables
             if not sd_req:
                 sd_req = [0xfffe]  # Set to default value
             self.packet = pb.Packet()
-            self.signed_command = self.packet.signed_command
-            self.init_command = self.signed_command.command.init
+
+            # By default, set the packet's command to an unsigned command
+            # If a signature is set (via set_signature), this will get overwritten
+            # with an instance of SignedCommand instead.
+            self.packet.command.op_code = pb.INIT
+
+            self.init_command = pb.InitCommand()
             self.init_command.hash.hash_type = hash_type.value
             self.init_command.type = dfu_type.value
             self.init_command.hash.hash = hash_bytes
@@ -98,7 +107,8 @@ class InitPacketPB(object):
             self.init_command.sd_size = sd_size
             self.init_command.bl_size = bl_size
             self.init_command.app_size = app_size
-            self.signed_command.command.op_code = pb.INIT
+
+            self.packet.command.init.CopyFrom(self.init_command)
 
         self._validate()
 
@@ -116,7 +126,7 @@ class InitPacketPB(object):
 
         if self.init_command.fw_version < 0 or self.init_command.fw_version > 0xffffffff or \
            self.init_command.hw_version < 0 or self.init_command.hw_version > 0xffffffff:
-            raise RuntimeError("Invalid range of firmware argument. [0 - 0xffffff] is valid range")
+            raise RuntimeError("Invalid range of firmware argument. [0 - 0xffffffff] is valid range")
 
     def _is_valid(self):
         try:
@@ -127,17 +137,18 @@ class InitPacketPB(object):
         return self.signed_command.signature is not None
 
     def get_init_packet_pb_bytes(self):
-        if self.signed_command.signature is not None:
-            return self.packet.SerializeToString()
-        else:
-            raise RuntimeError("Did not set signature")
+        return self.packet.SerializeToString()
 
     def get_init_command_bytes(self):
         return self.init_command.SerializeToString()
 
     def set_signature(self, signature, signature_type):
-        self.signed_command.signature = signature
-        self.signed_command.signature_type = signature_type.value
+        new_packet = pb.Packet()
+        new_packet.signed_command.signature = signature
+        new_packet.signed_command.signature_type = signature_type.value
+        new_packet.signed_command.command.CopyFrom(self.packet.command)
+
+        self.packet = new_packet
 
     def __str__(self):
         return str(self.init_command)

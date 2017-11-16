@@ -84,6 +84,25 @@ def display_sec_warning():
 """
     click.echo("{}".format(default_key_warning))
 
+def display_nokey_warning():
+    default_nokey_warning = """
+|===============================================================|
+|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
+|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
+|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
+|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
+|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
+|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
+| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
+|===============================================================|
+|You are not providing a signature key, which means the DFU     |
+|files will not be signed, and are vulnerable to tampering.     |
+|This is only compatible with a signature-less bootloader and is|
+|not suitable for production environments.                      |
+|===============================================================|
+"""
+    click.echo("{}".format(default_nokey_warning))
+
 def display_debug_warning():
     debug_warning = """
 |===============================================================|
@@ -350,7 +369,7 @@ def display(key_file, key, format, out_file):
             kfile.write(kstr)
 
 
-@cli.group(short_help='Generate a Device Firmware Update package.')
+@cli.group(short_help='Display or generate a DFU package (zip file).')
 def pkg():
     """
     This set of commands supports Nordic DFU package generation.
@@ -358,7 +377,7 @@ def pkg():
     pass
 
 
-@pkg.command(short_help='Generate a firmware package for over-the-air firmware updates.')
+@pkg.command(short_help='Generate a zip file for performing DFU.')
 @click.argument('zipfile',
                 required=True,
                 type=click.Path())
@@ -384,6 +403,7 @@ def pkg():
               type=BASED_INT_OR_NONE)
 @click.option('--hw-version',
               help='The hardware version.',
+              required=True,
               type=BASED_INT)
 @click.option('--sd-req',
               help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs '
@@ -404,6 +424,7 @@ def pkg():
                    '\n|s132_nrf52_4.0.4|0x9E|'
                    '\n|s132_nrf52_5.0.0|0x9D|',
               type=click.STRING,
+              required=True,
               multiple=True)
 @click.option('--sd-id',
               help='The new SoftDevice ID to be used as --sd-req for the Application update in case the ZIP '
@@ -415,7 +436,7 @@ def pkg():
               type=click.STRING)
 @click.option('--key-file',
               help='The private (signing) key in PEM fomat.',
-              required=True,
+              required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 def generate(zipfile,
            debug_mode,
@@ -532,7 +553,7 @@ def generate(zipfile,
 
     if application is not None and application_version_internal is None:
         click.echo('Error: --application-version or --application-version-string'
-                   'required with application image.')
+                   ' required with application image.')
         return
 
     if bootloader is not None and bootloader_version is None:
@@ -573,10 +594,13 @@ def generate(zipfile,
     else:
         sd_id_list = sd_req_list
 
-    signer = Signing()
-    default_key = signer.load_key(key_file)
-    if default_key:
-        display_sec_warning()
+    if key_file is None:
+        display_nokey_warning()
+    else:
+        signer = Signing()
+        default_key = signer.load_key(key_file)
+        if default_key:
+            display_sec_warning()
 
     package = Package(debug_mode,
                       hw_version,
@@ -609,7 +633,7 @@ def update_progress(progress=0):
     if global_bar:
         global_bar.update(progress)
 
-@cli.group(short_help='Perform a Device Firmware Update over, BLE, Thread, or serial transport.')
+@cli.group(short_help='Perform a Device Firmware Update over, BLE, Thread, or serial transport given a DFU package (zip file).')
 def dfu():
     """
     This set of commands supports Device Firmware Upgrade procedures over both BLE and serial transports.
