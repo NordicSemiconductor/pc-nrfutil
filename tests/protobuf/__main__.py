@@ -5,7 +5,7 @@ import os, sys
 sys.path.append(
     os.path.normpath(
         os.path.join(
-            os.path.dirname(__file__), '..', '..' # , 'nordicsemi'
+            os.path.dirname(__file__), '..', '..'
         )
     )
 )
@@ -16,7 +16,7 @@ class TestStringMethods(unittest.TestCase):
 
     def test_construct_from_empty_string(self):
         """
-        Raises an error when the trying to construct a init packet from a
+        Raises an error when trying to construct a init packet from an
         empty buffer
         """
 
@@ -29,7 +29,7 @@ class TestStringMethods(unittest.TestCase):
 
     def test_construct_from_params(self):
         """
-        Gracefully constructs a init packet protobuffer from parameters without bytes
+        Gracefully constructs an init packet protobuffer from parameters without bytes
         """
 
         i = InitPacketPB(
@@ -53,12 +53,10 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(hex_bytes, "08ffffffff0f10ffffffff0f1a05ffffffff0f20002800"
                          "300038d2094204080312004800")
 
-        #print i.get_init_packet_pb_bytes();
-
 
     def test_construct_from_params_and_sign(self):
         """
-        Gracefully constructs a init packet protobuffer from parameters without bytes,
+        Gracefully constructs an init packet protobuffer from parameters without bytes,
         then signs it
         """
 
@@ -89,8 +87,8 @@ class TestStringMethods(unittest.TestCase):
 
     def test_construct_from_params_and_not_sign(self):
         """
-        Gracefully constructs a init packet protobuffer from parameters without bytes,
-        then signs it
+        Gracefully constructs an init packet protobuffer from parameters without bytes,
+        skipping the signature process
         """
 
         i = InitPacketPB(

@@ -84,6 +84,25 @@ def display_sec_warning():
 """
     click.echo("{}".format(default_key_warning))
 
+def display_nokey_warning():
+    default_nokey_warning = """
+|===============================================================|
+|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
+|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
+|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
+|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
+|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
+|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
+| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
+|===============================================================|
+|You are not providing a signature key, which means the DFU     |
+|files will not be signed, and are vulnerable to tampering.     |
+|This is only compatible with a signature-less bootloader and is|
+|not suitable for production environments.                      |
+|===============================================================|
+"""
+    click.echo("{}".format(default_nokey_warning))
+
 def display_debug_warning():
     debug_warning = """
 |===============================================================|
@@ -573,7 +592,9 @@ def generate(zipfile,
     else:
         sd_id_list = sd_req_list
 
-    if key_file is not None:
+    if key_file is None:
+        display_nokey_warning()
+    else:
         signer = Signing()
         default_key = signer.load_key(key_file)
         if default_key:
