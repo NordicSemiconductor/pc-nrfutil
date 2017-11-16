@@ -716,7 +716,7 @@ def usb_serial(package, port, flow_control, packet_receipt_notification, baud_ra
               type=click.INT,
               required=False)
 def serial(package, port, flow_control, packet_receipt_notification, baud_rate):
-    """Perform a Device Firmware Update on a device with a bootloader that supports serial DFU."""
+    """Perform a Device Firmware Update on a device with a bootloader that supports UART serial DFU."""
 
     do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, True)
 
@@ -746,7 +746,7 @@ def get_port_by_snr(snr):
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
               required=True)
 @click.option('-ic', '--conn-ic-id',
-              help='Connectivity IC ID: NRF51 or NRF52',
+              help='Connectivity IC family: NRF51 or NRF52',
               type=click.Choice(['NRF51', 'NRF52']),
               required=True)
 @click.option('-p', '--port',
@@ -756,18 +756,22 @@ def get_port_by_snr(snr):
               help='Device name.',
               type=click.STRING)
 @click.option('-a', '--address',
-              help='Device address.',
+              help='BLE address of the DFU target device.',
               type=click.STRING)
 @click.option('-snr', '--jlink_snr',
-              help='Jlink serial number.',
+              help='Jlink serial number for the connectivity IC.',
               type=click.STRING)
 @click.option('-f', '--flash_connectivity',
               help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
 def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity):
+    """
+    Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU.
+    This requires a second nRF device, connected to this computer, with connectivity firmware
+    loaded. The connectivity device will perform the DFU procedure onto the target device.
+    """
     ble_driver_init(conn_ic_id)
-    """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
     if name is None and address is None:
         name = 'DfuTarg'
         click.echo("No target selected. Default device name: {} is used.".format(name))
@@ -842,7 +846,7 @@ def convert_version_string_to_int(s):
               help='Jlink serial number.',
               type=click.STRING)
 @click.option('-f', '--flash_connectivity',
-              help='Flash connectivity firmware automatically. Default: disabled.',
+              help='Flash NCP connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
 @click.option('-s', '--sim',
@@ -860,6 +864,12 @@ def convert_version_string_to_int(s):
 
 def thread(package, port, address, server_port, panid, channel, jlink_snr, flash_connectivity,
            sim, rate, reset_suppress):
+    """
+    Perform a Device Firmware Update on a device that supports Thread DFU.
+    This requires a second nRF device, connected to this computer, with Thread Network
+    CoProcessor (NCP) firmware loaded. The NCP device will perform the DFU procedure onto
+    the target device.
+    """
     ble_driver_init('NRF52')
     from nordicsemi.thread import tncp
     from nordicsemi.thread.dfu_thread import create_dfu_server
@@ -868,7 +878,6 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
 
     mcast_dfu = False
 
-    """Perform a Device Firmware Update on a device with a bootloader that supports Thread DFU."""
     if address is None:
         address = ipaddress.ip_address(u"ff03::1")
         click.echo("Address not specified. Using ff03::1 (all Thread nodes)")
