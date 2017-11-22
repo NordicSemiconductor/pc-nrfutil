@@ -422,7 +422,8 @@ def pkg():
                    '\n|s132_nrf52_4.0.2|0x98|'
                    '\n|s132_nrf52_4.0.3|0x99|'
                    '\n|s132_nrf52_4.0.4|0x9E|'
-                   '\n|s132_nrf52_5.0.0|0x9D|',
+                   '\n|s132_nrf52_5.0.0|0x9D|'
+                   '\n|s132_nrf52_5.1.0|0xA5|',
               type=click.STRING,
               required=True,
               multiple=True)
