@@ -148,6 +148,7 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_4.0.3`    | 0x99
 `s132_nrf52_4.0.4`    | 0x9E
 `s132_nrf52_5.0.0`    | 0x9D
+`s132_nrf52_5.1.0`    | 0xA5
 
 **Note**: The Thread stack doesn't use a SoftDevice but --sd-req option is required for compatibility reasons. You can provide any value for the option as it is ignored during DFU.
 
