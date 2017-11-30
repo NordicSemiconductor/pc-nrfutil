@@ -59,10 +59,10 @@ class ValidationException(NordicSemiException):
 logger = logging.getLogger(__name__)
 
 class Slip(object):
-    SLIP_BYTE_END             = 0300
-    SLIP_BYTE_ESC             = 0333
-    SLIP_BYTE_ESC_END         = 0334
-    SLIP_BYTE_ESC_ESC         = 0335
+    SLIP_BYTE_END             = 0o300
+    SLIP_BYTE_ESC             = 0o333
+    SLIP_BYTE_ESC_END         = 0o334
+    SLIP_BYTE_ESC_ESC         = 0o335
 
     SLIP_STATE_DECODING                 = 1
     SLIP_STATE_ESC_RECEIVED             = 2
@@ -186,7 +186,7 @@ class DfuTransportSerial(DfuTransport):
             self.serial_port = Serial(port=self.com_port,
                 baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
             self.dfu_adapter = DFUAdapter(self.serial_port)
-        except Exception, e:
+        except Exception as e:
             raise NordicSemiException("Serial port could not be opened on {0}"
             + ". Reason: {1}".format(self.com_port, e.message))
 

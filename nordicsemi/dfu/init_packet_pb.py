@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -34,7 +35,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-import dfu_cc_pb2 as pb
+from . import dfu_cc_pb2 as pb
 from enum import Enum
 
 class SigningTypes(Enum):

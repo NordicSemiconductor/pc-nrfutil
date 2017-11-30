@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -55,7 +56,7 @@ from nordicsemi.dfu.manifest import ManifestGenerator, Manifest
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 from nordicsemi.dfu.crc16 import *
 
-from signing import Signing
+from .signing import Signing
 
 HexTypeToInitPacketFwTypemap = {
     HexType.APPLICATION: DFUType.APPLICATION,
