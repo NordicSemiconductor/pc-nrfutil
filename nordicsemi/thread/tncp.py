@@ -170,6 +170,7 @@ class NCPTransport():
         logger.debug("Added")
 
     def print_addresses(self):
+        logger.info("NCP Thread IPv6 addresses:")
         for addr in self._wpan.get_ipaddrs():
             logger.info(unicode(addr))
 

@@ -132,10 +132,11 @@ def int_as_text_to_int(value):
         raise NordicSemiException('%s is not a valid integer' % value)
 
 def pause():
-    try:
-        raw_input()
-    except (KeyboardInterrupt, EOFError):
-        pass
+    while True:
+        try:
+            raw_input()
+        except (KeyboardInterrupt, EOFError):
+            break
 
 class BasedIntOrNoneParamType(click.ParamType):
     name = 'Integer'
@@ -944,9 +945,10 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
 
         transport.open()
         # Delay DFU trigger until NCP promotes to a router (6 seconds by default)
+        click.echo("Waiting for NCP to promote to a router...")
         time.sleep(6.0)
         dfu.trigger(address, 3)
-        click.echo("Press <ENTER> to terminate")
+        click.echo("Thread DFU server is running... Press <Ctrl + C> to stop.")
         pause()
         click.echo("Terminating")
 
