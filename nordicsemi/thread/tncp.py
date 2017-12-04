@@ -217,7 +217,7 @@ class NCPTransport():
         self._wpan.callback_register(SPINEL.PROP_STREAM_NET, self._wpan_receive)
 
         if (self._config[NCPTransport.CFG_KEY_RESET]) and not self._wpan.cmd_reset():
-            raise Exception('Failed to reset NCP. Please flash connectvity firmware.')
+            raise Exception('Failed to reset NCP. Please flash connectivity firmware.')
 
         logger.info('Attaching to the network')
         if (not self._attach_to_network()):

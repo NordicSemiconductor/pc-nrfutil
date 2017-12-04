@@ -84,6 +84,25 @@ def display_sec_warning():
 """
     click.echo("{}".format(default_key_warning))
 
+def display_nokey_warning():
+    default_nokey_warning = """
+|===============================================================|
+|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
+|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
+|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
+|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
+|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
+|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
+| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
+|===============================================================|
+|You are not providing a signature key, which means the DFU     |
+|files will not be signed, and are vulnerable to tampering.     |
+|This is only compatible with a signature-less bootloader and is|
+|not suitable for production environments.                      |
+|===============================================================|
+"""
+    click.echo("{}".format(default_nokey_warning))
+
 def display_debug_warning():
     debug_warning = """
 |===============================================================|
@@ -351,7 +370,7 @@ def display(key_file, key, format, out_file):
             kfile.write(kstr)
 
 
-@cli.group(short_help='Generate a Device Firmware Update package.')
+@cli.group(short_help='Display or generate a DFU package (zip file).')
 def pkg():
     """
     This set of commands supports Nordic DFU package generation.
@@ -359,7 +378,7 @@ def pkg():
     pass
 
 
-@pkg.command(short_help='Generate a firmware package for over-the-air firmware updates.')
+@pkg.command(short_help='Generate a zip file for performing DFU.')
 @click.argument('zipfile',
                 required=True,
                 type=click.Path())
@@ -385,11 +404,14 @@ def pkg():
               type=BASED_INT_OR_NONE)
 @click.option('--hw-version',
               help='The hardware version.',
+              required=True,
               type=BASED_INT)
 @click.option('--sd-req',
-              help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs (1 or more) '
-                   'of which one must be present on the target device. Each item on the list must be in hex and prefixed with \"0x\".'
-                   'A list of the possible values to use with this option follows:'
+              help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs '
+                   '(1 or more) of which one must be present on the target device. Each item on the '
+                   'list must be a two- or four-digit hex number prefixed with \"0x\" (e.g. \"0x12\", '
+                   '\"0x1234\").\n'
+                   'A non-exhaustive list of well-known values to use with this option follows:'
                    '\n|s130_nrf51_1.0.0|0x67|'
                    '\n|s130_nrf51_2.0.0|0x80|'
                    '\n|s132_nrf52_2.0.0|0x81|'
@@ -401,8 +423,10 @@ def pkg():
                    '\n|s132_nrf52_4.0.2|0x98|'
                    '\n|s132_nrf52_4.0.3|0x99|'
                    '\n|s132_nrf52_4.0.4|0x9E|'
-                   '\n|s132_nrf52_5.0.0|0x9D|',
+                   '\n|s132_nrf52_5.0.0|0x9D|'
+                   '\n|s132_nrf52_5.1.0|0xA5|',
               type=click.STRING,
+              required=True,
               multiple=True)
 @click.option('--sd-id',
               help='The new SoftDevice ID to be used as --sd-req for the Application update in case the ZIP '
@@ -414,7 +438,7 @@ def pkg():
               type=click.STRING)
 @click.option('--key-file',
               help='The private (signing) key in PEM fomat.',
-              required=True,
+              required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 def generate(zipfile,
            debug_mode,
@@ -531,7 +555,7 @@ def generate(zipfile,
 
     if application is not None and application_version_internal is None:
         click.echo('Error: --application-version or --application-version-string'
-                   'required with application image.')
+                   ' required with application image.')
         return
 
     if bootloader is not None and bootloader_version is None:
@@ -572,10 +596,13 @@ def generate(zipfile,
     else:
         sd_id_list = sd_req_list
 
-    signer = Signing()
-    default_key = signer.load_key(key_file)
-    if default_key:
-        display_sec_warning()
+    if key_file is None:
+        display_nokey_warning()
+    else:
+        signer = Signing()
+        default_key = signer.load_key(key_file)
+        if default_key:
+            display_sec_warning()
 
     package = Package(debug_mode,
                       hw_version,
@@ -608,7 +635,7 @@ def update_progress(progress=0):
     if global_bar:
         global_bar.update(progress)
 
-@cli.group(short_help='Perform a Device Firmware Update over, BLE, Thread, or serial transport.')
+@cli.group(short_help='Perform a Device Firmware Update over, BLE, Thread, or serial transport given a DFU package (zip file).')
 def dfu():
     """
     This set of commands supports Device Firmware Upgrade procedures over both BLE and serial transports.
@@ -691,7 +718,7 @@ def usb_serial(package, port, flow_control, packet_receipt_notification, baud_ra
               type=click.INT,
               required=False)
 def serial(package, port, flow_control, packet_receipt_notification, baud_rate):
-    """Perform a Device Firmware Update on a device with a bootloader that supports serial DFU."""
+    """Perform a Device Firmware Update on a device with a bootloader that supports UART serial DFU."""
 
     do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, True)
 
@@ -721,7 +748,7 @@ def get_port_by_snr(snr):
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
               required=True)
 @click.option('-ic', '--conn-ic-id',
-              help='Connectivity IC ID: NRF51 or NRF52',
+              help='Connectivity IC family: NRF51 or NRF52',
               type=click.Choice(['NRF51', 'NRF52']),
               required=True)
 @click.option('-p', '--port',
@@ -731,18 +758,22 @@ def get_port_by_snr(snr):
               help='Device name.',
               type=click.STRING)
 @click.option('-a', '--address',
-              help='Device address.',
+              help='BLE address of the DFU target device.',
               type=click.STRING)
 @click.option('-snr', '--jlink_snr',
-              help='Jlink serial number.',
+              help='Jlink serial number for the connectivity IC.',
               type=click.STRING)
 @click.option('-f', '--flash_connectivity',
               help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
 def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity):
+    """
+    Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU.
+    This requires a second nRF device, connected to this computer, with connectivity firmware
+    loaded. The connectivity device will perform the DFU procedure onto the target device.
+    """
     ble_driver_init(conn_ic_id)
-    """Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU."""
     if name is None and address is None:
         name = 'DfuTarg'
         click.echo("No target selected. Default device name: {} is used.".format(name))
@@ -817,7 +848,7 @@ def convert_version_string_to_int(s):
               help='Jlink serial number.',
               type=click.STRING)
 @click.option('-f', '--flash_connectivity',
-              help='Flash connectivity firmware automatically. Default: disabled.',
+              help='Flash NCP connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
 @click.option('-s', '--sim',
@@ -835,6 +866,12 @@ def convert_version_string_to_int(s):
 
 def thread(package, port, address, server_port, panid, channel, jlink_snr, flash_connectivity,
            sim, rate, reset_suppress):
+    """
+    Perform a Device Firmware Update on a device that supports Thread DFU.
+    This requires a second nRF device, connected to this computer, with Thread Network
+    CoProcessor (NCP) firmware loaded. The NCP device will perform the DFU procedure onto
+    the target device.
+    """
     ble_driver_init('NRF52')
     from nordicsemi.thread import tncp
     from nordicsemi.thread.dfu_thread import create_dfu_server
@@ -843,7 +880,6 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
 
     mcast_dfu = False
 
-    """Perform a Device Firmware Update on a device with a bootloader that supports Thread DFU."""
     if address is None:
         address = ipaddress.ip_address(u"ff03::1")
         click.echo("Address not specified. Using ff03::1 (all Thread nodes)")

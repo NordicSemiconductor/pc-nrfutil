@@ -23,8 +23,7 @@ enum HashType {
 	SHA512	= 4;
 }
 
-message Hash
-{
+message Hash {
 	required HashType 	hash_type	= 1;
 	required bytes 		hash		= 2;
 }
@@ -45,8 +44,7 @@ message InitCommand {
     optional bool   is_debug    = 9 [default = false];
 }
 
-message ResetCommand
-{
+message ResetCommand {
 	required uint32 timeout	= 1;
 }
 
