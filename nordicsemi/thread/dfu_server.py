@@ -190,7 +190,6 @@ class ThreadDfuServer():
 
         total_block_count = _block_count(len(self.image_resource.data), block_szx)
 
-
         self._update_progress_bar(request.remote.addr,
                                   self.clients[request.remote],
                                   block_num,
@@ -262,12 +261,22 @@ class ThreadDfuServer():
 
             logger.debug("Uploading resource {} block {} to {}".format(resource.path, num, remote.addr))
 
+            total_block_count = _block_count(len(resource.data), ThreadDfuServer.BLOCK_SZX)
+
+            self._update_progress_bar(remote.addr,
+                                      self.clients[remote],
+                                      num,
+                                      total_block_count)
+
             self._send_block(remote,
                              resource.path,
                              num,
                              more,
                              ThreadDfuServer.BLOCK_SZX,
                              payload)
+
+            if (self.clients[remote].last_block is None) or (self.clients[remote].last_block < num):
+                self.clients[remote].last_block = num
 
             self.bmp_received_event.clear()
             if len(bitmap):
@@ -353,6 +362,8 @@ class ThreadDfuServer():
     def _multicast_upload(self, remote, num_of_requests):
         self.missing_blocks.extend(_make_bitmap(self.init_resource))
         self.missing_blocks.extend(_make_bitmap(self.image_resource))
+
+        self.clients[remote] = ThreadDfuClient()
 
         self._send_trigger(remote, num_of_requests)
         self.trig_done_event.wait()
