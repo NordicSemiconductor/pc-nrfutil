@@ -1,3 +1,4 @@
+from __future__ import print_function
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -53,7 +54,7 @@ try:
     from ecdsa.curves import NIST256p
     from ecdsa.keys import sigencode_string
 except Exception:
-    print "Failed to import ecdsa, cannot do signing"
+    print("Failed to import ecdsa, cannot do signing")
 
 from pc_ble_driver_py.exceptions import InvalidArgumentException, IllegalStateException
 
