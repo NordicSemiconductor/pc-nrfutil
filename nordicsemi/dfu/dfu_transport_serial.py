@@ -115,6 +115,7 @@ class DFUAdapter(object):
 
     def send_message(self, data):
         packet = Slip.encode(data)
+        logger.log(5, 'SLIP: --> ' + str(data))
         self.serial_port.write(packet)
 
     def get_message(self):
@@ -131,6 +132,8 @@ class DFUAdapter(object):
             else:
                 current_state = Slip.SLIP_STATE_CLEARING_INVALID_PACKET
                 return None
+
+        logger.log(5, 'SLIP: <-- ' + str(decoded_data))
 
         return decoded_data
 
