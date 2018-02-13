@@ -180,7 +180,7 @@ class DfuTransportSerial(DfuTransport):
 
 
     def open(self):
-        time.sleep(7)
+        time.sleep(8)
         super(DfuTransportSerial, self).open()
 
         try:
