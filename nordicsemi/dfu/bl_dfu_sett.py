@@ -127,9 +127,24 @@ class BLDFUSettings(object):
         else:
             raise RuntimeError("Unknown architecture")
 
-    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver):
+    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr):
+        """
+        Populates the settings object based on the given parameters.
+
+        :param arch: Architecture family string, e.g. NRF51
+        :param app_file: Path to application file
+        :param app_ver: Application version number
+        :param bl_ver: Bootloader version number
+        :param bl_sett_ver: Bootloader settings version number
+        :param custom_bl_sett_addr: Custom start address for the settings page
+        :return:
+        """
+
         # Set the architecture
         self.set_arch(arch)
+
+        if custom_bl_sett_addr is not None:
+            self.bl_sett_addr = custom_bl_sett_addr
 
         if bl_sett_ver == 1:
             self.setts = BLDFUSettingsStructV1()
