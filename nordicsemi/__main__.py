@@ -48,7 +48,7 @@ sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.dfu import Dfu
-from nordicsemi.dfu.dfu_transport import DfuEvent
+from nordicsemi.dfu.dfu_transport import DfuEvent, TRANSPORT_LOGGING_LEVEL
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
@@ -183,7 +183,7 @@ def cli(verbose, output):
         log_level = logging.DEBUG
     else:
         # Custom level, logs all the bytes sent/received over the wire/air
-        log_level = 5
+        log_level = TRANSPORT_LOGGING_LEVEL
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=log_level)
 
