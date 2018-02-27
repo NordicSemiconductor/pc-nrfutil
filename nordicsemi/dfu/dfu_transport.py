@@ -96,7 +96,7 @@ class DfuTransport(object):
         "The firmware version is too low. For an application, the version must be greater than the current application. For a bootloader, it must be greater than or equal to the current version. This requirement prevents downgrade attacks.""",
         "The hardware version of the device does not match the required hardware version for the update.",
         "The array of supported SoftDevices for the update does not contain the FWID of the current SoftDevice.",
-        "The init packet does not contain a signature. This error code is not used in the current implementation, because init packets without a signature are regarded as invalid.",
+        "The init packet does not contain a signature, but this bootloader requires all updates to have one.",
         "The hash type that is specified by the init packet is not supported by the DFU bootloader.",
         "The hash of the firmware image cannot be calculated.",
         "The type of the signature is unknown or not supported by the DFU bootloader.",
