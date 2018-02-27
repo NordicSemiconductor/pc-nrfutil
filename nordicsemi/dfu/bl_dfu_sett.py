@@ -127,9 +127,24 @@ class BLDFUSettings(object):
         else:
             raise RuntimeError("Unknown architecture")
 
-    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver):
+    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr):
+        """
+        Populates the settings object based on the given parameters.
+
+        :param arch: Architecture family string, e.g. NRF51
+        :param app_file: Path to application file
+        :param app_ver: Application version number
+        :param bl_ver: Bootloader version number
+        :param bl_sett_ver: Bootloader settings version number
+        :param custom_bl_sett_addr: Custom start address for the settings page
+        :return:
+        """
+
         # Set the architecture
         self.set_arch(arch)
+
+        if custom_bl_sett_addr is not None:
+            self.bl_sett_addr = custom_bl_sett_addr
 
         if bl_sett_ver == 1:
             self.setts = BLDFUSettingsStructV1()
@@ -230,9 +245,6 @@ class BLDFUSettings(object):
         self.hex_file = f
         self.ihex.fromfile(f, format='hex')
 
-        # autodetect based on base address
-        base = self.ihex.minaddr()
-
         # check the 3 possible addresses for CRC matches
         try:
             self.probe_settings(BLDFUSettings.bl_sett_51_addr)
@@ -256,21 +268,25 @@ class BLDFUSettings(object):
                         except Exception as e:
                             raise NordicSemiException("Failed to parse .hex file: {0}".format(e))
 
+        self.bl_sett_addr = self.ihex.minaddr()
+
+
     def __str__(self):
         s = """
 Bootloader DFU Settings:
 * File:                 {0}
 * Family:               {1}
-* CRC:                  0x{2:08X}
-* Settings Version:     0x{3:08X} ({3})
-* App Version:          0x{4:08X} ({4})
-* Bootloader Version:   0x{5:08X} ({5})
-* Bank Layout:          0x{6:08X}
-* Current Bank:         0x{7:08X}
-* Application Size:     0x{8:08X} ({8} bytes)
-* Application CRC:      0x{9:08X}
-* Bank0 Bank Code:      0x{10:08X}
-""".format(self.hex_file, self.arch_str, self.crc, self.bl_sett_ver, self.app_ver, self.bl_ver, self.bank_layout, self.bank_current, self.app_sz, self.app_crc, self.bank0_bank_code)
+* Start Address:        0x{2:08X}
+* CRC:                  0x{3:08X}
+* Settings Version:     0x{4:08X} ({4})
+* App Version:          0x{5:08X} ({5})
+* Bootloader Version:   0x{6:08X} ({6})
+* Bank Layout:          0x{7:08X}
+* Current Bank:         0x{8:08X}
+* Application Size:     0x{9:08X} ({9} bytes)
+* Application CRC:      0x{10:08X}
+* Bank0 Bank Code:      0x{11:08X}
+""".format(self.hex_file, self.arch_str, self.bl_sett_addr, self.crc, self.bl_sett_ver, self.app_ver, self.bl_ver, self.bank_layout, self.bank_current, self.app_sz, self.app_crc, self.bank0_bank_code)
         return s
 
     def tohexfile(self, f):
