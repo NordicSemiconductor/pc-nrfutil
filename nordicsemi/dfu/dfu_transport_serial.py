@@ -183,6 +183,7 @@ class DfuTransportSerial(DfuTransport):
 
 
     def open(self):
+        time.sleep(8)
         super(DfuTransportSerial, self).open()
 
         try:
