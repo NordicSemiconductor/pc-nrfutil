@@ -227,6 +227,10 @@ def settings():
               'Defined in nrf_dfu_types.h, the following apply to released SDKs:'
               '\n|SDK12|1|',
               type=BASED_INT_OR_NONE)
+@click.option('--start-address',
+              help='Custom start address for the settings page. If not specified, '
+                   'then the last page of the flash is used.',
+              type=BASED_INT_OR_NONE)
 
 def generate(hex_file,
         family,
@@ -234,7 +238,8 @@ def generate(hex_file,
         application_version,
         application_version_string,
         bootloader_version,
-        bl_settings_version):
+        bl_settings_version,
+        start_address):
 
     # Initial consistency checks
     if family is None:
@@ -266,7 +271,7 @@ def generate(hex_file,
         return
 
     sett = BLDFUSettings()
-    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version)
+    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address)
     sett.tohexfile(hex_file)
 
     click.echo("\nGenerated Bootloader DFU settings .hex file and stored it in: {}".format(hex_file))
