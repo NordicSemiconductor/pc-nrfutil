@@ -48,7 +48,7 @@ sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.dfu import Dfu
-from nordicsemi.dfu.dfu_transport import DfuEvent
+from nordicsemi.dfu.dfu_transport import DfuEvent, TRANSPORT_LOGGING_LEVEL
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
@@ -166,7 +166,7 @@ TEXT_OR_NONE = TextOrNoneParamType()
 
 @click.group()
 @click.option('-v', '--verbose',
-              help='Show verbose information.',
+              help='Increase verbosity of output. Can be specified more than once (up to -v -v -v -v).',
               count=True)
 @click.option('-o', '--output',
               help='Log output to file',
@@ -176,9 +176,14 @@ def cli(verbose, output):
     if verbose == 0:
         log_level = logging.ERROR
     elif verbose == 1:
+        log_level = logging.WARNING
+    elif verbose == 2:
         log_level = logging.INFO
-    else:
+    elif verbose == 3:
         log_level = logging.DEBUG
+    else:
+        # Custom level, logs all the bytes sent/received over the wire/air
+        log_level = TRANSPORT_LOGGING_LEVEL
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=log_level)
 

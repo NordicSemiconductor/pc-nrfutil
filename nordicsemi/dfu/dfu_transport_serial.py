@@ -46,7 +46,7 @@ import struct
 from serial import Serial
 
 # Nordic Semiconductor imports
-from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent
+from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent, TRANSPORT_LOGGING_LEVEL
 from pc_ble_driver_py.exceptions    import NordicSemiException, IllegalStateException
 
 class ValidationException(NordicSemiException):
@@ -115,6 +115,7 @@ class DFUAdapter(object):
 
     def send_message(self, data):
         packet = Slip.encode(data)
+        logger.log(TRANSPORT_LOGGING_LEVEL, 'SLIP: --> ' + str(data))
         self.serial_port.write(packet)
 
     def get_message(self):
@@ -131,6 +132,8 @@ class DFUAdapter(object):
             else:
                 current_state = Slip.SLIP_STATE_CLEARING_INVALID_PACKET
                 return None
+
+        logger.log(TRANSPORT_LOGGING_LEVEL, 'SLIP: <-- ' + str(decoded_data))
 
         return decoded_data
 
