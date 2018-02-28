@@ -652,7 +652,7 @@ def dfu():
     """
     pass
 
-def do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, ping):
+def do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, ping):
 
     if flow_control is None:
         flow_control = DfuTransportSerial.DEFAULT_FLOW_CONTROL
@@ -667,7 +667,7 @@ def do_serial(package, port, flow_control, packet_receipt_notification, baud_rat
     serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate,
                     flow_control=flow_control, prn=packet_receipt_notification, do_ping=ping)
     serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend)
+    dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend, connect_delay = connect_delay)
 
     if logger.getEffectiveLevel() > logging.INFO:
         with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
@@ -688,6 +688,10 @@ def do_serial(package, port, flow_control, packet_receipt_notification, baud_rat
               help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
               required=True)
+@click.option('-cd', '--connect-delay',
+              help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
+              type=click.INT,
+              required=False)
 @click.option('-fc', '--flow-control',
               help='To enable flow control set this flag to 1',
               type=click.BOOL,
@@ -700,10 +704,10 @@ def do_serial(package, port, flow_control, packet_receipt_notification, baud_rat
               help='Set the baud rate',
               type=click.INT,
               required=False)
-def usb_serial(package, port, flow_control, packet_receipt_notification, baud_rate):
+def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate):
     """Perform a Device Firmware Update on a device with a bootloader that supports USB serial DFU."""
 
-    do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, False)
+    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, False)
 
 
 @dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART.")
@@ -715,6 +719,10 @@ def usb_serial(package, port, flow_control, packet_receipt_notification, baud_ra
               help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
               required=True)
+@click.option('-cd', '--connect-delay',
+              help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
+              type=click.INT,
+              required=False)
 @click.option('-fc', '--flow-control',
               help='To enable flow control set this flag to 1',
               type=click.BOOL,
@@ -727,10 +735,10 @@ def usb_serial(package, port, flow_control, packet_receipt_notification, baud_ra
               help='Set the baud rate',
               type=click.INT,
               required=False)
-def serial(package, port, flow_control, packet_receipt_notification, baud_rate):
+def serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate):
     """Perform a Device Firmware Update on a device with a bootloader that supports UART serial DFU."""
 
-    do_serial(package, port, flow_control, packet_receipt_notification, baud_rate, True)
+    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, True)
 
 
 def enumerate_ports():
@@ -764,6 +772,10 @@ def get_port_by_snr(snr):
 @click.option('-p', '--port',
               help='Serial port COM port to which the connectivity IC is connected.',
               type=click.STRING)
+@click.option('-cd', '--connect-delay',
+              help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
+              type=click.INT,
+              required=False)
 @click.option('-n', '--name',
               help='Device name.',
               type=click.STRING)
@@ -777,7 +789,7 @@ def get_port_by_snr(snr):
               help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
-def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity):
+def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flash_connectivity):
     """
     Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU.
     This requires a second nRF device, connected to this computer, with connectivity firmware
@@ -813,7 +825,7 @@ def ble(package, conn_ic_id, port, name, address, jlink_snr, flash_connectivity)
                                   target_device_name=str(name),
                                   target_device_addr=str(address))
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend)
+    dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend, connect_delay = connect_delay)
 
     if logger.getEffectiveLevel() > logging.INFO:
         with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
