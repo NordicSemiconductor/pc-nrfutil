@@ -44,6 +44,7 @@ import struct
 
 # Python 3rd party imports
 from serial import Serial
+from serial.serialutil import SerialException
 
 # Nordic Semiconductor imports
 from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent, TRANSPORT_LOGGING_LEVEL
@@ -116,7 +117,12 @@ class DFUAdapter(object):
     def send_message(self, data):
         packet = Slip.encode(data)
         logger.log(TRANSPORT_LOGGING_LEVEL, 'SLIP: --> ' + str(data))
-        self.serial_port.write(packet)
+        try:
+            self.serial_port.write(packet)
+        except SerialException as e:
+            raise NordicSemiException('Writing to serial port failed: ' + str(e) + '. '
+                                      'If MSD is enabled on the target device, try to disable it ref. '
+                                      'https://wiki.segger.com/index.php?title=J-Link-OB_SAM3U')
 
     def get_message(self):
         current_state = Slip.SLIP_STATE_DECODING
@@ -350,6 +356,11 @@ class DfuTransportSerial(DfuTransport):
     def __calculate_checksum(self):
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['CalcChecSum']])
         response = self.__get_response(DfuTransportSerial.OP_CODE['CalcChecSum'])
+
+        if response is None:
+            raise NordicSemiException('Did not receive checksum response from DFU target. '
+                                      'If MSD is enabled on the target device, try to disable it ref. '
+                                      'https://wiki.segger.com/index.php?title=J-Link-OB_SAM3U')
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
