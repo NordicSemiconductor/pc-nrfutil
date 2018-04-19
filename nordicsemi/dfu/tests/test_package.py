@@ -53,10 +53,7 @@ class TestPackage(unittest.TestCase):
         shutil.rmtree(self.work_directory, ignore_errors=True)
 
     def test_generate_package_application(self):
-        self.p = Package(
-            dev_type=1,
-            dev_rev=2,
-            app_version=100,
+        self.p = Package(app_version=100,
             sd_req=[0x1000, 0xfffe],
             app_fw="firmwares/bar.hex",
             key_file="key.pem"
@@ -64,7 +61,7 @@ class TestPackage(unittest.TestCase):
 
         pkg_name = "mypackage.zip"
 
-        self.p.generate_package(pkg_name, preserve_work_directory=False)
+        self.p.generate_package(pkg_name, preserve_work_dir=False)
         expected_zip_content = ["manifest.json", "bar.bin", "bar.dat"]
 
         with ZipFile(pkg_name, 'r') as pkg:
@@ -86,9 +83,7 @@ class TestPackage(unittest.TestCase):
                 self.assertTrue(u'bootloader' not in _json['manifest'])
 
     def test_generate_package_sd_bl(self):
-        self.p = Package(dev_type=1,
-                         dev_rev=2,
-                         app_version=100,
+        self.p = Package(app_version=100,
                          sd_req=[0x1000, 0xfffe],
                          softdevice_fw="firmwares/foo.hex",
                          bootloader_fw="firmwares/bar.hex",
@@ -97,7 +92,7 @@ class TestPackage(unittest.TestCase):
 
         pkg_name = "mypackage.zip"
 
-        self.p.generate_package(pkg_name, preserve_work_directory=False)
+        self.p.generate_package(pkg_name, preserve_work_dir=False)
 
         expected_zip_content = ["manifest.json", "sd_bl.bin", "sd_bl.dat"]
 
@@ -117,14 +112,12 @@ class TestPackage(unittest.TestCase):
                 self.assertEqual(u'sd_bl.dat', _json['manifest']['softdevice_bootloader']['dat_file'])
 
     def test_unpack_package_a(self):
-        self.p = Package(dev_type=1,
-                         dev_rev=2,
-                         app_version=100,
+        self.p = Package(app_version=100,
                          sd_req=[0x1000, 0xffff],
                          softdevice_fw="firmwares/bar.hex",
                          key_file="key.pem")
         pkg_name = os.path.join(self.work_directory, "mypackage.zip")
-        self.p.generate_package(pkg_name, preserve_work_directory=False)
+        self.p.generate_package(pkg_name, preserve_work_dir=False)
 
         unpacked_dir = os.path.join(self.work_directory, "unpacked")
         manifest = self.p.unpack_package(os.path.join(self.work_directory, pkg_name), unpacked_dir)
@@ -134,14 +127,12 @@ class TestPackage(unittest.TestCase):
 #         self.assertIsNotNone(manifest.softdevice.init_packet_data.firmware_crc16)
 
     def test_unpack_package_b(self):
-        self.p = Package(dev_type=1,
-                         dev_rev=2,
-                         app_version=100,
+        self.p = Package(app_version=100,
                          sd_req=[0x1000, 0xffff],
                          softdevice_fw="firmwares/bar.hex",
                          key_file="key.pem")
         pkg_name = os.path.join(self.work_directory, "mypackage.zip")
-        self.p.generate_package(pkg_name, preserve_work_directory=False)
+        self.p.generate_package(pkg_name, preserve_work_dir=False)
 
         unpacked_dir = os.path.join(self.work_directory, "unpacked")
         manifest = self.p.unpack_package(os.path.join(self.work_directory, pkg_name), unpacked_dir)
@@ -149,14 +140,12 @@ class TestPackage(unittest.TestCase):
         self.assertEqual(u'bar.bin', manifest.softdevice.bin_file)
 
     def test_unpack_package_c(self):
-        self.p = Package(dev_type=1,
-                         dev_rev=2,
-                         app_version=100,
+        self.p = Package(app_version=100,
                          sd_req=[0x1000, 0xffff],
                          softdevice_fw="firmwares/bar.hex",
                          key_file="key.pem")
         pkg_name = os.path.join(self.work_directory, "mypackage.zip")
-        self.p.generate_package(pkg_name, preserve_work_directory=False)
+        self.p.generate_package(pkg_name, preserve_work_dir=False)
 
         unpacked_dir = os.path.join(self.work_directory, "unpacked")
         manifest = self.p.unpack_package(os.path.join(self.work_directory, pkg_name), unpacked_dir)

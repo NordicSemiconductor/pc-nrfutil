@@ -77,21 +77,21 @@ class TestSinging(unittest.TestCase):
         signing = Signing()
         signing.load_key(key_file_name)
 
-        vk_str = signing.get_vk('hex')
+        vk_str = signing.get_vk('hex', False)
         vk_hex = signing.get_vk_hex()
         self.assertEqual(vk_hex, vk_str)
 
-        vk_str = signing.get_vk('code')
-        vk_code = signing.get_vk_code()
+        vk_str = signing.get_vk('code', False)
+        vk_code = signing.get_vk_code(False)
         self.assertEqual(vk_code, vk_str)
 
-        vk_str = signing.get_vk('pem')
+        vk_str = signing.get_vk('pem', False)
         vk_pem = signing.get_vk_pem()
         self.assertEqual(vk_pem, vk_str)
 
     def test_get_vk_hex(self):
         key_file_name = 'key.pem'
-        expected_vk_hex = "Verification key pk: 60f417aabb6bb5b9058aec0570b83fedab1782d62072ae7d691f98dbeda28d654c1d98"\
+        expected_vk_hex = "Public (verification) key pk:\n60f417aabb6bb5b9058aec0570b83fedab1782d62072ae7d691f98dbeda28d654c1d98"\
                           "6cadcd593ad8901084900c1bbdcc4fff62b612b604c22672adcdae9b90"
 
         signing = Signing()
