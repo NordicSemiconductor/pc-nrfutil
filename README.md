@@ -186,7 +186,7 @@ nrfutil pkg display package.zip
 #### dfu
 This set of commands allow you to perform an actual firmware update over a serial, BLE, or Thread connection.
 
-**Note**: When using Homebrew Python on macOS, you may encounter an error: `Fatal Python error: PyThreadState_Get: no current thread Abort trap: 6`. See [issue #46](https://github.com/NordicSemiconductor/pc-nrfutil/issues/46).
+**Note**: When using Homebrew Python on macOS, you may encounter an error: `Fatal Python error: PyThreadState_Get: no current thread Abort trap: 6`. See [issue #46](https://github.com/NordicSemiconductor/pc-nrfutil/issues/46#issuecomment-383930818).
 
 ##### ble
 Perform a full DFU procedure over a BLE connection. This command takes several options that you can list using:
