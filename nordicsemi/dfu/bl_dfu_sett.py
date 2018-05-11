@@ -167,9 +167,11 @@ class BLDFUSettings(object):
             # calculate application size and CRC32
             self.app_sz = int(Package.calculate_file_size(self.app_bin)) & 0xffffffff
             self.app_crc = int(Package.calculate_crc(32, self.app_bin)) & 0xffffffff
+            self.bank0_bank_code = 0x1 & 0xffffffff
         else:
             self.app_sz = 0x0 & 0xffffffff
             self.app_crc = 0x0 & 0xffffffff
+            self.bank0_bank_code = 0x0 & 0xffffffff
 
         # build the uint32_t array
         arr = [0x0] * self.setts.uint32_count
@@ -177,7 +179,6 @@ class BLDFUSettings(object):
         # additional harcoded values
         self.bank_layout = 0x0 & 0xffffffff
         self.bank_current = 0x0 & 0xffffffff
-        self.bank0_bank_code = 0x1 & 0xffffffff
 
         # fill in the settings
         arr[self.setts.offs_sett_ver] = self.bl_sett_ver
