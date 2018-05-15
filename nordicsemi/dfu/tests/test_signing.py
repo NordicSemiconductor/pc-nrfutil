@@ -77,21 +77,21 @@ class TestSinging(unittest.TestCase):
         signing = Signing()
         signing.load_key(key_file_name)
 
-        vk_str = signing.get_vk('hex')
+        vk_str = signing.get_vk('hex', False)
         vk_hex = signing.get_vk_hex()
         self.assertEqual(vk_hex, vk_str)
 
-        vk_str = signing.get_vk('code')
-        vk_code = signing.get_vk_code()
+        vk_str = signing.get_vk('code', False)
+        vk_code = signing.get_vk_code(False)
         self.assertEqual(vk_code, vk_str)
 
-        vk_str = signing.get_vk('pem')
+        vk_str = signing.get_vk('pem', False)
         vk_pem = signing.get_vk_pem()
         self.assertEqual(vk_pem, vk_str)
 
     def test_get_vk_hex(self):
         key_file_name = 'key.pem'
-        expected_vk_hex = "Verification key pk: 60f417aabb6bb5b9058aec0570b83fedab1782d62072ae7d691f98dbeda28d654c1d98"\
+        expected_vk_hex = "Public (verification) key pk:\n60f417aabb6bb5b9058aec0570b83fedab1782d62072ae7d691f98dbeda28d654c1d98"\
                           "6cadcd593ad8901084900c1bbdcc4fff62b612b604c22672adcdae9b90"
 
         signing = Signing()
@@ -103,8 +103,7 @@ class TestSinging(unittest.TestCase):
 
     def test_get_sk_hex(self):
         key_file_name = 'key.pem'
-        expected_vk_hex = "Verification key pk: 60f417aabb6bb5b9058aec0570b83fedab1782d62072ae7d691f98dbeda28d654c1d98"\
-                          "6cadcd593ad8901084900c1bbdcc4fff62b612b604c22672adcdae9b90"
+        expected_vk_hex = "Private (signing) key sk:\n9d37cc501be62612dd44d150a1c6ad69fbf08e9f905e5e860b89ff9e1050963d"
 
         signing = Signing()
         signing.load_key(key_file_name)
@@ -112,26 +111,6 @@ class TestSinging(unittest.TestCase):
         sk_hex = signing.get_sk_hex()
 
         self.assertEqual(expected_vk_hex, sk_hex)
-
-
-
-    def test_get_vk_code(self):
-        key_file_name = 'key.pem'
-
-        expected_vk_code = "static const uint8_t pk[] = { 0x60, 0xf4, 0x17, 0xaa, 0xbb, 0x6b, 0xb5, 0xb9, 0x05, " \
-                           "0x8a, 0xec, 0x05, 0x70, 0xb8, 0x3f, 0xed, 0xab, 0x17, 0x82, 0xd6, 0x20, 0x72, " \
-                           "0xae, 0x7d, 0x69, 0x1f, 0x98, 0xdb, 0xed, 0xa2, 0x8d, 0x65, 0x4c, 0x1d, 0x98, " \
-                           "0x6c, 0xad, 0xcd, 0x59, 0x3a, 0xd8, 0x90, 0x10, 0x84, 0x90, 0x0c, 0x1b, 0xbd, " \
-                           "0xcc, 0x4f, 0xff, 0x62, 0xb6, 0x12, 0xb6, 0x04, 0xc2, 0x26, 0x72, 0xad, 0xcd, " \
-                           "0xae, 0x9b, 0x90 };\n"\
-                           "static const nrf_crypto_key_t crypto_key_pk = { .p_le_data = pk, .len = sizeof(pk) };"
-
-        signing = Signing()
-        signing.load_key(key_file_name)
-
-        vk_code = signing.get_vk_code()
-
-        self.assertEqual(expected_vk_code, vk_code)
 
     def test_get_vk_pem(self):
         key_file_name = 'key.pem'
