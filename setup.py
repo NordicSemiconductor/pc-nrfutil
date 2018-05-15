@@ -44,11 +44,50 @@ USAGE:
 """
 import os
 import platform
+import sys
 
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
 from nordicsemi import version
+
+install_package = True
+try:
+    #    If the version that is being installed is older than the one currently installed, suggest to use a virtual environment.
+    
+    import pkg_resources
+    installed_packages = [d for d in pkg_resources.working_set]
+    flat_installed_packages = [package.project_name for package in installed_packages]
+    package = installed_packages[flat_installed_packages.index('nrfutil')]
+    installed_versions = [int(i) for i in package.version.split(".")]
+    new_versions = [int(i) for i in version.NRFUTIL_VERSION.split(".")]
+    legacy_version = False
+    for v1, v2 in zip(installed_versions, new_versions):
+        if v1 == v2:
+            continue
+        if v2 < v1:
+            legacy_version = True
+        break
+    
+    if legacy_version:
+        valid_response = ["y", "yes"]
+        msg = "A newer version of nrfutil may already be installed. Consider using a separate virtual environment when installing legacy versions. \nProceed (y/N)? "
+        print(msg)
+        sys.stdout.flush()
+        prompt = sys.stdin.readline().strip()
+        if(prompt.lower() not in valid_response):
+            install_package = False
+
+except ImportError:
+    pass # pkg_resources not available.
+except:
+    pass # Nrfutil is not already installed.
+
+
+# Exit program if user doesn't want to replace newer version.
+if(not install_package):
+    sys.exit(1)
+
 
 excludes = ["Tkconstants",
             "Tkinter",
