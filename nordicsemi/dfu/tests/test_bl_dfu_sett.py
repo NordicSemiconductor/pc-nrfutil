@@ -77,7 +77,7 @@ class TestBLDFUSettings(unittest.TestCase):
         self.assertEqual(nRFArch.NRF52, settings.arch)
         self.assertEqual('nRF52', settings.arch_str)
         self.assertEqual(0x0007F000, settings.bl_sett_addr)
-        self.assertEqual(0x2070A601, settings.crc)
+        self.assertEqual(0xEAA3288E, settings.crc)
         self.assertEqual(0x00000001, settings.bl_sett_ver)
         self.assertEqual(0x00000001, settings.app_ver)
         self.assertEqual(0x00000001, settings.bl_ver)
@@ -85,7 +85,7 @@ class TestBLDFUSettings(unittest.TestCase):
         self.assertEqual(0x00000000, settings.bank_current)
         self.assertEqual(0x00000000, settings.app_sz)
         self.assertEqual(0x00000000, settings.app_crc)
-        self.assertEqual(0x00000001, settings.bank0_bank_code)
+        self.assertEqual(0x00000000, settings.bank0_bank_code)
 
     def test_generate_with_application_file(self):
         settings = BLDFUSettings()
