@@ -80,7 +80,7 @@ class TestManifest(unittest.TestCase):
         }
 
     def test_generate_manifest(self):
-        r = ManifestGenerator(0.5, self.firmwares_data_a)
+        r = ManifestGenerator(self.firmwares_data_a)
 
         _json = json.loads(r.generate_manifest())
 
@@ -101,15 +101,15 @@ class TestManifest(unittest.TestCase):
         # Test softdevice_bootloader
         bl_sd = manifest['softdevice_bootloader']
         self.assertIsNotNone(bl_sd)
-        self.assertEqual(90, bl_sd['sd_size'])
-        self.assertEqual(50, bl_sd['bl_size'])
+        self.assertEqual(90, bl_sd['info_read_only_metadata']['sd_size'])
+        self.assertEqual(50, bl_sd['info_read_only_metadata']['bl_size'])
 
         # Test for values in document
         self.assertEqual("sd_bl_fw.bin", bl_sd['bin_file'])
         self.assertEqual("sd_bl_fw.dat", bl_sd['dat_file'])
 
     def test_manifest_a(self):
-        r = ManifestGenerator(0.5, self.firmwares_data_a)
+        r = ManifestGenerator(self.firmwares_data_a)
         m = Manifest.from_json(r.generate_manifest())
         self.assertIsNotNone(m)
         self.assertIsNotNone(m.application)
@@ -118,13 +118,13 @@ class TestManifest(unittest.TestCase):
         self.assertIsNone(m.bootloader)
         self.assertIsNone(m.softdevice)
         self.assertIsNotNone(m.softdevice_bootloader)
-        self.assertEqual(90, m.softdevice_bootloader.sd_size)
-        self.assertEqual(50, m.softdevice_bootloader.bl_size)
+        self.assertEqual(90, m.softdevice_bootloader.info_read_only_metadata.sd_size)
+        self.assertEqual(50, m.softdevice_bootloader.info_read_only_metadata.bl_size)
         self.assertEqual("sd_bl_fw.bin", m.softdevice_bootloader.bin_file)
         self.assertEqual("sd_bl_fw.dat", m.softdevice_bootloader.dat_file)
 
     def test_manifest_b(self):
-        r = ManifestGenerator("0.5", self.firmwares_data_b)
+        r = ManifestGenerator(self.firmwares_data_b)
         m = Manifest.from_json(r.generate_manifest())
         self.assertIsNotNone(m)
         self.assertIsNotNone(m.application)
@@ -138,7 +138,7 @@ class TestManifest(unittest.TestCase):
 
 
     def test_manifest_c(self):
-        r = ManifestGenerator("0.5", self.firmwares_data_c)
+        r = ManifestGenerator(self.firmwares_data_c)
         m = Manifest.from_json(r.generate_manifest())
         self.assertIsNotNone(m)
         self.assertIsNone(m.application)
