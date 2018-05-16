@@ -205,7 +205,6 @@ class DfuTransportSerial(DfuTransport):
             while datetime.now() - start < timedelta(seconds=self.timeout):
                 if self.__ping() == True:
                     ping_success = True
-                time.sleep(1)
 
             if ping_success == False:
                 raise NordicSemiException("No ping response after opening COM port")
