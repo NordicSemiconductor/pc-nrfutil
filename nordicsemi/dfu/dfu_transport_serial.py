@@ -202,7 +202,8 @@ class DfuTransportSerial(DfuTransport):
         if self.do_ping:
             ping_success = False
             start = datetime.now()
-            while datetime.now() - start < timedelta(seconds=self.timeout):
+            while (datetime.now() - start < timedelta(seconds=self.timeout)
+                    and ping_success == False):
                 if self.__ping() == True:
                     ping_success = True
 
