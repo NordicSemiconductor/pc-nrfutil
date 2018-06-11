@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -39,7 +39,7 @@
 Setup script for nrfutil.
 
 USAGE:
-    python setup.py install
+    python2 setup.py install
 
 """
 import os
