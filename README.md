@@ -80,14 +80,14 @@ pip install -r requirements.txt
 
 You can run the program directly without installing it by executing:
 ```
-python nordicsemi/__main__.py
+python2 nordicsemi/__main__.py
 ```
 
 ### Installing from source
 
 To install the library to the local Python site-packages and script folder:  
 ```
-python setup.py install
+python2 setup.py install
 ```
 
 To generate a self-contained executable version of the utility:  
