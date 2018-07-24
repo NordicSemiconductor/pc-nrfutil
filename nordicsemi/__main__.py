@@ -50,6 +50,7 @@ from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent, TRANSPORT_LOGGING_LEVEL
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
+from nordicsemi.dfu.dfu_transport_ant import DfuTransportAnt
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
@@ -1101,6 +1102,54 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
         dfu.dfu_send_images()
 
     click.echo("Device programmed.")
+
+@dfu.command(short_help="Update the firmware on a device over an ANT connection.")
+@click.option('-pkg', '--package',
+              help='Filename of the DFU package.',
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
+              required=True)
+@click.option('-p', '--port',
+              help='ANT USB device to use for performing the update',
+              type=click.INT,
+              required=False)
+@click.option('-cd', '--connect-delay',
+              help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
+              type=click.INT,
+              required=False)
+@click.option('-prn', '--packet-receipt-notification',
+              help='Set the packet receipt notification value',
+              type=click.INT,
+              required=False)
+@click.option('-d', '--debug/--no-debug',
+              help='Enable ANT debug logs',
+              default=False,
+              required=False)
+def ant(package, port, connect_delay, packet_receipt_notification, debug):
+    if port is None:
+        port = DfuTransportAnt.DEFAULT_PORT
+    if packet_receipt_notification is None:
+        packet_receipt_notification = DfuTransportAnt.DEFAULT_PRN
+
+    ant_backend = DfuTransportAnt(port=port, prn=packet_receipt_notification, debug=debug)
+    ant_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    dfu = Dfu(zip_file_path = package, dfu_transport = ant_backend, connect_delay = connect_delay)
+
+    try:
+        if logger.getEffectiveLevel() > logging.INFO:
+            with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
+                global global_bar
+                global_bar = bar
+                dfu.dfu_send_images()
+        else:
+            dfu.dfu_send_images()
+    except Exception:
+        if ant_backend.dfu_adapter and ant_backend.dfu_adapter.ant_dev:
+            # Make sure things get cleaned up if there is an error.
+            ant_backend.dfu_adapter.ant_dev.ant_close()
+        raise
+
+    click.echo("Device programmed.")
+
 
 def convert_version_string_to_int(s):
     """Convert from semver string "1.2.3", to integer 10203"""
