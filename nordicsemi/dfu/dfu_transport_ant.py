@@ -58,9 +58,29 @@ class ValidationException(NordicSemiException):
 
 logger = logging.getLogger(__name__)
 
+class AntParams(object):
+    # 2466 MHz
+    DEF_RF_FREQ = 66
+    # 16 Hz
+    DEF_CHANNEL_PERIOD = 2048
+    # Wildcard specific device.
+    DEF_DEVICE_NUM = 0
+    DEF_DEVICE_TYPE = 10
+    DEF_TRANS_TYPE = 0
+    DEF_NETWORK_KEY = None
+
+    def __init__(self):
+        self.rf_freq = self.DEF_RF_FREQ
+        self.channel_period = self.DEF_CHANNEL_PERIOD
+        self.device_num = self.DEF_DEVICE_NUM
+        self.device_type = self.DEF_DEVICE_TYPE
+        self.trans_type = self.DEF_TRANS_TYPE
+        self.network_key = self.DEF_NETWORK_KEY
+
 class DfuAdapter(object):
     ANT_RSP_TIMEOUT = 100
     ANT_DFU_CHAN = 0
+    ANT_NET_KEY_IDX = 0
 
     DATA_MESGS = (
         antdefs.MESG_BROADCAST_DATA_ID,
@@ -68,10 +88,11 @@ class DfuAdapter(object):
         antdefs.MESG_BURST_DATA_ID,
         antdefs.MESG_ADV_BURST_DATA_ID)
 
-    def __init__(self, ant_dev, timeout, search_timeout):
+    def __init__(self, ant_dev, timeout, search_timeout, ant_config):
         self.ant_dev = ant_dev
         self.timeout = timeout
         self.search_timeout = search_timeout
+        self.ant_config = ant_config
         self.connected = False
         self.tx_result = None
         self.beacon_rx = False
@@ -81,26 +102,31 @@ class DfuAdapter(object):
         self.resp_queue = Queue.Queue()
 
     def open(self):
-        # TODO: most of the channel parameters should be configurable.
         # TODO: use constant from antlib when it exists.
         # Set up advanced burst with optional frequency hopping. This can help
         # Increase the throughput by about 3x.
         self.ant_dev.configure_advanced_burst(True, 3, 0, 0x01,
             response_time_msec=self.ANT_RSP_TIMEOUT)
 
-        self.ant_dev.assign_channel(self.ANT_DFU_CHAN, antdefs.CHTYPE_SLAVE, 0,
-            response_time_msec=self.ANT_RSP_TIMEOUT)
+        if self.ant_config.network_key is not None:
+            self.ant_dev.set_network_key(self.ANT_NET_KEY_IDX,
+                self.ant_config.network_key)
+
+        self.ant_dev.assign_channel(self.ANT_DFU_CHAN, antdefs.CHTYPE_SLAVE,
+            self.ANT_NET_KEY_IDX, response_time_msec=self.ANT_RSP_TIMEOUT)
 
         # The params here are fairly arbitrary, but must match what the device
         # uses. These match the defaults in the example projects.
-        self.ant_dev.set_channel_freq(self.ANT_DFU_CHAN, 66,
+        self.ant_dev.set_channel_freq(self.ANT_DFU_CHAN,
+            self.ant_config.rf_freq, response_time_msec=self.ANT_RSP_TIMEOUT)
+
+        self.ant_dev.set_channel_period(self.ANT_DFU_CHAN,
+            self.ant_config.channel_period,
             response_time_msec=self.ANT_RSP_TIMEOUT)
 
-        self.ant_dev.set_channel_period(self.ANT_DFU_CHAN, 2048,
-            response_time_msec=self.ANT_RSP_TIMEOUT)
-
-        self.ant_dev.set_channel_id(self.ANT_DFU_CHAN, 0, 10, 0,
-            response_time_msec=self.ANT_RSP_TIMEOUT)
+        self.ant_dev.set_channel_id(self.ANT_DFU_CHAN,
+            self.ant_config.device_num, self.ant_config.device_type,
+            self.ant_config.trans_type, response_time_msec=self.ANT_RSP_TIMEOUT)
 
         # Disable high priority search. It doesn't matter much which search
         # is used as there are no other open channels, but configuring only
@@ -260,6 +286,7 @@ class DfuTransportAnt(DfuTransport):
     }
 
     def __init__(self,
+                 ant_config=None,
                  port=DEFAULT_PORT,
                  timeout=DEFAULT_CMD_TIMEOUT,
                  search_timeout=DEFAULT_SEARCH_TIMEOUT,
@@ -267,6 +294,9 @@ class DfuTransportAnt(DfuTransport):
                  debug=DEFAULT_DO_DEBUG):
 
         super(DfuTransportAnt, self).__init__()
+        if ant_config is None:
+            ant_config = AntParams()
+        self.ant_config     = ant_config
         self.port           = port
         self.timeout        = timeout
         self.search_timeout = search_timeout
@@ -295,7 +325,7 @@ class DfuTransportAnt(DfuTransport):
                 "Could not open {0}. Reason: {1}".format(ant_dev, e.message))
 
         self.dfu_adapter = DfuAdapter(
-            ant_dev, self.timeout, self.search_timeout)
+            ant_dev, self.timeout, self.search_timeout, self.ant_config)
         self.dfu_adapter.open()
 
         if not self.__ping():
