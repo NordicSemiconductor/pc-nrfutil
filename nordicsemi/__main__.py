@@ -50,7 +50,7 @@ from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent, TRANSPORT_LOGGING_LEVEL
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
-from nordicsemi.dfu.dfu_transport_ant import DfuTransportAnt
+from nordicsemi.dfu.dfu_transport_ant import DfuTransportAnt, AntParams
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
@@ -1120,17 +1120,51 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
               help='Set the packet receipt notification value',
               type=click.INT,
               required=False)
+@click.option('--period',
+              help='Set the ANT Channel period',
+              type=click.INT,
+              required=False)
+@click.option('--freq',
+              help='Set the ANT RF Frequency',
+              type=click.INT,
+              required=False)
+@click.option('--net-key',
+              help='Set the ANT network key. Must be formated as hexadecimal numbers seperated by dashes ("-")',
+              type=click.STRING,
+              required=False)
+@click.option('--dev-type',
+              help='Set the ANT device type',
+              type=click.INT,
+              required=False)
+@click.option('-srn', '--serial',
+              help='Serial number of device to search for',
+              type=click.INT,
+              required=False)
 @click.option('-d', '--debug/--no-debug',
               help='Enable ANT debug logs',
               default=False,
               required=False)
-def ant(package, port, connect_delay, packet_receipt_notification, debug):
+def ant(package, port, connect_delay, packet_receipt_notification, period,
+        freq, net_key, dev_type, serial, debug):
+    ant_config = AntParams()
     if port is None:
         port = DfuTransportAnt.DEFAULT_PORT
     if packet_receipt_notification is None:
         packet_receipt_notification = DfuTransportAnt.DEFAULT_PRN
+    if period is not None:
+        ant_config.channel_period = period
+    if freq is not None:
+        ant_config.rf_freq = freq
+    if net_key is not None:
+        ant_config.network_key = [int(x, 16) for x in net_key.split('-')]
+    if dev_type is not None:
+        ant_config.device_type = dev_type
+    if serial is not None:
+        ant_config.device_num = serial & 0xFFFF
+        ant_config.trans_type = 0x01 | ((serial >> 12) & 0xF0)
 
-    ant_backend = DfuTransportAnt(port=port, prn=packet_receipt_notification, debug=debug)
+    ant_backend = DfuTransportAnt(port=port, prn=packet_receipt_notification,
+        ant_config=ant_config, debug=debug)
     ant_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = ant_backend, connect_delay = connect_delay)
 
