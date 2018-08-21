@@ -136,7 +136,7 @@ The following table lists the FWIDs which are used to identify the SoftDevice ve
 
 SoftDevice            | FWID (sd-req)
 ----------------------| -------------
-`s112_nrf51_6.0.0`    | 0xA7
+`s112_nrf52_6.0.0`    | 0xA7
 `s130_nrf51_1.0.0`    | 0x67
 `s130_nrf51_2.0.0`    | 0x80
 `s132_nrf52_2.0.0`    | 0x81
