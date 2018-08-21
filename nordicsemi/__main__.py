@@ -422,7 +422,7 @@ def pkg():
                    'list must be a two- or four-digit hex number prefixed with \"0x\" (e.g. \"0x12\", '
                    '\"0x1234\").\n'
                    'A non-exhaustive list of well-known values to use with this option follows:'
-                   '\n|s112_nrf51_6.0.0|0xA7|'
+                   '\n|s112_nrf52_6.0.0|0xA7|'
                    '\n|s130_nrf51_1.0.0|0x67|'
                    '\n|s130_nrf51_2.0.0|0x80|'
                    '\n|s132_nrf52_2.0.0|0x81|'
