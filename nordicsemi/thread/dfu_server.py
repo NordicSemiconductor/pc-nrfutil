@@ -380,6 +380,8 @@ class ThreadDfuServer():
         if (self.opts.reset_suppress > 0):
             self._send_reset_request(remote, num_of_requests, self.opts.reset_suppress)
 
+        logger.info("Thread DFU upload complete")
+
     def _send_trigger(self, remote, num_of_requests):
         logger.info('Triggering DFU on {}'.format(remote))
         request = piccata.message.Message(mtype = piccata.constants.NON,

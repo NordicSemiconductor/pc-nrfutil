@@ -994,7 +994,7 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
         click.echo("Waiting for NCP to promote to a router...")
         time.sleep(6.0)
         dfu.trigger(address, 3)
-        click.echo("Thread DFU server is running... Press <Ctrl + C> to stop.")
+        click.echo("Thread DFU server is running... Press <Ctrl + D> to stop.")
         pause()
         click.echo("Terminating")
 
