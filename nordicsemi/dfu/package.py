@@ -59,10 +59,11 @@ from nordicsemi.dfu.crc16 import *
 from .signing import Signing
 
 HexTypeToInitPacketFwTypemap = {
-    HexType.APPLICATION: DFUType.APPLICATION,
-    HexType.BOOTLOADER: DFUType.BOOTLOADER,
-    HexType.SOFTDEVICE: DFUType.SOFTDEVICE,
-    HexType.SD_BL: DFUType.SOFTDEVICE_BOOTLOADER
+    HexType.APPLICATION:            DFUType.APPLICATION,
+    HexType.BOOTLOADER:             DFUType.BOOTLOADER,
+    HexType.SOFTDEVICE:             DFUType.SOFTDEVICE,
+    HexType.SD_BL:                  DFUType.SOFTDEVICE_BOOTLOADER,
+    HexType.EXTERNAL_APPLICATION:   DFUType.EXTERNAL_APPLICATION
 }
 
 
@@ -121,7 +122,8 @@ class Package(object):
                  app_fw=None,
                  bootloader_fw=None,
                  softdevice_fw=None,
-                 key_file=None):
+                 key_file=None,
+                 external_app=False):
         """
         Constructor that requires values used for generating a Nordic DFU package.
 
@@ -135,6 +137,7 @@ class Package(object):
         :param str bootloader_fw: Path to bootloader firmware file
         :param str softdevice_fw: Path to softdevice firmware file
         :param str key_file: Path to Signing key file (PEM)
+        :param bool external_app: Boolean to state that the application is external type (pass-through)
         :return: None
         """
 
@@ -151,10 +154,17 @@ class Package(object):
         self.firmwares_data = {}
 
         if app_fw:
-            self.__add_firmware_info(firmware_type=HexType.APPLICATION,
-                                     firmware_version=app_version,
-                                     filename=app_fw,
-                                     init_packet_data=init_packet_vars)
+            if external_app is True:
+                self.__add_firmware_info(firmware_type=HexType.APPLICATION,
+                                         firmware_version=app_version,
+                                         filename=app_fw,
+                                         init_packet_data=init_packet_vars)            
+            
+            else:
+                self.__add_firmware_info(firmware_type=HexType.EXTERNAL_APPLICATION,
+                                         firmware_version=app_version,
+                                         filename=app_fw,
+                                         init_packet_data=init_packet_vars)
 
         if sd_req is not None:
             init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
@@ -203,10 +213,11 @@ class Package(object):
         self.rm_work_dir(preserve_work_dir)
 
     def image_str(self, index, hex_type, img):
-        type_strs = {HexType.SD_BL : "sd_bl", 
-                    HexType.SOFTDEVICE : "softdevice",
-                    HexType.BOOTLOADER : "bootloader",
-                    HexType.APPLICATION : "application" }
+        type_strs = {HexType.SD_BL: "sd_bl",
+                     HexType.SOFTDEVICE: "softdevice",
+                     HexType.BOOTLOADER: "bootloader",
+                     HexType.APPLICATION: "application",
+                     HexType.EXTERNAL_APPLICATION: "external application"}
 
         # parse init packet
         with open(os.path.join(self.zip_dir, img.dat_file), "rb") as imgf:
@@ -355,7 +366,7 @@ DFU Package: <{0}>:
             sd_size = 0
             bl_size = 0
             app_size = 0
-            if key == HexType.APPLICATION:
+            if key == HexType.APPLICATION or key == HexType.EXTERNAL_APPLICATION:
                 app_size = bin_length
             elif key == HexType.SOFTDEVICE:
                 sd_size = bin_length
