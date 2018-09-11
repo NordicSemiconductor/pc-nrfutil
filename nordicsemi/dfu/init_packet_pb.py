@@ -114,7 +114,7 @@ class InitPacketPB(object):
         self._validate()
 
     def _validate(self):
-        if self.init_command.type == pb.APPLICATION or self.init_command.type == pb.EXTERNAL_APPLICATION and self.init_command.app_size == 0:
+        if (self.init_command.type == pb.APPLICATION or self.init_command.type == pb.EXTERNAL_APPLICATION ) and self.init_command.app_size == 0:
             raise RuntimeError("app_size is not set. It must be set when type is APPLICATION/EXTERNAL_APPLICATION")
         elif self.init_command.type == pb.SOFTDEVICE and self.init_command.sd_size == 0:
             raise RuntimeError("sd_size is not set. It must be set when type is SOFTDEVICE")
