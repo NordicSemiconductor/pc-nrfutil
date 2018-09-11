@@ -123,7 +123,7 @@ class Package(object):
                  bootloader_fw=None,
                  softdevice_fw=None,
                  key_file=None,
-                 external_app=False):
+                 is_external=False):
         """
         Constructor that requires values used for generating a Nordic DFU package.
 
@@ -137,7 +137,6 @@ class Package(object):
         :param str bootloader_fw: Path to bootloader firmware file
         :param str softdevice_fw: Path to softdevice firmware file
         :param str key_file: Path to Signing key file (PEM)
-        :param bool external_app: Boolean to state that the application is external type (pass-through)
         :return: None
         """
 
@@ -154,7 +153,7 @@ class Package(object):
         self.firmwares_data = {}
 
         if app_fw:
-            if external_app is True:
+            if is_external:
                 self.__add_firmware_info(firmware_type=HexType.APPLICATION,
                                          firmware_version=app_version,
                                          filename=app_fw,
@@ -213,11 +212,11 @@ class Package(object):
         self.rm_work_dir(preserve_work_dir)
 
     def image_str(self, index, hex_type, img):
-        type_strs = {HexType.SD_BL: "sd_bl",
-                     HexType.SOFTDEVICE: "softdevice",
-                     HexType.BOOTLOADER: "bootloader",
-                     HexType.APPLICATION: "application",
-                     HexType.EXTERNAL_APPLICATION: "external application"}
+        type_strs = {HexType.SD_BL : "sd_bl", 
+                    HexType.SOFTDEVICE : "softdevice",
+                    HexType.BOOTLOADER : "bootloader",
+                    HexType.APPLICATION : "application",
+                    HexType.EXTERNAL_APPLICATION : "external application"}
 
         # parse init packet
         with open(os.path.join(self.zip_dir, img.dat_file), "rb") as imgf:

@@ -460,7 +460,7 @@ def pkg():
 @click.option('--external-app',
               help='Indicates that the FW upgrade is intended to be passed through '
                    '(not applied on the receiving device)',
-              type=click.BOOL)
+              type=click.BOOL,is_flag=True,default=False)
 def generate(zipfile,
            debug_mode,
            application,
