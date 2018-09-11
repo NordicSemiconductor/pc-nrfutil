@@ -43,7 +43,6 @@ class SigningTypes(Enum):
     ED25519 = pb.ED25519
 
 class CommandTypes(Enum):
-    RESET = pb.RESET
     INIT = pb.INIT
 
 class HashTypes(Enum):
@@ -59,6 +58,7 @@ class DFUType(Enum):
     SOFTDEVICE = pb.SOFTDEVICE
     BOOTLOADER = pb.BOOTLOADER
     SOFTDEVICE_BOOTLOADER = pb.SOFTDEVICE_BOOTLOADER
+    EXTERNAL_APPLICATION = pb.EXTERNAL_APPLICATION
 
 
 class InitPacketPB(object):
@@ -114,8 +114,8 @@ class InitPacketPB(object):
         self._validate()
 
     def _validate(self):
-        if self.init_command.type == pb.APPLICATION and self.init_command.app_size == 0:
-            raise RuntimeError("app_size is not set. It must be set when type is APPLICATION")
+        if self.init_command.type == pb.APPLICATION or self.init_command.type == pb.EXTERNAL_APPLICATION and self.init_command.app_size == 0:
+            raise RuntimeError("app_size is not set. It must be set when type is APPLICATION/EXTERNAL_APPLICATION")
         elif self.init_command.type == pb.SOFTDEVICE and self.init_command.sd_size == 0:
             raise RuntimeError("sd_size is not set. It must be set when type is SOFTDEVICE")
         elif self.init_command.type == pb.BOOTLOADER and self.init_command.bl_size == 0:

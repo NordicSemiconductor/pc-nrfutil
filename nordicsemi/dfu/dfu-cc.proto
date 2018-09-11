@@ -2,17 +2,12 @@ package dfu;
 
 // Version 0.1
 
-// Definition of enums and types
-enum OpCode {
-	RESET	= 0;
-	INIT	= 1;
-}
-
 enum FwType {
 	APPLICATION				= 0; // default, compatible with proto3
 	SOFTDEVICE				= 1;
 	BOOTLOADER				= 2;
 	SOFTDEVICE_BOOTLOADER	= 3;
+    EXTERNAL_APPLICATION    = 4;
 }
 
 enum HashType {
@@ -23,9 +18,13 @@ enum HashType {
 	SHA512	= 4;
 }
 
+enum OpCode {
+    INIT = 1;
+}
+
 message Hash {
-	required HashType 	hash_type	= 1;
-	required bytes 		hash		= 2;
+	required HashType	hash_type	= 1;
+	required bytes		hash		= 2;
 }
 
 // Commands data
@@ -40,19 +39,14 @@ message InitCommand {
 	optional uint32	app_size	= 7;
 
 	optional Hash	hash		= 8;
-    
-    optional bool   is_debug    = 9 [default = false];
-}
 
-message ResetCommand {
-	required uint32 timeout	= 1;
+	optional bool	is_debug	= 9 [default = false];
 }
 
 // Command type
 message Command {
 	optional OpCode			op_code	= 1;
-	optional InitCommand	init 	= 2;
-	optional ResetCommand	reset 	= 3;
+	optional InitCommand	init	= 2;
 }
 
 // Signed command types
@@ -69,6 +63,6 @@ message SignedCommand {
 
 // Parent packet type
 message Packet {
-	optional Command 		command			= 1;
+	optional Command		command			= 1;
 	optional SignedCommand	signed_command	= 2;
 }
