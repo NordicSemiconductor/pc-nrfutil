@@ -60,12 +60,19 @@ class DFUType(Enum):
     SOFTDEVICE_BOOTLOADER = pb.SOFTDEVICE_BOOTLOADER
     EXTERNAL_APPLICATION = pb.EXTERNAL_APPLICATION
 
+class ValidationTypes(Enum):
+    NO_VALIDATION = pb.NO_VALIDATION
+    VALIDATE_GENERATED_CRC = pb.VALIDATE_GENERATED_CRC
+    VALIDATE_SHA256 = pb.VALIDATE_SHA256
+    VALIDATE_ECDSA_P256_SHA256 = pb.VALIDATE_ECDSA_P256_SHA256
 
 class InitPacketPB(object):
     def __init__(self,
                  from_bytes = None,
                  hash_bytes = None,
                  hash_type = None,
+                 boot_validation_type = [],
+                 boot_validation_bytes = [],
                  dfu_type = None,
                  is_debug=False,
                  fw_version=0xffffffff,
@@ -92,6 +99,10 @@ class InitPacketPB(object):
                 sd_req = [0xfffe]  # Set to default value
             self.packet = pb.Packet()
 
+            boot_validation = []
+            for i, x in enumerate(boot_validation_type):
+                boot_validation.append(pb.BootValidation(type=x.value, bytes=boot_validation_bytes[i]))
+
             # By default, set the packet's command to an unsigned command
             # If a signature is set (via set_signature), this will get overwritten
             # with an instance of SignedCommand instead.
@@ -109,6 +120,7 @@ class InitPacketPB(object):
             self.init_command.bl_size = bl_size
             self.init_command.app_size = app_size
 
+            self.init_command.boot_validation.extend(boot_validation)
             self.packet.command.init.CopyFrom(self.init_command)
 
         self._validate()
