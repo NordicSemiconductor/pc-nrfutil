@@ -457,6 +457,10 @@ def pkg():
               help='The private (signing) key in PEM fomat.',
               required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
+@click.option('--boot-validation',
+              help='Boot validation.',
+              required=False,
+              type=click.STRING)
 def generate(zipfile,
            debug_mode,
            application,
@@ -468,6 +472,7 @@ def generate(zipfile,
            sd_req,
            sd_id,
            softdevice,
+           boot_validation,
            key_file):
     """
     Generate a zip package for distribution to apps that support Nordic DFU OTA.
@@ -630,6 +635,7 @@ def generate(zipfile,
                       application,
                       bootloader,
                       softdevice,
+                      boot_validation,
                       key_file)
 
     package.generate_package(zipfile_path)

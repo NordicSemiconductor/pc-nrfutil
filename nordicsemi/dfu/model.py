@@ -53,3 +53,4 @@ class FirmwareKeys(Enum):
     INIT_PACKET_DATA = 5
     SD_SIZE = 6
     BL_SIZE = 7
+    BOOT_VALIDATION_TYPE = 8
