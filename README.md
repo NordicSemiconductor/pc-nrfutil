@@ -32,6 +32,9 @@ that you are using you will need to select a release of this tool compatible wit
 
 * Version 0.5.2 generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
 * Versions 1.5.0 and later generate modern firmware packages compatible with **nRF SDK 12.0 and newer**
+* Versions 4.0.0 and later generate modern firmware packages compatible with **nRF SDK 15.1 and newer**
+
+**Note**: In order to generate firmware images, compatible with **nRF SDK 12.0 to nRF SDK 15.0**, use `--no-backup` switch during generation of DFU settings.
 
 ## Installing from PyPI
 
@@ -297,6 +300,10 @@ nrfutil keys display --key pk --format code private.pem
 
 #### settings
 This set of commands allow you to generate and display Bootloader DFU settings, which must be present on the last page of available flash memory for the bootloader to function correctly.
+
+After SDK 15.1 release, there is an additional page used in order to backup Bootloader DFU settings during value updates. The backup is stored in a flash page before the DFU settings. As a result, the generated hex file will contain a copy of DFU setting in order to keep settings and their backup consistent.
+
+In order to generate DFU setting page without backup (compatibility mode), please use `--no-backup` switch.
 
 ##### generate
 Generate a flash page of Bootloader DFU settings  and store it in a file in .hex format. This command takes several options that you can list using:

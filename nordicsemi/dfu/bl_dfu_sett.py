@@ -127,7 +127,7 @@ class BLDFUSettings(object):
         else:
             raise RuntimeError("Unknown architecture")
 
-    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr):
+    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr, no_backup):
         """
         Populates the settings object based on the given parameters.
 
@@ -137,6 +137,7 @@ class BLDFUSettings(object):
         :param bl_ver: Bootloader version number
         :param bl_sett_ver: Bootloader settings version number
         :param custom_bl_sett_addr: Custom start address for the settings page
+        :param no_backup: Do not generate DFU setting backup page
         :return:
         """
 
@@ -206,6 +207,10 @@ class BLDFUSettings(object):
 
         # insert the data at the correct address
         self.ihex.puts(self.bl_sett_addr, data)
+
+        if no_backup == False:
+            # Update DFU settings backup page.
+            self.ihex.puts(self.bl_sett_addr - 0x1000, data)
 
     def probe_settings(self, base):
 
