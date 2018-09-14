@@ -138,7 +138,7 @@ setup(
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
     package_data = {
-                '': ['../requirements.txt', 'thread/hex/ncp.hex']
+                '': ['../requirements.txt', 'thread/hex/ncp.hex', 'zigbee/hex/ota.hex']
     },
     install_requires=reqs,
     zipfile=None,
