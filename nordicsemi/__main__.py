@@ -236,6 +236,13 @@ def settings():
               help='Custom start address for the settings page. If not specified, '
                    'then the last page of the flash is used.',
               type=BASED_INT_OR_NONE)
+@click.option('--no-backup',
+              help='Do not overwrite DFU settings backup page. If not specified, '
+                   'than the resulting .hex file will contain a copy of DFU settings, '
+                   'that will overwrite contents of DFU settings backup page.',
+              type=click.BOOL,
+              is_flag=True,
+              required=False)
 
 def generate(hex_file,
         family,
@@ -244,7 +251,8 @@ def generate(hex_file,
         application_version_string,
         bootloader_version,
         bl_settings_version,
-        start_address):
+        start_address,
+        no_backup):
 
     # Initial consistency checks
     if family is None:
@@ -275,8 +283,11 @@ def generate(hex_file,
         click.echo("Error: Bootloader DFU settings version required.")
         return
 
+    if no_backup is None:
+        no_backup = False
+
     sett = BLDFUSettings()
-    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address)
+    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address, no_backup=no_backup)
     sett.tohexfile(hex_file)
 
     click.echo("\nGenerated Bootloader DFU settings .hex file and stored it in: {}".format(hex_file))
