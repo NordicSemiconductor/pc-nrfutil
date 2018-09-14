@@ -154,13 +154,13 @@ class Package(object):
 
         if app_fw:
             if is_external:
-                self.__add_firmware_info(firmware_type=HexType.APPLICATION,
+                self.__add_firmware_info(firmware_type=HexType.EXTERNAL_APPLICATION,
                                          firmware_version=app_version,
                                          filename=app_fw,
                                          init_packet_data=init_packet_vars)            
             
             else:
-                self.__add_firmware_info(firmware_type=HexType.EXTERNAL_APPLICATION,
+                self.__add_firmware_info(firmware_type=HexType.APPLICATION,
                                          firmware_version=app_version,
                                          filename=app_fw,
                                          init_packet_data=init_packet_vars)
