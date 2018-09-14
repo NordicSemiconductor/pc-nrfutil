@@ -55,15 +55,15 @@ from nordicsemi.dfu.init_packet_pb import *
 from nordicsemi.dfu.manifest import ManifestGenerator, Manifest
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 from nordicsemi.dfu.crc16 import *
-from nordicsemi.zigbee.ota_file import *
 
 from .signing import Signing
 
 HexTypeToInitPacketFwTypemap = {
-    HexType.APPLICATION: DFUType.APPLICATION,
-    HexType.BOOTLOADER: DFUType.BOOTLOADER,
-    HexType.SOFTDEVICE: DFUType.SOFTDEVICE,
-    HexType.SD_BL: DFUType.SOFTDEVICE_BOOTLOADER
+    HexType.APPLICATION:            DFUType.APPLICATION,
+    HexType.BOOTLOADER:             DFUType.BOOTLOADER,
+    HexType.SOFTDEVICE:             DFUType.SOFTDEVICE,
+    HexType.SD_BL:                  DFUType.SOFTDEVICE_BOOTLOADER,
+    HexType.EXTERNAL_APPLICATION:   DFUType.EXTERNAL_APPLICATION
 }
 
 
@@ -123,10 +123,7 @@ class Package(object):
                  bootloader_fw=None,
                  softdevice_fw=None,
                  key_file=None,
-                 zigbee_format=False,
-                 manufacturer_id=0,
-                 image_type=0,
-                 comment=''):
+                 is_external=False):
         """
         Constructor that requires values used for generating a Nordic DFU package.
 
@@ -156,10 +153,17 @@ class Package(object):
         self.firmwares_data = {}
 
         if app_fw:
-            self.__add_firmware_info(firmware_type=HexType.APPLICATION,
-                                     firmware_version=app_version,
-                                     filename=app_fw,
-                                     init_packet_data=init_packet_vars)
+            if is_external:
+                self.__add_firmware_info(firmware_type=HexType.EXTERNAL_APPLICATION,
+                                         firmware_version=app_version,
+                                         filename=app_fw,
+                                         init_packet_data=init_packet_vars)            
+            
+            else:
+                self.__add_firmware_info(firmware_type=HexType.APPLICATION,
+                                         firmware_version=app_version,
+                                         filename=app_fw,
+                                         init_packet_data=init_packet_vars)
 
         if sd_req is not None:
             init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
@@ -180,17 +184,6 @@ class Package(object):
 
         self.work_dir = None
         self.manifest = None
-
-        if zigbee_format:
-            self.is_zigbee = True
-            self.image_type = image_type
-            self.manufacturer_id = manufacturer_id
-            self.comment = comment
-        else:
-            self.is_zigbee = False
-            self.image_type = None
-            self.manufacturer_id = None
-            self.comment = None
 
     def __del__(self):
         """
@@ -222,7 +215,8 @@ class Package(object):
         type_strs = {HexType.SD_BL : "sd_bl", 
                     HexType.SOFTDEVICE : "softdevice",
                     HexType.BOOTLOADER : "bootloader",
-                    HexType.APPLICATION : "application" }
+                    HexType.APPLICATION : "application",
+                    HexType.EXTERNAL_APPLICATION : "external application"}
 
         # parse init packet
         with open(os.path.join(self.zip_dir, img.dat_file), "rb") as imgf:
@@ -371,7 +365,7 @@ DFU Package: <{0}>:
             sd_size = 0
             bl_size = 0
             app_size = 0
-            if key == HexType.APPLICATION:
+            if key == HexType.APPLICATION or key == HexType.EXTERNAL_APPLICATION:
                 app_size = bin_length
             elif key == HexType.SOFTDEVICE:
                 sd_size = bin_length
@@ -408,22 +402,6 @@ DFU Package: <{0}>:
 
             firmware_data[FirmwareKeys.DAT_FILENAME] = \
                 init_packet_filename
-
-            if self.is_zigbee:
-                self.zigbee_ota_file = OTA_file(firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],
-                                         len(init_packet.get_init_packet_pb_bytes()),
-                                         binascii.crc32(init_packet.get_init_packet_pb_bytes()) & 0xFFFFFFFF,
-                                         init_packet.get_init_packet_pb_bytes(),
-                                         os.path.getsize(firmware_data[FirmwareKeys.BIN_FILENAME]),
-                                         self.calculate_crc(32, firmware_data[FirmwareKeys.BIN_FILENAME]) & 0xFFFFFFFF,
-                                         bytes(open(firmware_data[FirmwareKeys.BIN_FILENAME]).read()),
-                                         self.manufacturer_id,
-                                         self.image_type,
-                                         self.comment)
-
-                ota_file_handle = open(self.zigbee_ota_file.filename, 'wb')
-                ota_file_handle.write(self.zigbee_ota_file.binary)
-                ota_file_handle.close()
 
         # Store the manifest to manifest.json
         manifest = self.create_manifest()

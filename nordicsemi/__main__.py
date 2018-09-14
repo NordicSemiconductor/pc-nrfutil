@@ -443,7 +443,6 @@ def pkg():
                    '\n|s140_nrf52_6.0.0|0xA9|'
                    '\n|s140_nrf52_6.1.0|0xAE|',
               type=click.STRING,
-              required=True,
               multiple=True)
 @click.option('--sd-id',
               help='The new SoftDevice ID to be used as --sd-req for the Application update in case the ZIP '
@@ -538,6 +537,9 @@ def generate(zipfile,
     if hw_version == 'none':
         hw_version = None
 
+    if external_app == None:
+        external_app = False
+
     # Convert multiple value into a single instance
     if len(sd_req) > 1:
         click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
@@ -586,7 +588,7 @@ def generate(zipfile,
         click.echo("Error: --hw-version required.")
         return
 
-    if sd_req is None:
+    if sd_req is None and external_app is False:
         click.echo("Error: --sd-req required.")
         return
 
@@ -1100,4 +1102,4 @@ def zigbee(file, jlink_snr, channel):
     of.setup_channel()
 
 if __name__ == '__main__':
-    cli()
+    cli(sys.argv[1:])
