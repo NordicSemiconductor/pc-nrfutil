@@ -687,6 +687,13 @@ def generate(zipfile,
     if zigbee_image_type is None:
         zigbee_image_type = 0xFFFF
 
+    # Set the external_app to false in --zigbee is set
+    inner_external_app = external_app
+    if zigbee:
+        inner_external_app = False
+
+    # Generate a DFU package. If --zigbee is set this is the inner DFU package
+    # which will be used as a binary input to the outter DFU package
     package = Package(debug_mode,
                       hw_version,
                       application_version_internal,
@@ -697,7 +704,7 @@ def generate(zipfile,
                       bootloader,
                       softdevice,
                       key_file,
-                      external_app,
+                      inner_external_app,
                       zigbee,
                       zigbee_manufacturer_id,
                       zigbee_image_type,
@@ -705,16 +712,19 @@ def generate(zipfile,
 
     package.generate_package(zipfile_path)
 
-    # Regenerate BLE DFU package for Zigbee DFU purposes.
     if zigbee:
+
         from shutil import copyfile
         from os import remove
 
         log_message = "Zigbee update created at {0}".format(package.zigbee_ota_file.filename)
         click.echo(log_message)
 
+        # Taking the inner Zigbee package as input for the outer DFU package
         binfile = package.zigbee_ota_file.filename.replace(".zigbee", ".bin")
         copyfile(package.zigbee_ota_file.filename, binfile)
+
+        # Create the outer Zigbee DFU package.
         package = Package(debug_mode,
                           hw_version,
                           application_version_internal,
@@ -722,61 +732,9 @@ def generate(zipfile,
                           sd_req_list,
                           sd_id_list,
                           binfile,
-                          bootloader,
-                          softdevice,
-    if zigbee_comment is None:
-        zigbee_comment = ''
-    elif any(ord(char) > 127 for char in zigbee_comment): # Check if all the characters belong to the ASCII range
-        click.echo('Warning: Non-ASCII characters in the comment are not allowed. Discarding comment.')
-        zigbee_comment = ''
-    elif len(zigbee_comment) > 30:
-        click.echo('Warning: truncating the comment to 30 bytes.')
-        zigbee_comment = zigbee_comment[:30]
-
-    if zigbee_manufacturer_id is None:
-        zigbee_manufacturer_id = 0xFFFF
-
-    if zigbee_image_type is None:
-        zigbee_image_type = 0xFFFF
-
-    package = Package(debug_mode,
-                      hw_version,
-                      application_version_internal,
-                      bootloader_version,
-                      sd_req_list,
-                      sd_id_list,
-                      application,
-                      bootloader,
-                      softdevice,
-                      key_file,
-                      False
-                      zigbee,
-                      zigbee_manufacturer_id,
-                      zigbee_image_type,
-                      zigbee_comment)
-
-    package.generate_package(zipfile_path)
-
-    # Regenerate BLE DFU package for Zigbee DFU purposes.
-    if zigbee:
-        from shutil import copyfile
-        from os import remove
-
-        log_message = "Zigbee update created at {0}".format(package.zigbee_ota_file.filename)
-        click.echo(log_message)
-
-        binfile = package.zigbee_ota_file.filename.replace(".zigbee", ".bin")
-        copyfile(package.zigbee_ota_file.filename, binfile)
-        package = Package(debug_mode,
-                          hw_version,
-                          application_version_internal,
-                          bootloader_version,
-                          sd_req_list,
-                          sd_id_list,
-                          binfile,
-                          bootloader,
-                          softdevice,
-                          key_file
+                          None,
+                          None,
+                          key_file,
                           True)
 
         package.generate_package(zipfile_path)
