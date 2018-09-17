@@ -415,16 +415,19 @@ DFU Package: <{0}>:
                 init_packet_filename
 
             if self.is_zigbee:
-                self.zigbee_ota_file = OTA_file(firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],
-                                         len(init_packet.get_init_packet_pb_bytes()),
-                                         binascii.crc32(init_packet.get_init_packet_pb_bytes()) & 0xFFFFFFFF,
-                                         init_packet.get_init_packet_pb_bytes(),
-                                         os.path.getsize(firmware_data[FirmwareKeys.BIN_FILENAME]),
-                                         self.calculate_crc(32, firmware_data[FirmwareKeys.BIN_FILENAME]) & 0xFFFFFFFF,
-                                         bytes(open(firmware_data[FirmwareKeys.BIN_FILENAME]).read()),
-                                         self.manufacturer_id,
-                                         self.image_type,
-                                         self.comment)
+                firmware_version = firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION]
+                file_name = firmware_data[FirmwareKeys.BIN_FILENAME]
+
+                self.zigbee_ota_file = OTA_file(firmware_version,
+                                                len(init_packet.get_init_packet_pb_bytes()),
+                                                binascii.crc32(init_packet.get_init_packet_pb_bytes()) & 0xFFFFFFFF,
+                                                init_packet.get_init_packet_pb_bytes(),
+                                                os.path.getsize(file_name),
+                                                self.calculate_crc(32, file_name) & 0xFFFFFFFF,
+                                                bytes(open(file_name, 'rb').read()),
+                                                self.manufacturer_id,
+                                                self.image_type,
+                                                self.comment)
 
                 ota_file_handle = open(self.zigbee_ota_file.filename, 'wb')
                 ota_file_handle.write(self.zigbee_ota_file.binary)
