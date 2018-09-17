@@ -542,7 +542,7 @@ def generate(zipfile,
     if hw_version == 'none':
         hw_version = None
 
-    if external_app == None:
+    if external_app is None:
         external_app = False
 
     # Convert multiple value into a single instance
