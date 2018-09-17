@@ -55,6 +55,7 @@ from nordicsemi.dfu.init_packet_pb import *
 from nordicsemi.dfu.manifest import ManifestGenerator, Manifest
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 from nordicsemi.dfu.crc16 import *
+from nordicsemi.zigbee.ota_file import *
 
 from .signing import Signing
 
@@ -123,7 +124,12 @@ class Package(object):
                  bootloader_fw=None,
                  softdevice_fw=None,
                  key_file=None,
-                 is_external=False):
+                 is_external=False,
+                 zigbee_format=False,
+                 manufacturer_id=0,
+                 image_type=0,
+                 comment=''):
+
         """
         Constructor that requires values used for generating a Nordic DFU package.
 
@@ -178,6 +184,17 @@ class Package(object):
 
         self.work_dir = None
         self.manifest = None
+
+        if zigbee_format:
+            self.is_zigbee = True
+            self.image_type = image_type
+            self.manufacturer_id = manufacturer_id
+            self.comment = comment
+        else:
+            self.is_zigbee = False
+            self.image_type = None
+            self.manufacturer_id = None
+            self.comment = None
 
     def __del__(self):
         """
@@ -396,6 +413,25 @@ DFU Package: <{0}>:
 
             firmware_data[FirmwareKeys.DAT_FILENAME] = \
                 init_packet_filename
+
+            if self.is_zigbee:
+                firmware_version = firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION]
+                file_name = firmware_data[FirmwareKeys.BIN_FILENAME]
+
+                self.zigbee_ota_file = OTA_file(firmware_version,
+                                                len(init_packet.get_init_packet_pb_bytes()),
+                                                binascii.crc32(init_packet.get_init_packet_pb_bytes()) & 0xFFFFFFFF,
+                                                init_packet.get_init_packet_pb_bytes(),
+                                                os.path.getsize(file_name),
+                                                self.calculate_crc(32, file_name) & 0xFFFFFFFF,
+                                                bytes(open(file_name, 'rb').read()),
+                                                self.manufacturer_id,
+                                                self.image_type,
+                                                self.comment)
+
+                ota_file_handle = open(self.zigbee_ota_file.filename, 'wb')
+                ota_file_handle.write(self.zigbee_ota_file.binary)
+                ota_file_handle.close()
 
         # Store the manifest to manifest.json
         manifest = self.create_manifest()
