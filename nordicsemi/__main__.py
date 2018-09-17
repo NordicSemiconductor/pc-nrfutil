@@ -476,18 +476,6 @@ def pkg():
               help='Firmware comment to be used in Zigbee OTA header.',
               required=False,
               type=click.STRING)
-@click.option('--zigbee-manufacturer-id',
-              help='Manufacturer ID to be used in Zigbee OTA header.',
-              required=False,
-              type=BASED_INT)
-@click.option('--zigbee-image-type',
-              help='Image type to be used in Zigbee OTA header.',
-              required=False,
-              type=BASED_INT)
-@click.option('--zigbee-comment',
-              help='Firmware comment to be used in Zigbee OTA header.',
-              required=False,
-              type=click.STRING)
 def generate(zipfile,
            debug_mode,
            application,
