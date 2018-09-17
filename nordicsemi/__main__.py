@@ -459,7 +459,7 @@ def pkg():
 @click.option('--external-app',
               help='Indicates that the FW upgrade is intended to be passed through '
                    '(not applied on the receiving device)',
-              type=click.BOOL,is_flag=True,default=False)
+              type=click.BOOL, is_flag=True, default=False)
 @click.option('--zigbee',
               help='Create an image and distribution package for Zigbee DFU server.',
               required=False,
@@ -476,6 +476,14 @@ def pkg():
               help='Firmware comment to be used in Zigbee OTA header.',
               required=False,
               type=click.STRING)
+@click.option('--zigbee-ota-hw-version',
+              help='The zigbee OTA hw version.',
+              required=False,
+              type=BASED_INT_OR_NONE)
+@click.option('--zigbee-ota-fw-version',
+              help='The zigbee OTA fw version.',
+              required=False,
+              type=BASED_INT_OR_NONE)
 def generate(zipfile,
            debug_mode,
            application,
@@ -492,7 +500,9 @@ def generate(zipfile,
            zigbee,
            zigbee_manufacturer_id,
            zigbee_image_type,
-           zigbee_comment):
+           zigbee_comment,
+           zigbee_ota_hw_version,
+           zigbee_ota_fw_version):
     """
     Generate a zip package for distribution to apps that support Nordic DFU OTA.
     The application, bootloader, and SoftDevice files are converted to .bin if supplied as .hex files.
@@ -544,6 +554,12 @@ def generate(zipfile,
 
     if external_app is None:
         external_app = False
+
+    if zigbee_ota_hw_version == 'none':
+        zigbee_ota_hw_version = None
+
+    if zigbee_ota_fw_version == 'none':
+        zigbee_ota_fw_version = None
 
     # Convert multiple value into a single instance
     if len(sd_req) > 1:
@@ -617,16 +633,23 @@ def generate(zipfile,
         return
 
     if application is None and external_app is True:
-        click.echo("Error: --external_app requires an application.")
+        click.echo("Error: --external-app requires an application.")
         return
 
     if application is not None and softdevice is not None and external_app is True:
-        click.echo("Error: --external_app is only possible for application only DFU packages.")
+        click.echo("Error: --external-app is only possible for application only DFU packages.")
         return
 
     if application is not None and bootloader is not None and external_app is True:
-        click.echo("Error: --external_app is only possible for application only DFU packages.")
+        click.echo("Error: --external-app is only possible for application only DFU packages.")
         return
+
+    if zigbee and zigbee_ota_hw_version is None:
+        click.echo("Error: --zigbee-ota-hw-version is required.")
+        return
+
+    if zigbee and zigbee_ota_fw_version is None:
+        zigbee_ota_fw_version = 0
 
     sd_req_list = []
     if sd_req is not None:
@@ -720,9 +743,9 @@ def generate(zipfile,
 
         # Create the outer Zigbee DFU package.
         package = Package(debug_mode,
-                          hw_version,
-                          application_version_internal,
-                          bootloader_version,
+                          zigbee_ota_hw_version,
+                          zigbee_ota_fw_version,
+                          None,
                           sd_req_list,
                           sd_id_list,
                           binfile,
@@ -1120,4 +1143,4 @@ def zigbee(file, jlink_snr, channel):
     of.setup_channel()
 
 if __name__ == '__main__':
-    cli()
+    cli(sys.argv[1:])
