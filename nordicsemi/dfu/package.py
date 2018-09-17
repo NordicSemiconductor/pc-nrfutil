@@ -159,17 +159,11 @@ class Package(object):
         self.firmwares_data = {}
 
         if app_fw:
-            if is_external:
-                self.__add_firmware_info(firmware_type=HexType.EXTERNAL_APPLICATION,
-                                         firmware_version=app_version,
-                                         filename=app_fw,
-                                         init_packet_data=init_packet_vars)            
-            
-            else:
-                self.__add_firmware_info(firmware_type=HexType.APPLICATION,
-                                         firmware_version=app_version,
-                                         filename=app_fw,
-                                         init_packet_data=init_packet_vars)
+            firmware_type = HexType.EXTERNAL_APPLICATION if is_external else HexType.APPLICATION
+            self.__add_firmware_info(firmware_type=firmware_type,
+                                     firmware_version=app_version,
+                                     filename=app_fw,
+                                     init_packet_data=init_packet_vars)
 
         if sd_req is not None:
             init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
@@ -382,7 +376,7 @@ DFU Package: <{0}>:
             sd_size = 0
             bl_size = 0
             app_size = 0
-            if key == HexType.APPLICATION or key == HexType.EXTERNAL_APPLICATION:
+            if key in [HexType.APPLICATION, HexType.EXTERNAL_APPLICATION]:
                 app_size = bin_length
             elif key == HexType.SOFTDEVICE:
                 sd_size = bin_length
