@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016 Nordic Semiconductor ASA
+# Copyright (c) 2018 Nordic Semiconductor ASA
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -35,6 +35,4 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-""" Version definition for nrfutil. """
-
-NRFUTIL_VERSION = "3.6.0"
+"""Package with Zigbee OTA file functionality."""

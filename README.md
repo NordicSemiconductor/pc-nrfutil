@@ -14,6 +14,7 @@ This application and its library offer the following features:
 * Bootloader DFU settings generation and display
 * Device Firmware Update procedure over Bluetooth Low Energy
 * Device Firmware Update procedure over Thread
+* Device Firmware Update procedure over Zigbee
 
 ## License
 
@@ -44,7 +45,7 @@ This will also retrieve and install all additional required packages.
 
 **Note**: When installing on macOS, you may need to add ` --ignore-installed six` when running pip. See [issue #79](https://github.com/NordicSemiconductor/pc-nrfutil/issues/79).
 
-**Note**: To use the `dfu ble` or `dfu thread` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
+**Note**: To use the `dfu ble`, `dfu thread`, or `dfu zigbee` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
 
 ## Downloading precompiled Windows executable
 
@@ -102,7 +103,7 @@ pyinstaller /full/path/to/nrfutil.spec
 
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
-**Note**: To use the `dfu ble` or `dfu thread` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
+**Note**: To use the `dfu ble`, `dfu thread`, or `dfu zigbee` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
 
 ## Usage
 
@@ -157,7 +158,7 @@ SoftDevice            | FWID (sd-req)
 `s140_nrf52_6.0.0`    | 0xA9
 `s140_nrf52_6.1.0`    | 0xAE
 
-**Note**: The Thread stack doesn't use a SoftDevice but --sd-req option is required for compatibility reasons. You can provide any value for the option as it is ignored during DFU.
+**Note**: The Thread, and Zigbee stacks don't use a SoftDevice but --sd-req option is required for compatibility reasons. You can provide any value for the option as it is ignored during DFU.
 
 Not all combinations of Bootloader, SoftDevice and Application are possible when generating a package. The table below summarizes the support for different combinations.
 
@@ -182,6 +183,12 @@ SD + APP      | Yes       | **See notes 1 and 2 below**
 **Note 2:** When updating SD (+ BL) + APP the update is done in 2 following connections, unless a custom bootloader is used. First the SD (+ BL) is updated, then the bootloader will disconnect and the (new) BL will start advertising. Second connection to the bootloader will update the APP. However, the two SDs may have different IDs. The first update requires `--sd-req` to be set to the ID of the old SD. Update of the APP requires the ID of the new SD. In that case the new ID must be set using `--sd-id` parameter. This parameter is
 was added in nrfutil 3.1.0 and is required since 3.2.0 in case the package should contain SD (+ BL) + APP. Also, since version 3.2.0 the new ID is copied to `--sd-req` list so that
 in case of a link loss during APP update the DFU process can be restarted. In that case the new SD would overwrite itself, so `--sd-req` must contain also the ID of the new SD.
+
+The boolean option '--zigbee' enables the generation of Zigbee update file in addition to the zip package. The following example demostrates the generation of such update file:
+```
+nrfutil pkg generate --hw-version 52 --sd-req 0 --application-version 0x01020101 --application nrf52840_xxaa.hex --key-file ../priv.pem app_dfu_package.zip --zigbee True --manufacturer-id 0xCAFE --image-type 0x1234 --comment good_image
+```
+**Note 3:** The generated Zigbee update file is named according to the recomendation of the Zigbee Specification ([Zigbee Cluster Library Specification 11.5 - Zigbee Document 07-5123-06](http://www.zigbee.org/~zigbeeor/wp-content/uploads/2014/10/07-5123-06-zigbee-cluster-library-specification.pdf)), so the user doesn't provide the name of the Update file.
 
 ##### display
 Use this option to display the contents of a DFU package in a .zip file.
@@ -218,7 +225,19 @@ nrfutil dfu ble -pkg app_dfu_package.zip -p COM3 -f
 ```
 The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a network co-processor (NCP). Use with caution as this will overwrite the contents of the IC's flash memory.
 
-##### serial
+##### Zigbee
+**Note**: DFU over Zigbee OTA is experimental
+
+Perform a full DFU procedure over Zigbee network using ZCL OTA Upgrade Cluster. This command takes several options that you can list using:
+```
+nrfutil dfu zigbee --help
+```
+Below is an example of the execution of a DFU procedure using a file generated above using a OTA Upgrade server deployed on a DK with a OTA Upgrade Server operating on the 802.15.4 channel.
+```
+nrfutil dfu zigbee -f CAFE-1234-good_image.zigbee -snr 683604699 -chan 20
+```
+
+##### Serial
 
 Perform a full DFU procedure over a UART serial line. The DFU target shall be configured to use some of its digital I/O pins as UART.
 
