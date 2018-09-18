@@ -73,13 +73,14 @@ class BLDFUSettingsStructV1(object):
 class BLDFUSettings(object):
     """ Class to abstract a bootloader and its settings """
 
-    flash_page_51_sz     = 0x400
-    flash_page_52_sz     = 0x1000
-    bl_sett_51_addr      = 0x0003FC00
-    bl_sett_52_addr      = 0x0007F000
-    bl_sett_52_qfab_addr = 0x0003F000
-    bl_sett_52810_addr   = 0x0002F000
-    bl_sett_52840_addr   = 0x000FF000
+    flash_page_51_sz      = 0x400
+    flash_page_52_sz      = 0x1000
+    bl_sett_51_addr       = 0x0003FC00
+    bl_sett_52_addr       = 0x0007F000
+    bl_sett_52_qfab_addr  = 0x0003F000
+    bl_sett_52810_addr    = 0x0002F000
+    bl_sett_52840_addr    = 0x000FF000
+    bl_sett_backup_offset = 0x1000
 
 
     def __init__(self, ):
@@ -127,7 +128,7 @@ class BLDFUSettings(object):
         else:
             raise RuntimeError("Unknown architecture")
 
-    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr, no_backup):
+    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr, no_backup, backup_address):
         """
         Populates the settings object based on the given parameters.
 
@@ -138,6 +139,7 @@ class BLDFUSettings(object):
         :param bl_sett_ver: Bootloader settings version number
         :param custom_bl_sett_addr: Custom start address for the settings page
         :param no_backup: Do not generate DFU setting backup page
+        :param backup_address: Custom bootloader settings backup page address
         :return:
         """
 
@@ -208,9 +210,12 @@ class BLDFUSettings(object):
         # insert the data at the correct address
         self.ihex.puts(self.bl_sett_addr, data)
 
+        if backup_address is None:
+            backup_address = self.bl_sett_addr - self.bl_sett_backup_offset
+
         if no_backup == False:
             # Update DFU settings backup page.
-            self.ihex.puts(self.bl_sett_addr - 0x1000, data)
+            self.ihex.puts(backup_address, data)
 
     def probe_settings(self, base):
 
