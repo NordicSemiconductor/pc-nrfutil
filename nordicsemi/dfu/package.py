@@ -416,7 +416,7 @@ DFU Package: <{0}>:
                                          init_packet.get_init_packet_pb_bytes(),
                                          os.path.getsize(firmware_data[FirmwareKeys.BIN_FILENAME]),
                                          self.calculate_crc(32, firmware_data[FirmwareKeys.BIN_FILENAME]) & 0xFFFFFFFF,
-                                         bytes(open(firmware_data[FirmwareKeys.BIN_FILENAME]).read()),
+                                         bytes(open(firmware_data[FirmwareKeys.BIN_FILENAME], 'rb').read()),
                                          self.manufacturer_id,
                                          self.image_type,
                                          self.comment)
