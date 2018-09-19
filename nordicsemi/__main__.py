@@ -121,6 +121,25 @@ def display_debug_warning():
 """
     click.echo("{}".format(debug_warning))
 
+def display_settings_backup_warning():
+    debug_warning = """
+|===============================================================|
+|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
+|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
+|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
+|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
+|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
+|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
+| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
+|===============================================================|
+|You are generating a DFU settings page with backup page        |
+|included. This is only required for bootloaders from nRF SDK   |
+|15.1 and newer. If you want to skip backup page genetation,    |
+|use --no-backup option.                                        |
+|===============================================================|
+"""
+    click.echo("{}".format(debug_warning))
+
 def int_as_text_to_int(value):
     try:
         if value[:2].lower() == '0x':
@@ -296,6 +315,9 @@ def generate(hex_file,
 
     if no_backup is None:
         no_backup = False
+
+    if no_backup == False:
+        display_settings_backup_warning()
 
     if (start_address is not None) and (backup_address is None):
         click.echo("WARNING: Using default offset in order to calculate bootloader settings backup page")
