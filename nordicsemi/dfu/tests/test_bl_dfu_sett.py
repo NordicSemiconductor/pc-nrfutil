@@ -72,7 +72,9 @@ class TestBLDFUSettings(unittest.TestCase):
                           app_ver=1,
                           bl_ver=1,
                           bl_sett_ver=1,
-                          custom_bl_sett_addr=None)
+                          custom_bl_sett_addr=None,
+                          no_backup=False,
+                          backup_address=None)
 
         self.assertEqual(nRFArch.NRF52, settings.arch)
         self.assertEqual('nRF52', settings.arch_str)
@@ -94,7 +96,9 @@ class TestBLDFUSettings(unittest.TestCase):
                           app_ver=1,
                           bl_ver=1,
                           bl_sett_ver=1,
-                          custom_bl_sett_addr=None)
+                          custom_bl_sett_addr=None,
+                          no_backup=False,
+                          backup_address=None)
 
         self.assertEqual(nRFArch.NRF52, settings.arch)
         self.assertEqual('nRF52', settings.arch_str)
@@ -116,9 +120,77 @@ class TestBLDFUSettings(unittest.TestCase):
                           app_ver=1,
                           bl_ver=1,
                           bl_sett_ver=1,
-                          custom_bl_sett_addr=0x0006F000)
+                          custom_bl_sett_addr=0x0006F000,
+                          no_backup=False,
+                          backup_address=None)
 
         self.assertEqual(settings.bl_sett_addr, 0x0006F000)
+
+    def test_generate_with_backup_page_check_size(self):
+        settings_raw = BLDFUSettings()
+        settings_raw.generate(arch='NRF52',
+                             app_file=None,
+                             app_ver=1,
+                             bl_ver=1,
+                             bl_sett_ver=1,
+                             custom_bl_sett_addr=None,
+                             no_backup=True,
+                             backup_address=None)
+
+        settings = BLDFUSettings()
+        settings.generate(arch='NRF52',
+                          app_file=None,
+                          app_ver=1,
+                          bl_ver=1,
+                          bl_sett_ver=1,
+                          custom_bl_sett_addr=None,
+                          no_backup=False,
+                          backup_address=None)
+
+        self.assertEqual(len(settings.ihex.todict().keys()), len(settings_raw.ihex.todict().keys()) * 2)
+
+    def test_generate_with_backup_page_check_values(self):
+        settings = BLDFUSettings()
+        settings.generate(arch='NRF52',
+                          app_file=None,
+                          app_ver=1,
+                          bl_ver=1,
+                          bl_sett_ver=1,
+                          custom_bl_sett_addr=None,
+                          no_backup=False,
+                          backup_address=None)
+
+        backup_dict = {(k + settings.bl_sett_backup_offset): v for k, v in settings.ihex.todict().items() if k < settings.bl_sett_addr}
+        settings_dict = {k: v for k, v in settings.ihex.todict().items() if k >= settings.bl_sett_addr}
+        self.assertEqual(backup_dict, settings_dict)
+
+    def test_generate_with_backup_page_custom_address(self):
+        settings = BLDFUSettings()
+        settings.generate(arch='NRF52',
+                          app_file=None,
+                          app_ver=1,
+                          bl_ver=1,
+                          bl_sett_ver=1,
+                          custom_bl_sett_addr=None,
+                          no_backup=False,
+                          backup_address=0x0006F000)
+
+        self.assertEqual(settings.backup_address, 0x0006F000)
+        self.assertTrue(0x0006F000 in settings.ihex.todict().keys())
+
+    def test_generate_with_backup_page_default_address(self):
+        settings = BLDFUSettings()
+        settings.generate(arch='NRF52',
+                          app_file=None,
+                          app_ver=1,
+                          bl_ver=1,
+                          bl_sett_ver=1,
+                          custom_bl_sett_addr=0x0006F000,
+                          no_backup=False,
+                          backup_address=None)
+
+        self.assertEqual(settings.backup_address, (0x0006F000 - settings.bl_sett_backup_offset))
+        self.assertTrue((0x0006F000 - settings.bl_sett_backup_offset) in settings.ihex.todict().keys())
 
 
 if __name__ == '__main__':
