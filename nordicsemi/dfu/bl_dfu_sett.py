@@ -211,11 +211,13 @@ class BLDFUSettings(object):
         self.ihex.puts(self.bl_sett_addr, data)
 
         if backup_address is None:
-            backup_address = self.bl_sett_addr - self.bl_sett_backup_offset
+            self.backup_address = self.bl_sett_addr - self.bl_sett_backup_offset
+        else:
+            self.backup_address = backup_address
 
         if no_backup == False:
             # Update DFU settings backup page.
-            self.ihex.puts(backup_address, data)
+            self.ihex.puts(self.backup_address, data)
 
     def probe_settings(self, base):
 
