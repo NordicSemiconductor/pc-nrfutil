@@ -379,6 +379,14 @@ def display(key_file, key, format, out_file):
         with open(out_file, "w") as kfile:
             kfile.write(kstr)
 
+BOOT_VALIDATION_ARGS =\
+[
+    'NO_VALIDATION',
+    'VALIDATE_GENERATED_CRC',
+    'VALIDATE_GENERATED_SHA256',
+    'VALIDATE_ECDSA_P256_SHA256',
+]
+
 
 @cli.group(short_help='Display or generate a DFU package (zip file).')
 def pkg():
@@ -458,7 +466,7 @@ def pkg():
               required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 @click.option('--boot-validation',
-              help='Boot validation.',
+              help='The method of boot validation. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
               required=False,
               type=click.STRING)
 def generate(zipfile,
@@ -625,6 +633,10 @@ def generate(zipfile,
         default_key = signer.load_key(key_file)
         if default_key:
             display_sec_warning()
+
+    if boot_validation not in BOOT_VALIDATION_ARGS:
+        click.echo("Error: --boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+        return
 
     package = Package(debug_mode,
                       hw_version,
