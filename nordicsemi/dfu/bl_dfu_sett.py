@@ -57,17 +57,19 @@ logger = logging.getLogger(__name__)
 
 class BLDFUSettingsStructV1(object):
 
-    def __init__(self):
-        self.uint32_count = (4 + 2 + (3 * 2) + 2 + (3 + 1 + 4) + 1)
-        self.offs_crc               = 0
-        self.offs_sett_ver          = 1
-        self.offs_app_ver           = 2
-        self.offs_bl_ver            = 3
-        self.offs_bank_layout       = 4
-        self.offs_bank_current      = 5
-        self.offs_bank0_img_sz      = 6
-        self.offs_bank0_img_crc     = 7
-        self.offs_bank0_bank_code   = 8
+    def __init__(self, setting_address):
+        self.bytes_count = 92
+        self.crc               = setting_address + 0x0
+        self.sett_ver          = setting_address + 0x4
+        self.app_ver           = setting_address + 0x8
+        self.bl_ver            = setting_address + 0xC
+        self.bank_layout       = setting_address + 0x10
+        self.bank_current      = setting_address + 0x14
+        self.bank0_img_sz      = setting_address + 0x18
+        self.bank0_img_crc     = setting_address + 0x1C
+        self.bank0_bank_code   = setting_address + 0x20
+
+        self.last_addr         = setting_address + 0x5B
 
 
 class BLDFUSettings(object):
@@ -127,27 +129,33 @@ class BLDFUSettings(object):
         else:
             raise RuntimeError("Unknown architecture")
 
+    def _add_value_tohex(self, addr, value, format='<I'):
+        self.ihex.puts(addr, struct.pack(format, value))
+
+    def _get_value_fromhex(self, addr, size=4, format='<I'):
+        return struct.unpack(format, self.ihex.gets(addr, size))[0] & 0xffffffff
+
+    def _calculate_crc32_from_hex(self, ih_object, start_addr=None, end_addr=None):
+        list = []
+        hex_dict = ih_object.todict()
+        if start_addr == None and end_addr == None:
+            for addr, byte in hex_dict.items():
+                list.append(byte)
+        else:
+            for addr, byte in hex_dict.items():
+                if addr >= start_addr and addr <= end_addr:
+                    list.append(byte)
+        return binascii.crc32(bytearray(list)) & 0xFFFFFFFF
+
     def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr):
-        """
-        Populates the settings object based on the given parameters.
 
-        :param arch: Architecture family string, e.g. NRF51
-        :param app_file: Path to application file
-        :param app_ver: Application version number
-        :param bl_ver: Bootloader version number
-        :param bl_sett_ver: Bootloader settings version number
-        :param custom_bl_sett_addr: Custom start address for the settings page
-        :return:
-        """
-
-        # Set the architecture
         self.set_arch(arch)
 
         if custom_bl_sett_addr is not None:
             self.bl_sett_addr = custom_bl_sett_addr
 
         if bl_sett_ver == 1:
-            self.setts = BLDFUSettingsStructV1()
+            self.setts = BLDFUSettingsStructV1(self.bl_sett_addr)
         else:
             raise NordicSemiException("Unknown bootloader settings version")
 
@@ -168,79 +176,64 @@ class BLDFUSettings(object):
             self.app_sz = int(Package.calculate_file_size(self.app_bin)) & 0xffffffff
             self.app_crc = int(Package.calculate_crc(32, self.app_bin)) & 0xffffffff
             self.bank0_bank_code = 0x1 & 0xffffffff
+
         else:
             self.app_sz = 0x0 & 0xffffffff
             self.app_crc = 0x0 & 0xffffffff
             self.bank0_bank_code = 0x0 & 0xffffffff
 
-        # build the uint32_t array
-        arr = [0x0] * self.setts.uint32_count
-
         # additional harcoded values
         self.bank_layout = 0x0 & 0xffffffff
         self.bank_current = 0x0 & 0xffffffff
 
-        # fill in the settings
-        arr[self.setts.offs_sett_ver] = self.bl_sett_ver
-        arr[self.setts.offs_app_ver] = self.app_ver
-        arr[self.setts.offs_bl_ver] = self.bl_ver
-        arr[self.setts.offs_bank_layout] = self.bank_layout
-        arr[self.setts.offs_bank_current] = self.bank_current
-        arr[self.setts.offs_bank0_img_sz] = self.app_sz
-        arr[self.setts.offs_bank0_img_crc] = self.app_crc
-        arr[self.setts.offs_bank0_bank_code] = self.bank0_bank_code
+        # Fill the entire settings page with 0's
+        for addr in range(self.bl_sett_addr, self.setts.last_addr + 1):
+            self.ihex[addr] = 0x00
 
-        # calculate the CRC32 from the filled-in settings
-        crc_format_str = '<' + ('I' * (self.setts.uint32_count - 1))
-        crc_arr = arr[1:]
-        crc_data = struct.pack(crc_format_str, *crc_arr)
-        self.crc = binascii.crc32(crc_data) & 0xffffffff
+        self._add_value_tohex(self.setts.sett_ver, self.bl_sett_ver)
+        self._add_value_tohex(self.setts.app_ver, self.app_ver)
+        self._add_value_tohex(self.setts.bl_ver, self.bl_ver)
+        self._add_value_tohex(self.setts.bank_layout, self.bank_layout)
+        self._add_value_tohex(self.setts.bank_current, self.bank_current)
+        self._add_value_tohex(self.setts.bank0_img_sz, self.app_sz)
+        self._add_value_tohex(self.setts.bank0_img_crc, self.app_crc)
+        self._add_value_tohex(self.setts.bank0_bank_code, self.bank0_bank_code)
 
-        # fill in the calculated CRC32
-        arr[self.setts.offs_crc] = self.crc
+        self.crc = self._calculate_crc32_from_hex(self.ihex, start_addr=self.bl_sett_addr+4, end_addr=self.setts.last_addr) & 0xffffffff
 
-        format_str = '<' + ('I' * self.setts.uint32_count)
+        self._add_value_tohex(self.setts.crc, self.crc)
 
-        # Get the packed data to insert into the hex instance
-        data = struct.pack(format_str, *arr)
-
-        # insert the data at the correct address
-        self.ihex.puts(self.bl_sett_addr, data)
+        for offset in range(self.bl_sett_addr, self.setts.last_addr + 1):
+            self.ihex[offset - 0x1000] = self.ihex[offset]
 
     def probe_settings(self, base):
-
         # Unpack CRC and version
         fmt = '<I'
-
         crc = struct.unpack(fmt, self.ihex.gets(base + 0, 4))[0] & 0xffffffff
         ver = struct.unpack(fmt, self.ihex.gets(base + 4, 4))[0] & 0xffffffff
 
         if ver == 1:
-            self.setts = BLDFUSettingsStructV1()
+            self.setts = BLDFUSettingsStructV1(base)
         else:
             raise RuntimeError("Unknown Bootloader DFU settings version: {0}".format(ver))
 
         # calculate the CRC32 over the data
-        crc_data = self.ihex.gets(base + 4, (self.setts.uint32_count - 1) * 4)
-        _crc = binascii.crc32(crc_data) & 0xffffffff
+        _crc = self._calculate_crc32_from_hex(self.ihex,
+                                              start_addr=base-0x1000+4,
+                                              end_addr=base-0x1000+self.setts.bytes_count) & 0xffffffff
 
         if _crc != crc:
-            raise RuntimeError("CRC32 mismtach: flash: {0} calculated: {1}".format(crc, _crc))
+            raise RuntimeError("CRC32 mismtach: flash: {0} calculated: {1}".format(hex(crc), hex(_crc)))
 
         self.crc = crc
-
-        fmt = '<' + ('I' * (self.setts.uint32_count))
-        arr = struct.unpack(fmt, self.ihex.gets(base, (self.setts.uint32_count) * 4))
-
-        self.bl_sett_ver = arr[self.setts.offs_sett_ver] & 0xffffffff
-        self.app_ver = arr[self.setts.offs_app_ver] & 0xffffffff
-        self.bl_ver = arr[self.setts.offs_bl_ver] & 0xffffffff
-        self.bank_layout = arr[self.setts.offs_bank_layout] & 0xffffffff
-        self.bank_current = arr[self.setts.offs_bank_current] & 0xffffffff
-        self.app_sz = arr[self.setts.offs_bank0_img_sz] & 0xffffffff
-        self.app_crc = arr[self.setts.offs_bank0_img_crc] & 0xffffffff
-        self.bank0_bank_code = arr[self.setts.offs_bank0_bank_code] & 0xffffffff
-
+        self.bl_sett_ver     = self._get_value_fromhex(self.setts.sett_ver)
+        self.app_ver         = self._get_value_fromhex(self.setts.app_ver)
+        self.bl_ver          = self._get_value_fromhex(self.setts.bl_ver)
+        self.bank_layout     = self._get_value_fromhex(self.setts.bank_layout)
+        self.bank_current    = self._get_value_fromhex(self.setts.bank_current)
+        self.app_sz          = self._get_value_fromhex(self.setts.bank0_img_sz)
+        self.app_crc         = self._get_value_fromhex(self.setts.bank0_img_crc)
+        self.bank0_bank_code = self._get_value_fromhex(self.setts.bank0_bank_code)
 
     def fromhexfile(self, f, arch=None):
         self.hex_file = f
