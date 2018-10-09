@@ -183,6 +183,14 @@ class TextOrNoneParamType(click.ParamType):
 
 TEXT_OR_NONE = TextOrNoneParamType()
 
+BOOT_VALIDATION_ARGS =\
+[
+    'NO_VALIDATION',
+    'VALIDATE_GENERATED_CRC',
+    'VALIDATE_GENERATED_SHA256',
+    'VALIDATE_ECDSA_P256_SHA256',
+]
+
 @click.group()
 @click.option('-v', '--verbose',
               help='Increase verbosity of output. Can be specified more than once (up to -v -v -v -v).',
@@ -425,14 +433,6 @@ def display(key_file, key, format, out_file):
     else:
         with open(out_file, "w") as kfile:
             kfile.write(kstr)
-
-BOOT_VALIDATION_ARGS =\
-[
-    'NO_VALIDATION',
-    'VALIDATE_GENERATED_CRC',
-    'VALIDATE_GENERATED_SHA256',
-    'VALIDATE_ECDSA_P256_SHA256',
-]
 
 
 @cli.group(short_help='Display or generate a DFU package (zip file).')
