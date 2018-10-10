@@ -121,6 +121,25 @@ def display_debug_warning():
 """
     click.echo("{}".format(debug_warning))
 
+def display_settings_backup_warning():
+    debug_warning = """
+|===============================================================|
+|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
+|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
+|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
+|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
+|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
+|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
+| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
+|===============================================================|
+|You are generating a DFU settings page with backup page        |
+|included. This is only required for bootloaders from nRF SDK   |
+|15.1 and newer. If you want to skip backup page genetation,    |
+|use --no-backup option.                                        |
+|===============================================================|
+"""
+    click.echo("{}".format(debug_warning))
+
 def int_as_text_to_int(value):
     try:
         if value[:2].lower() == '0x':
@@ -316,6 +335,19 @@ def generate(hex_file,
     if bl_settings_version is None:
         click.echo("Error: Bootloader DFU settings version required.")
         return
+
+    if (no_backup is not None) and (backup_address is not None):
+        click.echo("Error: Bootloader DFU settings backup page cannot be specified if backup is disabled.")
+        return
+
+    if no_backup is None:
+        no_backup = False
+
+    if no_backup == False:
+        display_settings_backup_warning()
+
+    if (start_address is not None) and (backup_address is None):
+        click.echo("WARNING: Using default offset in order to calculate bootloader settings backup page")
 
     if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
         click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
@@ -531,6 +563,22 @@ def pkg():
               help='The method of boot validation. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
               required=False,
               type=click.STRING)
+@click.option('--zigbee',
+              help='Create an image and distribution package for Zigbee DFU server.',
+              required=False,
+              type=click.BOOL)
+@click.option('--zigbee-manufacturer-id',
+              help='Manufacturer ID to be used in Zigbee OTA header.',
+              required=False,
+              type=BASED_INT)
+@click.option('--zigbee-image-type',
+              help='Image type to be used in Zigbee OTA header.',
+              required=False,
+              type=BASED_INT)
+@click.option('--zigbee-comment',
+              help='Firmware comment to be used in Zigbee OTA header.',
+              required=False,
+              type=click.STRING)
 def generate(zipfile,
            debug_mode,
            application,
@@ -543,7 +591,11 @@ def generate(zipfile,
            sd_id,
            softdevice,
            boot_validation,
-           key_file):
+           key_file,
+           zigbee,
+           zigbee_manufacturer_id,
+           zigbee_image_type,
+           zigbee_comment):
     """
     Generate a zip package for distribution to apps that support Nordic DFU OTA.
     The application, bootloader, and SoftDevice files are converted to .bin if supplied as .hex files.
@@ -700,6 +752,21 @@ def generate(zipfile,
         click.echo("Error: --boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
         return
 
+    if zigbee_comment is None:
+        zigbee_comment = ''
+    elif any(ord(char) > 127 for char in zigbee_comment): # Check if all the characters belong to the ASCII range
+        click.echo('Warning: Non-ASCII characters in the comment are not allowed. Discarding comment.')
+        zigbee_comment = ''
+    elif len(zigbee_comment) > 30:
+        click.echo('Warning: truncating the comment to 30 bytes.')
+        zigbee_comment = zigbee_comment[:30]
+
+    if zigbee_manufacturer_id is None:
+        zigbee_manufacturer_id = 0xFFFF
+
+    if zigbee_image_type is None:
+        zigbee_image_type = 0xFFFF
+
     package = Package(debug_mode,
                       hw_version,
                       application_version_internal,
@@ -710,9 +777,37 @@ def generate(zipfile,
                       bootloader,
                       softdevice,
                       boot_validation,
-                      key_file)
+                      key_file,
+                      zigbee,
+                      zigbee_manufacturer_id,
+                      zigbee_image_type,
+                      zigbee_comment)
 
     package.generate_package(zipfile_path)
+
+    # Regenerate BLE DFU package for Zigbee DFU purposes.
+    if zigbee:
+        from shutil import copyfile
+        from os import remove
+
+        log_message = "Zigbee update created at {0}".format(package.zigbee_ota_file.filename)
+        click.echo(log_message)
+
+        binfile = package.zigbee_ota_file.filename.replace(".zigbee", ".bin")
+        copyfile(package.zigbee_ota_file.filename, binfile)
+        package = Package(debug_mode,
+                          hw_version,
+                          application_version_internal,
+                          bootloader_version,
+                          sd_req_list,
+                          sd_id_list,
+                          binfile,
+                          bootloader,
+                          softdevice,
+                          key_file)
+
+        package.generate_package(zipfile_path)
+        remove(binfile)
 
     log_message = "Zip created at {0}".format(zipfile_path)
     click.echo(log_message)
@@ -1065,6 +1160,39 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
         logger.exception(e)
     finally:
         transport.close()
+
+@dfu.command(short_help="Update the firmware on a device over a Zigbee connection.")
+@click.option('-f', '--file',
+              help='Filename of the Zigbee OTA Upgrade file.',
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
+              required=True)
+@click.option('-snr', '--jlink_snr',
+              help='JLink serial number of the devboard which shall serve as a OTA Server cluster',
+              type=click.STRING)
+@click.option('-chan', '--channel',
+              help='802.15.4 Channel that the OTA server will use',
+              type=click.INT)
+
+def zigbee(file, jlink_snr, channel):
+    """
+    Perform a Device Firmware Update on a device that implements a  Zigbee OTA Client cluster.
+    This requires a second nRF device, connected to this computer, which shall serve as a
+    OTA Server cluster.
+    """
+    ble_driver_init('NRF52')
+    from nordicsemi.zigbee.ota_flasher import OTAFlasher
+    of = OTAFlasher(fw = file, channel = channel, snr = jlink_snr)
+
+    if of.fw_check():
+        click.echo("Board already flashed with connectivity firmware.")
+    else:
+        click.echo("Flashing connectivity firmware...")
+        of.fw_flash()
+        click.echo("Connectivity firmware flashed.")
+
+    of.reset()
+    time.sleep(3.0) # A delay to init the OTA Server flashed on the devboard and the CLI inside of it
+    of.setup_channel()
 
 if __name__ == '__main__':
     cli()

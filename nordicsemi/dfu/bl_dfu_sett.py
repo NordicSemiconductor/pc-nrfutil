@@ -101,13 +101,14 @@ class BLDFUSettingsStructV2(object):
 class BLDFUSettings(object):
     """ Class to abstract a bootloader and its settings """
 
-    flash_page_51_sz     = 0x400
-    flash_page_52_sz     = 0x1000
-    bl_sett_51_addr      = 0x0003FC00
-    bl_sett_52_addr      = 0x0007F000
-    bl_sett_52_qfab_addr = 0x0003F000
-    bl_sett_52810_addr   = 0x0002F000
-    bl_sett_52840_addr   = 0x000FF000
+    flash_page_51_sz      = 0x400
+    flash_page_52_sz      = 0x1000
+    bl_sett_51_addr       = 0x0003FC00
+    bl_sett_52_addr       = 0x0007F000
+    bl_sett_52_qfab_addr  = 0x0003F000
+    bl_sett_52810_addr    = 0x0002F000
+    bl_sett_52840_addr    = 0x000FF000
+    bl_sett_backup_offset = 0x1000
 
 
     def __init__(self, ):
