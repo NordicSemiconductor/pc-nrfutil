@@ -157,6 +157,7 @@ class ThreadDfuServer():
         self.missing_blocks = []
         self.bmp_received_event = threading.Event()
         self.upload_done_event = threading.Event()
+        self.upload_done_event.set()
         self.trig_done_event = threading.Event()
 
         self.init_resource = Resource((ThreadDfuServer.INIT_URI,), init_data)
@@ -219,12 +220,22 @@ class ThreadDfuServer():
         self.trig_done_event.set()
 
     def _handle_trigger_request(self, request):
-        response = Message.AckMessage(request,
-                                      constants.CONTENT,
-                                      _make_trigger(self.init_resource.data,
-                                                    self.image_resource.data,
-                                                    self.opts.mcast_dfu,
-                                                    self.opts.reset_suppress))
+        response = None
+        if request.mtype == piccata.constants.CON:
+            response = Message.AckMessage(request,
+                                          constants.CONTENT,
+                                          _make_trigger(self.init_resource.data,
+                                                        self.image_resource.data,
+                                                        False,
+                                                        self.opts.reset_suppress))
+        else:
+            if self.opts.mcast_dfu:
+                address = self.REALM_LOCAL_ADDR
+            else:
+                address = getattr(request.remote, 'addr')
+
+            self.trigger(address, 3)
+
         return response
 
     def _send_block(self, remote, path, num, more, szx, payload):
@@ -360,11 +371,15 @@ class ThreadDfuServer():
         return piccata.message.Message.AckMessage(request, piccata.constants.NOT_FOUND)
 
     def _multicast_upload(self, remote, num_of_requests):
+        self.upload_done_event.clear()
+
         self.missing_blocks.extend(_make_bitmap(self.init_resource))
         self.missing_blocks.extend(_make_bitmap(self.image_resource))
 
         self.clients[remote] = ThreadDfuClient()
 
+        logger.info("Waiting 20s before starting multicast DFU procedure")
+        time.sleep(20)
         self._send_trigger(remote, num_of_requests)
         self.trig_done_event.wait()
 
@@ -403,9 +418,10 @@ class ThreadDfuServer():
         remote = piccata.types.Endpoint(address, piccata.constants.COAP_PORT)
 
         if (self.opts.mcast_dfu):
-            thread = threading.Thread(target = self._multicast_upload,
-                                      args = (remote, num_of_requests, ))
-            thread.setDaemon(True)
-            thread.start()
+            if self.upload_done_event.is_set():
+                thread = threading.Thread(target = self._multicast_upload,
+                                          args = (remote, num_of_requests, ))
+                thread.setDaemon(True)
+                thread.start()
         else:
             self._send_trigger(remote, num_of_requests)
