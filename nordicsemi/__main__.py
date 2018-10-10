@@ -625,7 +625,7 @@ def generate(zipfile,
     # Zigbee only allows App, SoftDevice (minor), bootloader or Softdevice+bootloader
     if zigbee:
         if sum(bool(x) for x in [application, softdevice, bootloader]) != 1:
-            click.echo('Error: Provide either --application, --softdevice or --bootloader'
+            click.echo('Error: Provide either --application, --softdevice, or --bootloader'
                        ' for Zigbee package generation (not a combination).')
 
     if application is not None and softdevice is not None and sd_id is None:
