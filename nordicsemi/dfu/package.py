@@ -60,10 +60,11 @@ from nordicsemi.zigbee.ota_file import *
 from .signing import Signing
 
 HexTypeToInitPacketFwTypemap = {
-    HexType.APPLICATION: DFUType.APPLICATION,
-    HexType.BOOTLOADER: DFUType.BOOTLOADER,
-    HexType.SOFTDEVICE: DFUType.SOFTDEVICE,
-    HexType.SD_BL: DFUType.SOFTDEVICE_BOOTLOADER
+    HexType.APPLICATION:            DFUType.APPLICATION,
+    HexType.BOOTLOADER:             DFUType.BOOTLOADER,
+    HexType.SOFTDEVICE:             DFUType.SOFTDEVICE,
+    HexType.SD_BL:                  DFUType.SOFTDEVICE_BOOTLOADER,
+    HexType.EXTERNAL_APPLICATION:   DFUType.EXTERNAL_APPLICATION
 }
 
 
@@ -125,10 +126,12 @@ class Package(object):
                  softdevice_fw=None,
                  boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
                  key_file=None,
+                 is_external=False,
                  zigbee_format=False,
                  manufacturer_id=0,
                  image_type=0,
                  comment=''):
+
         """
         Constructor that requires values used for generating a Nordic DFU package.
 
@@ -163,7 +166,8 @@ class Package(object):
         self.firmwares_data = {}
 
         if app_fw:
-            self.__add_firmware_info(firmware_type=HexType.APPLICATION,
+            firmware_type = HexType.EXTERNAL_APPLICATION if is_external else HexType.APPLICATION
+            self.__add_firmware_info(firmware_type=firmware_type,
                                      firmware_version=app_version,
                                      filename=app_fw,
                                      boot_validation_type=boot_validation_type,
@@ -232,7 +236,8 @@ class Package(object):
         type_strs = {HexType.SD_BL : "sd_bl", 
                     HexType.SOFTDEVICE : "softdevice",
                     HexType.BOOTLOADER : "bootloader",
-                    HexType.APPLICATION : "application" }
+                    HexType.APPLICATION : "application",
+                    HexType.EXTERNAL_APPLICATION : "external application"}
 
         # parse init packet
         with open(os.path.join(self.zip_dir, img.dat_file), "rb") as imgf:
@@ -401,7 +406,7 @@ DFU Package: <{0}>:
             sd_size = 0
             bl_size = 0
             app_size = 0
-            if key == HexType.APPLICATION:
+            if key in [HexType.APPLICATION, HexType.EXTERNAL_APPLICATION]:
                 app_size = bin_length
             elif key == HexType.SOFTDEVICE:
                 sd_size = bin_length
@@ -454,16 +459,19 @@ DFU Package: <{0}>:
                 init_packet_filename
 
             if self.is_zigbee:
-                self.zigbee_ota_file = OTA_file(firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],
-                                         len(init_packet.get_init_packet_pb_bytes()),
-                                         binascii.crc32(init_packet.get_init_packet_pb_bytes()) & 0xFFFFFFFF,
-                                         init_packet.get_init_packet_pb_bytes(),
-                                         os.path.getsize(firmware_data[FirmwareKeys.BIN_FILENAME]),
-                                         self.calculate_crc(32, firmware_data[FirmwareKeys.BIN_FILENAME]) & 0xFFFFFFFF,
-                                         bytes(open(firmware_data[FirmwareKeys.BIN_FILENAME], 'rb').read()),
-                                         self.manufacturer_id,
-                                         self.image_type,
-                                         self.comment)
+                firmware_version = firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION]
+                file_name = firmware_data[FirmwareKeys.BIN_FILENAME]
+
+                self.zigbee_ota_file = OTA_file(firmware_version,
+                                                len(init_packet.get_init_packet_pb_bytes()),
+                                                binascii.crc32(init_packet.get_init_packet_pb_bytes()) & 0xFFFFFFFF,
+                                                init_packet.get_init_packet_pb_bytes(),
+                                                os.path.getsize(file_name),
+                                                self.calculate_crc(32, file_name) & 0xFFFFFFFF,
+                                                bytes(open(file_name, 'rb').read()),
+                                                self.manufacturer_id,
+                                                self.image_type,
+                                                self.comment)
 
                 ota_file_handle = open(self.zigbee_ota_file.filename, 'wb')
                 ota_file_handle.write(self.zigbee_ota_file.binary)

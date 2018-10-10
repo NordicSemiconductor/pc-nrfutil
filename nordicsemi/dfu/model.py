@@ -43,6 +43,7 @@ class HexType(Enum):
     BOOTLOADER = 2
     SD_BL = 3
     APPLICATION = 4
+    EXTERNAL_APPLICATION = 5
 
 
 class FirmwareKeys(Enum):

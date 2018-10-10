@@ -545,7 +545,6 @@ def pkg():
                    '\n|s140_nrf52_6.0.0|0xA9|'
                    '\n|s140_nrf52_6.1.0|0xAE|',
               type=click.STRING,
-              required=True,
               multiple=True)
 @click.option('--sd-id',
               help='The new SoftDevice ID to be used as --sd-req for the Application update in case the ZIP '
@@ -563,6 +562,10 @@ def pkg():
               help='The method of boot validation. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
               required=False,
               type=click.STRING)
+@click.option('--external-app',
+              help='Indicates that the FW upgrade is intended to be passed through '
+                   '(not applied on the receiving device)',
+              type=click.BOOL, is_flag=True, default=False)
 @click.option('--zigbee',
               help='Create an image and distribution package for Zigbee DFU server.',
               required=False,
@@ -579,6 +582,14 @@ def pkg():
               help='Firmware comment to be used in Zigbee OTA header.',
               required=False,
               type=click.STRING)
+@click.option('--zigbee-ota-hw-version',
+              help='The zigbee OTA hw version.',
+              required=False,
+              type=BASED_INT_OR_NONE)
+@click.option('--zigbee-ota-fw-version',
+              help='The zigbee OTA fw version.',
+              required=False,
+              type=BASED_INT_OR_NONE)
 def generate(zipfile,
            debug_mode,
            application,
@@ -592,10 +603,13 @@ def generate(zipfile,
            softdevice,
            boot_validation,
            key_file,
+           external_app,
            zigbee,
            zigbee_manufacturer_id,
            zigbee_image_type,
-           zigbee_comment):
+           zigbee_comment,
+           zigbee_ota_hw_version,
+           zigbee_ota_fw_version):
     """
     Generate a zip package for distribution to apps that support Nordic DFU OTA.
     The application, bootloader, and SoftDevice files are converted to .bin if supplied as .hex files.
@@ -608,7 +622,7 @@ def generate(zipfile,
 
     * SD only: Supported (SD of same Major Version).
 
-    * APP only: Supported.
+    * APP only: Supported (external or internal).
 
     * BL + SD: Supported.
 
@@ -644,6 +658,15 @@ def generate(zipfile,
 
     if hw_version == 'none':
         hw_version = None
+
+    if external_app is None:
+        external_app = False
+
+    if zigbee_ota_hw_version == 'none':
+        zigbee_ota_hw_version = None
+
+    if zigbee_ota_fw_version == 'none':
+        zigbee_ota_fw_version = None
 
     # Convert multiple value into a single instance
     if len(sd_req) > 1:
@@ -693,7 +716,7 @@ def generate(zipfile,
         click.echo("Error: --hw-version required.")
         return
 
-    if sd_req is None:
+    if sd_req is None and external_app is False:
         click.echo("Error: --sd-req required.")
         return
 
@@ -706,9 +729,34 @@ def generate(zipfile,
         click.echo("Error: --bootloader-version required with bootloader image.")
         return
 
+    # Zigbee only allows App, SoftDevice (minor), bootloader or Softdevice+bootloader
+    if zigbee:
+        if sum(bool(x) for x in [application, softdevice, bootloader]) != 1:
+            click.echo('Error: Provide either --application, --softdevice, or --bootloader'
+                       ' for Zigbee package generation (not a combination).')
+
     if application is not None and softdevice is not None and sd_id is None:
         click.echo("Error: --sd-id required with softdevice and application images.")
         return
+
+    if application is None and external_app is True:
+        click.echo("Error: --external-app requires an application.")
+        return
+
+    if application is not None and softdevice is not None and external_app is True:
+        click.echo("Error: --external-app is only possible for application only DFU packages.")
+        return
+
+    if application is not None and bootloader is not None and external_app is True:
+        click.echo("Error: --external-app is only possible for application only DFU packages.")
+        return
+
+    if zigbee and zigbee_ota_hw_version is None:
+        click.echo("Error: --zigbee-ota-hw-version is required.")
+        return
+
+    if zigbee and zigbee_ota_fw_version is None:
+        zigbee_ota_fw_version = 0
 
     sd_req_list = []
     if sd_req is not None:
@@ -767,6 +815,13 @@ def generate(zipfile,
     if zigbee_image_type is None:
         zigbee_image_type = 0xFFFF
 
+    # Set the external_app to false in --zigbee is set
+    inner_external_app = external_app
+    if zigbee:
+        inner_external_app = False
+
+    # Generate a DFU package. If --zigbee is set this is the inner DFU package
+    # which will be used as a binary input to the outter DFU package
     package = Package(debug_mode,
                       hw_version,
                       application_version_internal,
@@ -778,6 +833,7 @@ def generate(zipfile,
                       softdevice,
                       boot_validation,
                       key_file,
+                      inner_external_app,
                       zigbee,
                       zigbee_manufacturer_id,
                       zigbee_image_type,
@@ -785,7 +841,6 @@ def generate(zipfile,
 
     package.generate_package(zipfile_path)
 
-    # Regenerate BLE DFU package for Zigbee DFU purposes.
     if zigbee:
         from shutil import copyfile
         from os import remove
@@ -793,18 +848,23 @@ def generate(zipfile,
         log_message = "Zigbee update created at {0}".format(package.zigbee_ota_file.filename)
         click.echo(log_message)
 
+        # Taking the inner Zigbee package as input for the outer DFU package
         binfile = package.zigbee_ota_file.filename.replace(".zigbee", ".bin")
         copyfile(package.zigbee_ota_file.filename, binfile)
+
+        # Create the outer Zigbee DFU package.
         package = Package(debug_mode,
-                          hw_version,
-                          application_version_internal,
-                          bootloader_version,
+                          zigbee_ota_hw_version,
+                          zigbee_ota_fw_version,
+                          None,
                           sd_req_list,
                           sd_id_list,
                           binfile,
-                          bootloader,
-                          softdevice,
-                          key_file)
+                          None,
+                          None,
+                          None, 
+                          key_file,
+                          True)
 
         package.generate_package(zipfile_path)
         remove(binfile)
