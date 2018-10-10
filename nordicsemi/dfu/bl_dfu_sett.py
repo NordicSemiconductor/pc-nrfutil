@@ -163,14 +163,14 @@ class BLDFUSettings(object):
 
     def _calculate_crc32_from_hex(self, ih_object, start_addr=None, end_addr=None):
         list = []
-        hex_dict = ih_object.todict()
         if start_addr == None and end_addr == None:
+            hex_dict = ih_object.todict()
             for addr, byte in hex_dict.items():
                 list.append(byte)
         else:
-            for addr, byte in hex_dict.items():
-                if addr >= start_addr and addr <= end_addr:
-                    list.append(byte)
+            for addr in range(start_addr, end_addr + 1):
+                list.append(ih_object[addr])
+
         return binascii.crc32(bytearray(list)) & 0xFFFFFFFF
 
     def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr, no_backup,
