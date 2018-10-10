@@ -121,6 +121,25 @@ def display_debug_warning():
 """
     click.echo("{}".format(debug_warning))
 
+def display_settings_backup_warning():
+    debug_warning = """
+|===============================================================|
+|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
+|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
+|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
+|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
+|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
+|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
+| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
+|===============================================================|
+|You are generating a DFU settings page with backup page        |
+|included. This is only required for bootloaders from nRF SDK   |
+|15.1 and newer. If you want to skip backup page genetation,    |
+|use --no-backup option.                                        |
+|===============================================================|
+"""
+    click.echo("{}".format(debug_warning))
+
 def int_as_text_to_int(value):
     try:
         if value[:2].lower() == '0x':
@@ -236,6 +255,19 @@ def settings():
               help='Custom start address for the settings page. If not specified, '
                    'then the last page of the flash is used.',
               type=BASED_INT_OR_NONE)
+@click.option('--no-backup',
+              help='Do not overwrite DFU settings backup page. If not specified, '
+                   'than the resulting .hex file will contain a copy of DFU settings, '
+                   'that will overwrite contents of DFU settings backup page.',
+              type=click.BOOL,
+              is_flag=True,
+              required=False)
+@click.option('--backup-address',
+              help='Address of the DFU settings backup page inside flash. '
+                   'By default, the backup page address is placed one page below DFU settings. '
+                   'The value is precalculated based on configured settings address '
+                   '(<DFU_settings_addrsss> - 0x1000).',
+              type=BASED_INT_OR_NONE)
 
 def generate(hex_file,
         family,
@@ -244,7 +276,9 @@ def generate(hex_file,
         application_version_string,
         bootloader_version,
         bl_settings_version,
-        start_address):
+        start_address,
+        no_backup,
+        backup_address):
 
     # Initial consistency checks
     if family is None:
@@ -275,8 +309,21 @@ def generate(hex_file,
         click.echo("Error: Bootloader DFU settings version required.")
         return
 
+    if (no_backup is not None) and (backup_address is not None):
+        click.echo("Error: Bootloader DFU settings backup page cannot be specified if backup is disabled.")
+        return
+
+    if no_backup is None:
+        no_backup = False
+
+    if no_backup == False:
+        display_settings_backup_warning()
+
+    if (start_address is not None) and (backup_address is None):
+        click.echo("WARNING: Using default offset in order to calculate bootloader settings backup page")
+
     sett = BLDFUSettings()
-    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address)
+    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address, no_backup=no_backup, backup_address=backup_address)
     sett.tohexfile(hex_file)
 
     click.echo("\nGenerated Bootloader DFU settings .hex file and stored it in: {}".format(hex_file))
