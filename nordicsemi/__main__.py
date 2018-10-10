@@ -1160,4 +1160,4 @@ def zigbee(file, jlink_snr, channel):
     of.setup_channel()
 
 if __name__ == '__main__':
-    cli(sys.argv[1:])
+    cli()
