@@ -862,6 +862,7 @@ def generate(zipfile,
                           binfile,
                           None,
                           None,
+                          None, 
                           key_file,
                           True)
 
