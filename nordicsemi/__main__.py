@@ -183,6 +183,14 @@ class TextOrNoneParamType(click.ParamType):
 
 TEXT_OR_NONE = TextOrNoneParamType()
 
+BOOT_VALIDATION_ARGS =\
+[
+    'NO_VALIDATION',
+    'VALIDATE_GENERATED_CRC',
+    'VALIDATE_GENERATED_SHA256',
+    'VALIDATE_ECDSA_P256_SHA256',
+]
+
 @click.group()
 @click.option('-v', '--verbose',
               help='Increase verbosity of output. Can be specified more than once (up to -v -v -v -v).',
@@ -268,17 +276,36 @@ def settings():
                    'The value is precalculated based on configured settings address '
                    '(<DFU_settings_addrsss> - 0x1000).',
               type=BASED_INT_OR_NONE)
-
+@click.option('--app-boot-validation',
+              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              required=False,
+              type=click.STRING)
+@click.option('--sd-boot-validation',
+              help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              required=False,
+              type=click.STRING)
+@click.option('--softdevice',
+              help='The SoftDevice firmware file. Must be given if SD Boot Validation is used.',
+              required=False,
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
+@click.option('--key-file',
+              help='The private (signing) key in PEM fomat. Needed for ECDSA Boot Validation.',
+              required=False,
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 def generate(hex_file,
-        family,
-        application,
-        application_version,
-        application_version_string,
-        bootloader_version,
-        bl_settings_version,
-        start_address,
-        no_backup,
-        backup_address):
+             family,
+             application,
+             application_version,
+             application_version_string,
+             bootloader_version,
+             bl_settings_version,
+             start_address,
+             no_backup,
+             backup_address,
+             app_boot_validation,
+             sd_boot_validation,
+             softdevice,
+             key_file):
 
     # Initial consistency checks
     if family is None:
@@ -322,8 +349,36 @@ def generate(hex_file,
     if (start_address is not None) and (backup_address is None):
         click.echo("WARNING: Using default offset in order to calculate bootloader settings backup page")
 
+    if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
+        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+        return
+
+    if app_boot_validation and (app_boot_validation not in BOOT_VALIDATION_ARGS):
+        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+        return
+
+    if bl_settings_version == 1 and (app_boot_validation or sd_boot_validation):
+        click.echo("Error: Bootloader settings version 1 does not support boot validation.")
+        return
+
+    if (app_boot_validation is 'VALIDATE_ECDSA_P256_SHA256' and key_file is None) or \
+        (sd_boot_validation is 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
+        click.echo("Error: Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
+        return
+
+    if app_boot_validation and not application:
+        click.echo("Error: --application hex file must be set when using --app_boot_validation")
+        return
+
+    if sd_boot_validation and not softdevice:
+        click.echo("Error: --softdevice hex file must be set when using --sd_boot_validation")
+        return
+
     sett = BLDFUSettings()
-    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address, no_backup=no_backup, backup_address=backup_address)
+    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version,
+                  bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address, no_backup=no_backup,
+                  backup_address=backup_address, app_boot_validation_type=app_boot_validation,
+                  sd_boot_validation_type=sd_boot_validation, sd_file=softdevice, key_file=key_file)
     sett.tohexfile(hex_file)
 
     click.echo("\nGenerated Bootloader DFU settings .hex file and stored it in: {}".format(hex_file))
@@ -503,6 +558,10 @@ def pkg():
               help='The private (signing) key in PEM fomat.',
               required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
+@click.option('--boot-validation',
+              help='The method of boot validation. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              required=False,
+              type=click.STRING)
 @click.option('--external-app',
               help='Indicates that the FW upgrade is intended to be passed through '
                    '(not applied on the receiving device)',
@@ -542,6 +601,7 @@ def generate(zipfile,
            sd_req,
            sd_id,
            softdevice,
+           boot_validation,
            key_file,
            external_app,
            zigbee,
@@ -562,7 +622,7 @@ def generate(zipfile,
 
     * SD only: Supported (SD of same Major Version).
 
-    * APP only: Supported can be external or internal.
+    * APP only: Supported (external or internal).
 
     * BL + SD: Supported.
 
@@ -736,6 +796,10 @@ def generate(zipfile,
         if default_key:
             display_sec_warning()
 
+    if boot_validation not in BOOT_VALIDATION_ARGS:
+        click.echo("Error: --boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+        return
+
     if zigbee_comment is None:
         zigbee_comment = ''
     elif any(ord(char) > 127 for char in zigbee_comment): # Check if all the characters belong to the ASCII range
@@ -767,6 +831,7 @@ def generate(zipfile,
                       application,
                       bootloader,
                       softdevice,
+                      boot_validation,
                       key_file,
                       inner_external_app,
                       zigbee,
@@ -777,7 +842,6 @@ def generate(zipfile,
     package.generate_package(zipfile_path)
 
     if zigbee:
-
         from shutil import copyfile
         from os import remove
 
