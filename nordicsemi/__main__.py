@@ -164,14 +164,6 @@ class TextOrNoneParamType(click.ParamType):
 
 TEXT_OR_NONE = TextOrNoneParamType()
 
-BOOT_VALIDATION_ARGS =\
-[
-    'NO_VALIDATION',
-    'VALIDATE_GENERATED_CRC',
-    'VALIDATE_GENERATED_SHA256',
-    'VALIDATE_ECDSA_P256_SHA256',
-]
-
 @click.group()
 @click.option('-v', '--verbose',
               help='Increase verbosity of output. Can be specified more than once (up to -v -v -v -v).',
@@ -244,49 +236,15 @@ def settings():
               help='Custom start address for the settings page. If not specified, '
                    'then the last page of the flash is used.',
               type=BASED_INT_OR_NONE)
-@click.option('--no-backup',
-              help='Do not overwrite DFU settings backup page. If not specified, '
-                   'than the resulting .hex file will contain a copy of DFU settings, '
-                   'that will overwrite contents of DFU settings backup page.',
-              type=click.BOOL,
-              is_flag=True,
-              required=False)
-@click.option('--backup-address',
-              help='Address of the DFU settings backup page inside flash. '
-                   'By default, the backup page address is placed one page below DFU settings. '
-                   'The value is precalculated based on configured settings address '
-                   '(<DFU_settings_addrsss> - 0x1000).',
-              type=BASED_INT_OR_NONE)
-@click.option('--app-boot-validation',
-              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
-              required=False,
-              type=click.STRING)
-@click.option('--sd-boot-validation',
-              help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
-              required=False,
-              type=click.STRING)
-@click.option('--softdevice',
-              help='The SoftDevice firmware file. Must be given if SD Boot Validation is used.',
-              required=False,
-              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
-@click.option('--key-file',
-              help='The private (signing) key in PEM fomat. Needed for ECDSA Boot Validation.',
-              required=False,
-              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
+
 def generate(hex_file,
-             family,
-             application,
-             application_version,
-             application_version_string,
-             bootloader_version,
-             bl_settings_version,
-             start_address,
-             no_backup,
-             backup_address,
-             app_boot_validation,
-             sd_boot_validation,
-             softdevice,
-             key_file):
+        family,
+        application,
+        application_version,
+        application_version_string,
+        bootloader_version,
+        bl_settings_version,
+        start_address):
 
     # Initial consistency checks
     if family is None:
@@ -317,36 +275,8 @@ def generate(hex_file,
         click.echo("Error: Bootloader DFU settings version required.")
         return
 
-    if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
-
-    if app_boot_validation and (app_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
-
-    if bl_settings_version == 1 and (app_boot_validation or sd_boot_validation):
-        click.echo("Error: Bootloader settings version 1 does not support boot validation.")
-        return
-
-    if (app_boot_validation is 'VALIDATE_ECDSA_P256_SHA256' and key_file is None) or \
-        (sd_boot_validation is 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
-        click.echo("Error: Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
-        return
-
-    if app_boot_validation and not application:
-        click.echo("Error: --application hex file must be set when using --app_boot_validation")
-        return
-
-    if sd_boot_validation and not softdevice:
-        click.echo("Error: --softdevice hex file must be set when using --sd_boot_validation")
-        return
-
     sett = BLDFUSettings()
-    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version,
-                  bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address, no_backup=no_backup,
-                  backup_address=backup_address, app_boot_validation_type=app_boot_validation,
-                  sd_boot_validation_type=sd_boot_validation, sd_file=softdevice, key_file=key_file)
+    sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version, bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address)
     sett.tohexfile(hex_file)
 
     click.echo("\nGenerated Bootloader DFU settings .hex file and stored it in: {}".format(hex_file))
@@ -513,7 +443,6 @@ def pkg():
                    '\n|s140_nrf52_6.0.0|0xA9|'
                    '\n|s140_nrf52_6.1.0|0xAE|',
               type=click.STRING,
-              required=True,
               multiple=True)
 @click.option('--sd-id',
               help='The new SoftDevice ID to be used as --sd-req for the Application update in case the ZIP '
@@ -527,10 +456,34 @@ def pkg():
               help='The private (signing) key in PEM fomat.',
               required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
-@click.option('--boot-validation',
-              help='The method of boot validation. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+@click.option('--external-app',
+              help='Indicates that the FW upgrade is intended to be passed through '
+                   '(not applied on the receiving device)',
+              type=click.BOOL, is_flag=True, default=False)
+@click.option('--zigbee',
+              help='Create an image and distribution package for Zigbee DFU server.',
+              required=False,
+              type=click.BOOL)
+@click.option('--zigbee-manufacturer-id',
+              help='Manufacturer ID to be used in Zigbee OTA header.',
+              required=False,
+              type=BASED_INT)
+@click.option('--zigbee-image-type',
+              help='Image type to be used in Zigbee OTA header.',
+              required=False,
+              type=BASED_INT)
+@click.option('--zigbee-comment',
+              help='Firmware comment to be used in Zigbee OTA header.',
               required=False,
               type=click.STRING)
+@click.option('--zigbee-ota-hw-version',
+              help='The zigbee OTA hw version.',
+              required=False,
+              type=BASED_INT_OR_NONE)
+@click.option('--zigbee-ota-fw-version',
+              help='The zigbee OTA fw version.',
+              required=False,
+              type=BASED_INT_OR_NONE)
 def generate(zipfile,
            debug_mode,
            application,
@@ -542,8 +495,14 @@ def generate(zipfile,
            sd_req,
            sd_id,
            softdevice,
-           boot_validation,
-           key_file):
+           key_file,
+           external_app,
+           zigbee,
+           zigbee_manufacturer_id,
+           zigbee_image_type,
+           zigbee_comment,
+           zigbee_ota_hw_version,
+           zigbee_ota_fw_version):
     """
     Generate a zip package for distribution to apps that support Nordic DFU OTA.
     The application, bootloader, and SoftDevice files are converted to .bin if supplied as .hex files.
@@ -556,7 +515,7 @@ def generate(zipfile,
 
     * SD only: Supported (SD of same Major Version).
 
-    * APP only: Supported.
+    * APP only: Supported can be external or internal.
 
     * BL + SD: Supported.
 
@@ -592,6 +551,15 @@ def generate(zipfile,
 
     if hw_version == 'none':
         hw_version = None
+
+    if external_app is None:
+        external_app = False
+
+    if zigbee_ota_hw_version == 'none':
+        zigbee_ota_hw_version = None
+
+    if zigbee_ota_fw_version == 'none':
+        zigbee_ota_fw_version = None
 
     # Convert multiple value into a single instance
     if len(sd_req) > 1:
@@ -641,7 +609,7 @@ def generate(zipfile,
         click.echo("Error: --hw-version required.")
         return
 
-    if sd_req is None:
+    if sd_req is None and external_app is False:
         click.echo("Error: --sd-req required.")
         return
 
@@ -654,9 +622,34 @@ def generate(zipfile,
         click.echo("Error: --bootloader-version required with bootloader image.")
         return
 
+    # Zigbee only allows App, SoftDevice (minor), bootloader or Softdevice+bootloader
+    if zigbee:
+        if sum(bool(x) for x in [application, softdevice, bootloader]) != 1:
+            click.echo('Error: Provide either --application, --softdevice, or --bootloader'
+                       ' for Zigbee package generation (not a combination).')
+
     if application is not None and softdevice is not None and sd_id is None:
         click.echo("Error: --sd-id required with softdevice and application images.")
         return
+
+    if application is None and external_app is True:
+        click.echo("Error: --external-app requires an application.")
+        return
+
+    if application is not None and softdevice is not None and external_app is True:
+        click.echo("Error: --external-app is only possible for application only DFU packages.")
+        return
+
+    if application is not None and bootloader is not None and external_app is True:
+        click.echo("Error: --external-app is only possible for application only DFU packages.")
+        return
+
+    if zigbee and zigbee_ota_hw_version is None:
+        click.echo("Error: --zigbee-ota-hw-version is required.")
+        return
+
+    if zigbee and zigbee_ota_fw_version is None:
+        zigbee_ota_fw_version = 0
 
     sd_req_list = []
     if sd_req is not None:
@@ -696,10 +689,28 @@ def generate(zipfile,
         if default_key:
             display_sec_warning()
 
-    if boot_validation not in BOOT_VALIDATION_ARGS:
-        click.echo("Error: --boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
+    if zigbee_comment is None:
+        zigbee_comment = ''
+    elif any(ord(char) > 127 for char in zigbee_comment): # Check if all the characters belong to the ASCII range
+        click.echo('Warning: Non-ASCII characters in the comment are not allowed. Discarding comment.')
+        zigbee_comment = ''
+    elif len(zigbee_comment) > 30:
+        click.echo('Warning: truncating the comment to 30 bytes.')
+        zigbee_comment = zigbee_comment[:30]
 
+    if zigbee_manufacturer_id is None:
+        zigbee_manufacturer_id = 0xFFFF
+
+    if zigbee_image_type is None:
+        zigbee_image_type = 0xFFFF
+
+    # Set the external_app to false in --zigbee is set
+    inner_external_app = external_app
+    if zigbee:
+        inner_external_app = False
+
+    # Generate a DFU package. If --zigbee is set this is the inner DFU package
+    # which will be used as a binary input to the outter DFU package
     package = Package(debug_mode,
                       hw_version,
                       application_version_internal,
@@ -709,10 +720,42 @@ def generate(zipfile,
                       application,
                       bootloader,
                       softdevice,
-                      boot_validation,
-                      key_file)
+                      key_file,
+                      inner_external_app,
+                      zigbee,
+                      zigbee_manufacturer_id,
+                      zigbee_image_type,
+                      zigbee_comment)
 
     package.generate_package(zipfile_path)
+
+    if zigbee:
+
+        from shutil import copyfile
+        from os import remove
+
+        log_message = "Zigbee update created at {0}".format(package.zigbee_ota_file.filename)
+        click.echo(log_message)
+
+        # Taking the inner Zigbee package as input for the outer DFU package
+        binfile = package.zigbee_ota_file.filename.replace(".zigbee", ".bin")
+        copyfile(package.zigbee_ota_file.filename, binfile)
+
+        # Create the outer Zigbee DFU package.
+        package = Package(debug_mode,
+                          zigbee_ota_hw_version,
+                          zigbee_ota_fw_version,
+                          None,
+                          sd_req_list,
+                          sd_id_list,
+                          binfile,
+                          None,
+                          None,
+                          key_file,
+                          True)
+
+        package.generate_package(zipfile_path)
+        remove(binfile)
 
     log_message = "Zip created at {0}".format(zipfile_path)
     click.echo(log_message)
@@ -1083,5 +1126,38 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
     finally:
         transport.close()
 
+@dfu.command(short_help="Update the firmware on a device over a Zigbee connection.")
+@click.option('-f', '--file',
+              help='Filename of the Zigbee OTA Upgrade file.',
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
+              required=True)
+@click.option('-snr', '--jlink_snr',
+              help='JLink serial number of the devboard which shall serve as a OTA Server cluster',
+              type=click.STRING)
+@click.option('-chan', '--channel',
+              help='802.15.4 Channel that the OTA server will use',
+              type=click.INT)
+
+def zigbee(file, jlink_snr, channel):
+    """
+    Perform a Device Firmware Update on a device that implements a  Zigbee OTA Client cluster.
+    This requires a second nRF device, connected to this computer, which shall serve as a
+    OTA Server cluster.
+    """
+    ble_driver_init('NRF52')
+    from nordicsemi.zigbee.ota_flasher import OTAFlasher
+    of = OTAFlasher(fw = file, channel = channel, snr = jlink_snr)
+
+    if of.fw_check():
+        click.echo("Board already flashed with connectivity firmware.")
+    else:
+        click.echo("Flashing connectivity firmware...")
+        of.fw_flash()
+        click.echo("Connectivity firmware flashed.")
+
+    of.reset()
+    time.sleep(3.0) # A delay to init the OTA Server flashed on the devboard and the CLI inside of it
+    of.setup_channel()
+
 if __name__ == '__main__':
-    cli()
+    cli(sys.argv[1:])
