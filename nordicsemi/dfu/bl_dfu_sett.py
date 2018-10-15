@@ -220,13 +220,13 @@ class BLDFUSettings(object):
                 self.app_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(ecdsa)])
             else:  # This also covers 'NO_VALIDATION' case
                 self.app_boot_validation_type = 0 & 0xffffffff
-                self.app_boot_validation_bytes = 0 & 0xffffffff
+                self.app_boot_validation_bytes = bytearray(0)
         else:
             self.app_sz = 0x0 & 0xffffffff
             self.app_crc = 0x0 & 0xffffffff
             self.bank0_bank_code = 0x0 & 0xffffffff
             self.app_boot_validation_type = 0x0 & 0xffffffff
-            self.app_boot_validation_bytes = 0x0 & 0xffffffff
+            self.app_boot_validation_bytes = bytearray(0)
 
         if sd_file is not None:
             # Load SD to calculate CRC
@@ -259,11 +259,11 @@ class BLDFUSettings(object):
                 self.sd_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(ecdsa)])
             else:  # This also covers 'NO_VALIDATION_CASE'
                 self.sd_boot_validation_type = 0 & 0xffffffff
-                self.sd_boot_validation_bytes = 0 & 0xffffffff
+                self.sd_boot_validation_bytes = bytearray(0)
         else:
             self.sd_sz = 0x0 & 0xffffffff
             self.sd_boot_validation_type = 0 & 0xffffffff
-            self.sd_boot_validation_bytes = 0 & 0xffffffff
+            self.sd_boot_validation_bytes = bytearray(0)
 
         # additional harcoded values
         self.bank_layout = 0x0 & 0xffffffff
