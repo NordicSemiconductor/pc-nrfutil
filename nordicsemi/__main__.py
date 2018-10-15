@@ -361,8 +361,8 @@ def generate(hex_file,
         click.echo("Error: Bootloader settings version 1 does not support boot validation.")
         return
 
-    if (app_boot_validation is 'VALIDATE_ECDSA_P256_SHA256' and key_file is None) or \
-        (sd_boot_validation is 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
+    if (app_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None) or \
+        (sd_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
         click.echo("Error: Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
         return
 
