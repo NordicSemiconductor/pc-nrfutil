@@ -796,7 +796,7 @@ def generate(zipfile,
         if default_key:
             display_sec_warning()
 
-    if boot_validation not in BOOT_VALIDATION_ARGS:
+    if boot_validation and (boot_validation not in BOOT_VALIDATION_ARGS):
         click.echo("Error: --boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
         return
 
