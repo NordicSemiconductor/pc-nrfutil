@@ -123,21 +123,9 @@ def display_debug_warning():
 
 def display_settings_backup_warning():
     debug_warning = """
-|===============================================================|
-|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
-|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
-|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
-|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
-|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
-|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
-| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
-|===============================================================|
-|You are generating a DFU settings page with backup page        |
-|included. This is only required for bootloaders from nRF SDK   |
-|15.1 and newer. If you want to skip backup page genetation,    |
-|use --no-backup option.                                        |
-|===============================================================|
-"""
+Generating a DFU settings page with backup page included. This is
+only required for bootloaders from nRF SDK 15.1 and newer. If you
+want to skip backup page generation, use --no-backup option."""
     click.echo("{}".format(debug_warning))
 
 def int_as_text_to_int(value):
