@@ -48,6 +48,7 @@ from piccata.message import Message
 from piccata import constants
 from ipaddress import ip_address
 from collections import namedtuple
+import click
 import collections
 import time
 
@@ -197,6 +198,10 @@ class ThreadDfuServer():
                                   total_block_count)
 
         self.clients[request.remote].last_block = block_num
+
+        if block_num == total_block_count:
+            click.echo() # New line after progress bar
+            click.echo("Thread DFU upload complete")
 
         return piccata.block_transfer.create_block_2_response(self.image_resource.data, request)
 
@@ -378,7 +383,7 @@ class ThreadDfuServer():
 
         self.clients[remote] = ThreadDfuClient()
 
-        logger.info("Waiting 20s before starting multicast DFU procedure")
+        click.echo("Waiting 20s before starting multicast DFU procedure")
         time.sleep(20)
         self._send_trigger(remote, num_of_requests)
         self.trig_done_event.wait()
@@ -395,7 +400,8 @@ class ThreadDfuServer():
         if (self.opts.reset_suppress > 0):
             self._send_reset_request(remote, num_of_requests, self.opts.reset_suppress)
 
-        logger.info("Thread DFU upload complete")
+        click.echo() # New line after progress bar
+        click.echo("Thread DFU upload complete")
 
     def _send_trigger(self, remote, num_of_requests):
         logger.info('Triggering DFU on {}'.format(remote))
