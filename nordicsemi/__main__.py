@@ -54,6 +54,7 @@ from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
 from nordicsemi.dfu.util import query_func
+from nordicsemi.zigbee.prod_config import Production_Config, Production_Config_Wrong_Exception, Production_Config_Too_Large
 from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
 
 logger = logging.getLogger(__name__)
@@ -1128,6 +1129,39 @@ def zigbee(file, jlink_snr, channel):
     of.reset()
     time.sleep(3.0) # A delay to init the OTA Server flashed on the devboard and the CLI inside of it
     of.setup_channel()
+
+@cli.group()
+def zigbee():
+    """
+    Zigbee-related commands and utilities.
+    """
+    pass
+
+@zigbee.command(short_help='Generate the Zigbee Production Config hex file.')
+@click.argument('input', required=True, type=click.Path())
+@click.argument('output', required=True, type=click.Path())
+@click.option('--offset',
+              help='Offset at which the Production Config is located',
+              type=BASED_INT_OR_NONE)
+def production_config(input, output, offset):
+    """
+    Generate the Production config hex file for Zigbee Devices out of YAML-structured description.
+    """
+    try:
+        pc = Production_Config(input)
+    except Production_Config_Wrong_Exception:
+        click.echo("Error: Input YAML file format wrong. Please see the example YAML file in the documentation.")
+        return
+
+    try:
+        if offset is None:
+            pc.generate(output)
+        else:
+            pc.generate(output, offset=offset)
+        click.echo("Production Config hexfile generated.")
+    except Production_Config_Too_Large as e:
+        click.echo("Error: Production Config too large: " + str(e.length) + " bytes")
+        return
 
 if __name__ == '__main__':
     cli()

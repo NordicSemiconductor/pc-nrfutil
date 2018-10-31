@@ -348,6 +348,18 @@ nrfutil settings display flash_dump.hex
 #### version
 This command displays the version of nrfutil.
 
+#### zigbee
+
+Use this command to issue some zigbee-only related commands. Currently only generation of production config is supported.
+
+##### production_config
+
+Use this option to generate the production config .hex file out of the production config description in YAML format. You can provide the offset where the hex should be located.
+
+```
+nrfutil zigbee production_config config_description.yaml config_hex.hex --offset 0xFC000
+```
+
 ## Init Packet customisation
 
 If you want to modify the Init Packet, which is the packet that contains all of the metadata and that is sent before the actual firmware images, you will need to recompile the Google Protocol Buffers `.proto` file and adapt `nrfutil` itself.
