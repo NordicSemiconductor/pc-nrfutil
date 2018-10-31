@@ -10,3 +10,5 @@ tqdm
 piccata
 pyspinel == 1.0.0a3
 intelhex
+pyyaml
+crcmod
