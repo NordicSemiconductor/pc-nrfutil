@@ -40,14 +40,14 @@ import struct
 import intelhex
 import yaml
 
-class Production_Config_Wrong_Exception(Exception):
+class ProductionConfigWrongException(Exception):
     pass
 
-class Production_Config_Too_Large(Exception):
+class ProductionConfigTooLargeException(Exception):
     def __init__(self, length):
         self.length = length
 
-class Production_Config(object):
+class ProductionConfig(object):
     PRODUCTION_CONFIG_SIZE_MAX        = 128
     PRODUCTION_CONFIG_MAGIC_NUMBER    = 0xF6DD37E7
     PRODUCTION_CONFIG_VERSION         = 1
@@ -65,7 +65,7 @@ class Production_Config(object):
                 self._yaml = yaml.load(f)
         
         except yaml.YAMLError as e:
-            raise Production_Config_Wrong_Exception
+            raise ProductionConfigWrongException
 
         try:
             # Handle the channel mask
@@ -103,7 +103,7 @@ class Production_Config(object):
                 self._ad_len = len(self._parsed_values["app_data"])
 
         except (TypeError, ValueError) as e:
-            raise Production_Config_Wrong_Exception
+            raise ProductionConfigWrongException
 
     def _custom_crc32(self, data):
         '''
@@ -139,7 +139,7 @@ class Production_Config(object):
         output = struct.pack('<L', self.PRODUCTION_CONFIG_MAGIC_NUMBER) + struct.pack('<L', crc32) + self._struct
 
         if len(output) > self.PRODUCTION_CONFIG_SIZE_MAX + 4: # 4 is for Magic Number
-            raise Production_Config_Too_Large(len(output))
+            raise ProductionConfigTooLargeException(len(output))
 
         ih = intelhex.IntelHex()
         ih.puts(offset, output)
