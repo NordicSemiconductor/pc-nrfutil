@@ -48,7 +48,11 @@ class TestProductionConfig(unittest.TestCase):
     PRODUCTION_CONFIG_GOLDEN_DATA_PATH = 'golden_data'
 
     def setUp(self):
-        ''' Create a temporary directory to work in. '''
+        ''' Switch to a directory of the file and create a temporary directory to work in. '''
+        script_abspath = os.path.abspath(__file__)
+        script_dirname = os.path.dirname(script_abspath)
+        os.chdir(script_dirname)
+
         self.work_directory = tempfile.mkdtemp(prefix="nrf_zigbee_production_config_tests_")
 
     def tearDown(self):
