@@ -99,7 +99,7 @@ class NCPTransport():
             (SPINEL.PROP_PHY_CHAN, self._config[self.CFG_KEY_CHANNEL], 'H'),
             (SPINEL.PROP_MAC_15_4_PANID, self._config[self.CFG_KEY_PANID], 'H'),
             (SPINEL.PROP_NET_IF_UP, 1, 'B'),
-            (SPINEL.PROP_NET_STACK_UP, 2, 'B'),
+            (SPINEL.PROP_NET_STACK_UP, 1, 'B'),
         ]
         self._set_property(*props)
 
@@ -114,13 +114,11 @@ class NCPTransport():
 
     def _wpan_receive(self, prop, value, tid):
         consumed = False
-
         if prop == SPINEL.PROP_STREAM_NET:
             consumed = True
             try:
-                pkt = self._udp6_parser.parse(io.BytesIO(value[2:]),
+                pkt = self._udp6_parser.parse(io.BytesIO(value),
                                               spinel.common.MessageInfo())
-
                 endpoint = collections.namedtuple('endpoint', 'addr port')
                 payload = str(pkt.upper_layer_protocol.payload.to_bytes())
                 src = endpoint(pkt.ipv6_header.source_address,
@@ -177,8 +175,13 @@ class NCPTransport():
     def send(self, payload, dest):
         if (dest.addr.is_multicast):
             rloc16 = self._wpan.prop_get_value(SPINEL.PROP_THREAD_RLOC16)
-            # Create an IPv6 Thread RLOC address from mesh-local prefix and RLOC16 MAC address.
-            src_addr = ipaddress.ip_address(self._ml_prefix + '\x00\x00\x00\xff\xfe\x00' + struct.pack('>H', rloc16))
+
+            # Workaround for rloc16 not being returned by pyspinel
+            if rloc16 is None:
+                src_addr = self._ml_eid
+            else:
+                # Create an IPv6 Thread RLOC address from mesh-local prefix and RLOC16 MAC address.
+                src_addr = ipaddress.ip_address(self._ml_prefix + '\x00\x00\x00\xff\xfe\x00' + struct.pack('>H', rloc16))
         else:
             src_addr = self._ml_eid
 
