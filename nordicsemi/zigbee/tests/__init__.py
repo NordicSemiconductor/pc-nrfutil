@@ -35,4 +35,4 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-"""Package implementing Zigbee OTA DFU functionality."""
+""" Tests for Zigbee Production Config functionality. """
