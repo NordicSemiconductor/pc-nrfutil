@@ -76,8 +76,9 @@ class nRFHex(intelhex.IntelHex):
 
         self.loadfile(source, self.file_format)
 
-        self._removeuicr()
-        self._removembr()
+        if self.file_format == 'hex':
+            self._removeuicr()
+            self._removembr()
 
         self.bootloaderhex = None
 
