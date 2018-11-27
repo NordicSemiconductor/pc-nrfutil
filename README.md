@@ -329,7 +329,8 @@ The `--bl-settings-version` depends on the SDK version used. Check the following
 
 SDK Version   | BL Settings Version
 ------------- | -------------------
-12.0          | 1
+12.0 - 15.2.0 | 1
+15.3.0 -      | 2
 
 The Bootloader DFU settings version supported and used by the SDK you are using can be found in `nrf_dfu_types.h` in the `bootloader` library.
 
