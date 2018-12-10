@@ -58,6 +58,8 @@ from nordicsemi.dfu.util import query_func
 from nordicsemi.zigbee.prod_config import ProductionConfig, ProductionConfigWrongException, ProductionConfigTooLargeException
 from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
 from nordicsemi.lister.device_lister import DeviceLister
+import spinel.util as util
+
 
 logger = logging.getLogger(__name__)
 
@@ -1292,9 +1294,12 @@ def convert_version_string_to_int(s):
                    'If -1 is given then suppress indefinatelly.',
               type = click.INT,
               metavar = '<delay_in_ms>')
+@click.option('-m', '--masterkey',
+              help='Masterkey. If not specified then 00112233445566778899aabbccddeeff is used',
+              type=click.STRING)
 
 def thread(package, port, address, server_port, panid, channel, jlink_snr, flash_connectivity,
-           sim, rate, reset_suppress):
+           sim, rate, reset_suppress, masterkey):
     """
     Perform a Device Firmware Update on a device that supports Thread DFU.
     This requires a second nRF device, connected to this computer, with Thread Network
@@ -1358,6 +1363,8 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
         config[tncp.NCPTransport.CFG_KEY_CHANNEL] = channel
     if (flash_connectivity):
         config[tncp.NCPTransport.CFG_KEY_RESET] = False
+    if (masterkey):
+        config[tncp.NCPTransport.CFG_KEY_MASTERKEY] = util.hex_to_bytes(masterkey)
 
     opts = type('DFUServerOptions', (object,), {})()
     opts.rate = rate

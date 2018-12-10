@@ -47,6 +47,7 @@ from spinel.stream import StreamOpen
 from spinel.codec import WpanApi
 from spinel.const import SPINEL
 import collections
+import spinel.util as util
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ class NCPTransport():
     CFG_KEY_CHANNEL = 'channel'
     CFG_KEY_PANID = 'panid'
     CFG_KEY_RESET = 'reset'
+    CFG_KEY_MASTERKEY = 'masterkey'
 
     def __init__(self, port, stream_descriptor, config = None):
         self._port = port
@@ -98,6 +100,7 @@ class NCPTransport():
             (SPINEL.PROP_THREAD_RLOC16_DEBUG_PASSTHRU, 1, 'B'),
             (SPINEL.PROP_PHY_CHAN, self._config[self.CFG_KEY_CHANNEL], 'H'),
             (SPINEL.PROP_MAC_15_4_PANID, self._config[self.CFG_KEY_PANID], 'H'),
+            (SPINEL.PROP_NET_MASTER_KEY, self._config[self.CFG_KEY_MASTERKEY], '16s'),
             (SPINEL.PROP_NET_IF_UP, 1, 'B'),
             (SPINEL.PROP_NET_STACK_UP, 1, 'B'),
         ]
@@ -146,9 +149,10 @@ class NCPTransport():
 
     @classmethod
     def get_default_config(cls):
-        return {cls.CFG_KEY_CHANNEL: 11,
-                cls.CFG_KEY_PANID:   0xabcd,
-                cls.CFG_KEY_RESET:   True}
+        return {cls.CFG_KEY_CHANNEL:     11,
+                cls.CFG_KEY_PANID:       0xabcd,
+                cls.CFG_KEY_RESET:       True,
+                cls.CFG_KEY_MASTERKEY:   util.hex_to_bytes("00112233445566778899aabbccddeeff")}
 
     def add_ip_address(self, ipaddr):
         valid = 1
