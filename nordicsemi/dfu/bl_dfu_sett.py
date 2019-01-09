@@ -302,12 +302,14 @@ class BLDFUSettings(object):
                                                   end_addr=self.setts.init_cmd - 1) & 0xffffffff
         self._add_value_tohex(self.setts.crc, self.crc)
 
+        if backup_address is None:
+            self.backup_address = self.bl_sett_addr - self.bl_sett_backup_offset
+        else:
+            self.backup_address = backup_address
+
         if not no_backup:
             for offset in range(0, self.setts.bytes_count):
-                if backup_address:
-                    self.ihex[backup_address + offset] = self.ihex[self.bl_sett_addr + offset]
-                else:
-                    self.ihex[self.bl_sett_addr - 0x1000 + offset] = self.ihex[self.bl_sett_addr + offset]
+                self.ihex[self.backup_address + offset] = self.ihex[self.bl_sett_addr + offset]
 
     def probe_settings(self, base):
         # Unpack CRC and version
