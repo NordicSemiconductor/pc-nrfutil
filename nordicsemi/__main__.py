@@ -527,6 +527,7 @@ def pkg():
                    'A non-exhaustive list of well-known values to use with this option follows:'
                    '\n|s112_nrf52_6.0.0|0xA7|'
                    '\n|s112_nrf52_6.1.0|0xB0|'
+                   '\n|s112_nrf52_6.1.1|0xB8|'
                    '\n|s130_nrf51_1.0.0|0x67|'
                    '\n|s130_nrf51_2.0.0|0x80|'
                    '\n|s132_nrf52_2.0.0|0x81|'
@@ -543,8 +544,10 @@ def pkg():
                    '\n|s132_nrf52_5.1.0|0xA5|'
                    '\n|s132_nrf52_6.0.0|0xA8|'
                    '\n|s132_nrf52_6.1.0|0xAF|'
+                   '\n|s132_nrf52_6.1.1|0xB7|'
                    '\n|s140_nrf52_6.0.0|0xA9|'
-                   '\n|s140_nrf52_6.1.0|0xAE|',
+                   '\n|s140_nrf52_6.1.0|0xAE|'
+                   '\n|s140_nrf52_6.1.1|0xB6|',
               type=click.STRING,
               multiple=True)
 @click.option('--sd-id',
