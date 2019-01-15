@@ -142,6 +142,7 @@ SoftDevice            | FWID (sd-req)
 ----------------------| -------------
 `s112_nrf52_6.0.0`    | 0xA7
 `s112_nrf52_6.1.0`    | 0xB0
+`s112_nrf52_6.1.1`    | 0xB8
 `s130_nrf51_1.0.0`    | 0x67
 `s130_nrf51_2.0.0`    | 0x80
 `s132_nrf52_2.0.0`    | 0x81
@@ -158,8 +159,10 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_5.1.0`    | 0xA5
 `s132_nrf52_6.0.0`    | 0xA8
 `s132_nrf52_6.1.0`    | 0xAF
+`s132_nrf52_6.1.1`    | 0xB7
 `s140_nrf52_6.0.0`    | 0xA9
 `s140_nrf52_6.1.0`    | 0xAE
+`s140_nrf52_6.1.1`    | 0xB6
 
 **Note**: The Thread and Zigbee stacks don't use a SoftDevice but --sd-req option is required for compatibility reasons. You can provide any value for the option as it is ignored during DFU.
 
