@@ -258,7 +258,8 @@ def settings():
 @click.option('--bl-settings-version',
               help='The Bootloader settings version.'
               'Defined in nrf_dfu_types.h, the following apply to released SDKs:'
-              '\n|SDK12|1|',
+              '\n|SDK12.0.0 - SDK15.2.0|1|'
+              '\n|SDK15.3.0 -          |2|',
               type=BASED_INT_OR_NONE)
 @click.option('--start-address',
               help='Custom start address for the settings page. If not specified, '
