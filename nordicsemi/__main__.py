@@ -191,6 +191,7 @@ BOOT_VALIDATION_ARGS =\
     'VALIDATE_GENERATED_SHA256',
     'VALIDATE_ECDSA_P256_SHA256',
 ]
+DEFAULT_BOOT_VALIDATION = 'VALIDATE_GENERATED_CRC'
 
 @click.group()
 @click.option('-v', '--verbose',
@@ -375,6 +376,12 @@ def generate(hex_file,
     if sd_boot_validation and not softdevice:
         click.echo("Error: --softdevice hex file must be set when using --sd_boot_validation")
         return
+
+    # Default boot validation cases
+    if app_boot_validation is None and application is not None and bl_settings_version == 2:
+        app_boot_validation = DEFAULT_BOOT_VALIDATION
+    if sd_boot_validation is None and softdevice is not None and bl_settings_version == 2:
+        sd_boot_validation = DEFAULT_BOOT_VALIDATION
 
     sett = BLDFUSettings()
     sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version,
