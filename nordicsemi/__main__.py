@@ -566,18 +566,18 @@ def pkg():
 @click.option('--softdevice',
               help='The SoftDevice firmware file.',
               type=click.STRING)
-@click.option('--key-file',
-              help='The private (signing) key in PEM fomat.',
-              required=False,
-              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
-@click.option('--app-boot-validation',
-              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
-              required=False,
-              type=click.STRING)
 @click.option('--sd-boot-validation',
               help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
               required=False,
               type=click.STRING)
+@click.option('--app-boot-validation',
+              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              required=False,
+              type=click.STRING)
+@click.option('--key-file',
+              help='The private (signing) key in PEM fomat.',
+              required=False,
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 @click.option('--external-app',
               help='Indicates that the FW upgrade is intended to be passed through '
                    '(not applied on the receiving device)',
@@ -617,8 +617,8 @@ def generate(zipfile,
            sd_req,
            sd_id,
            softdevice,
-           app_boot_validation,
            sd_boot_validation,
+           app_boot_validation,
            key_file,
            external_app,
            zigbee,
@@ -884,7 +884,8 @@ def generate(zipfile,
                           binfile,
                           None,
                           None,
-                          None, 
+                          None,
+                          None,
                           key_file,
                           True)
 
