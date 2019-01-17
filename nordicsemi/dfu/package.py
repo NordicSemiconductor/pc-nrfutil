@@ -365,6 +365,7 @@ DFU Package: <{0}>:
         self.zip_file = filename
         self.work_dir = self.__create_temp_workspace()
 
+        sd_bin_created = False
         if Package._is_bootloader_softdevice_combination(self.firmwares_data):
             # Removing softdevice and bootloader data from dictionary and adding the combined later
             softdevice_fw_data = self.firmwares_data.pop(HexType.SOFTDEVICE)
@@ -397,6 +398,7 @@ DFU Package: <{0}>:
             # Need to generate SD only bin for boot validation signature
             sd_bin = Package.normalize_firmware_to_bin(self.work_dir, softdevice_fw_data[FirmwareKeys.FIRMWARE_FILENAME])
             sd_bin_path = os.path.join(self.work_dir, sd_bin)
+            sd_bin_created = True
 
         for key, firmware_data in self.firmwares_data.iteritems():
 
@@ -482,6 +484,10 @@ DFU Package: <{0}>:
                 ota_file_handle = open(self.zigbee_ota_file.filename, 'wb')
                 ota_file_handle.write(self.zigbee_ota_file.binary)
                 ota_file_handle.close()
+
+        # Remove SD binary file created for boot validation
+        if sd_bin_created:
+            os.remove(sd_bin_path)
 
         # Store the manifest to manifest.json
         manifest = self.create_manifest()
