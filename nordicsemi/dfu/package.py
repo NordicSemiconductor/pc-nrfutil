@@ -124,7 +124,8 @@ class Package(object):
                  app_fw=None,
                  bootloader_fw=None,
                  softdevice_fw=None,
-                 boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
+                 sd_boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
+                 app_boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
                  key_file=None,
                  is_external=False,
                  zigbee_format=False,
@@ -158,10 +159,15 @@ class Package(object):
         if sd_id is not None:
             init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_id
 
-        if boot_validation is not None:
-            boot_validation_type = [ValidationTypes[boot_validation]]
+        if sd_boot_validation is not None:
+            sd_boot_validation_type = [ValidationTypes[sd_boot_validation]]
         else:
-            boot_validation_type = [ValidationTypes.VALIDATE_GENERATED_CRC]
+            sd_boot_validation_type = [ValidationTypes.VALIDATE_GENERATED_CRC]
+
+        if app_boot_validation is not None:
+            app_boot_validation_type = [ValidationTypes[app_boot_validation]]
+        else:
+            app_boot_validation_type = [ValidationTypes.VALIDATE_GENERATED_CRC]
 
         self.firmwares_data = {}
 
@@ -170,7 +176,7 @@ class Package(object):
             self.__add_firmware_info(firmware_type=firmware_type,
                                      firmware_version=app_version,
                                      filename=app_fw,
-                                     boot_validation_type=boot_validation_type,
+                                     boot_validation_type=app_boot_validation_type,
                                      init_packet_data=init_packet_vars)
 
         if sd_req is not None:
@@ -187,7 +193,7 @@ class Package(object):
             self.__add_firmware_info(firmware_type=HexType.SOFTDEVICE,
                                      firmware_version=0xFFFFFFFF,
                                      filename=softdevice_fw,
-                                     boot_validation_type=boot_validation_type,
+                                     boot_validation_type=sd_boot_validation_type,
                                      init_packet_data=init_packet_vars)
 
         self.key_file = key_file

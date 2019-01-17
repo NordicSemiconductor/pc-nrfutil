@@ -570,8 +570,12 @@ def pkg():
               help='The private (signing) key in PEM fomat.',
               required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
-@click.option('--boot-validation',
-              help='The method of boot validation. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+@click.option('--app-boot-validation',
+              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              required=False,
+              type=click.STRING)
+@click.option('--sd-boot-validation',
+              help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
               required=False,
               type=click.STRING)
 @click.option('--external-app',
@@ -613,7 +617,8 @@ def generate(zipfile,
            sd_req,
            sd_id,
            softdevice,
-           boot_validation,
+           app_boot_validation,
+           sd_boot_validation,
            key_file,
            external_app,
            zigbee,
@@ -808,8 +813,12 @@ def generate(zipfile,
         if default_key:
             display_sec_warning()
 
-    if boot_validation and (boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+    if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
+        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+        return
+
+    if app_boot_validation and (app_boot_validation not in BOOT_VALIDATION_ARGS):
+        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
         return
 
     if zigbee_comment is None:
@@ -843,7 +852,8 @@ def generate(zipfile,
                       application,
                       bootloader,
                       softdevice,
-                      boot_validation,
+                      sd_boot_validation,
+                      app_boot_validation,
                       key_file,
                       inner_external_app,
                       zigbee,
