@@ -33,6 +33,7 @@ that you are using you will need to select a release of this tool compatible wit
 * Version 0.5.2 generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
 * Versions 1.5.0 and later generate modern firmware packages compatible with **nRF SDK 12.0 and newer**
 * Versions 4.0.0 and later generate modern firmware packages compatible with **nRF SDK 15.1 and newer**
+* Versions 5.0.0 and later generate modern firmware packages compatible with **nRF SDK 15.3 and newer**
 
 **Note**: In order to generate firmware images, compatible with **nRF SDK 12.0 to nRF SDK 15.0**, use `--no-backup` switch during generation of DFU settings.
 
@@ -190,8 +191,7 @@ SD + APP      | Yes       | **See notes 1 and 2 below**
 was added in nrfutil 3.1.0 and is required since 3.2.0 in case the package should contain SD (+ BL) + APP. Also, since version 3.2.0 the new ID is copied to `--sd-req` list so that
 in case of a link loss during APP update the DFU process can be restarted. In that case the new SD would overwrite itself, so `--sd-req` must contain also the ID of the new SD.
 
-**Note 3:** When creating update packages of bootloaders compiled from nRF5 SDK 15.3.0 and higher, nrfutil version 4.1.0 (TODO: UPDATE THIS WHEN VERSION IS
-DECIDED) must be used. This is because of changes to the bootloader projects in the nRF5 SDK, and if an old nrfutil version is used the size of the generated packages
+**Note 3:** When creating update packages of bootloaders compiled from nRF5 SDK 15.3.0 and higher, nrfutil version 5.0.0 must be used. This is because of changes to the bootloader projects in the nRF5 SDK, and if an old nrfutil version is used the size of the generated packages
 will be too large.
 
 Boot validation for a SD or APP update can be activated by setting the `--sd-boot-validation` or `--app-boot-validation` to the preferred
@@ -205,7 +205,7 @@ The boolean option `--zigbee` enables the generation of Zigbee update file in ad
 ```
 nrfutil pkg generate --hw-version 52 --sd-req 0 --application-version 0x01020101 --application nrf52840_xxaa.hex --key-file ../priv.pem app_dfu_package.zip --zigbee True --manufacturer-id 0xCAFE --image-type 0x1234 --comment good_image
 ```
-**Note 3:** The generated Zigbee update file is named according to the recommendation of the Zigbee Specification ([Zigbee Cluster Library Specification 11.5 - Zigbee Document 07-5123-06](http://www.zigbee.org/~zigbeeor/wp-content/uploads/2014/10/07-5123-06-zigbee-cluster-library-specification.pdf)), so the user doesn't provide the name of the Update file.
+**Note 4:** The generated Zigbee update file is named according to the recommendation of the Zigbee Specification ([Zigbee Cluster Library Specification 11.5 - Zigbee Document 07-5123-06](http://www.zigbee.org/~zigbeeor/wp-content/uploads/2014/10/07-5123-06-zigbee-cluster-library-specification.pdf)), so the user doesn't provide the name of the Update file.
 
 ##### display
 Use this option to display the contents of a DFU package in a .zip file.
