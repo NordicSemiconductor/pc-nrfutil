@@ -74,7 +74,7 @@ class ManifestGenerator(object):
             _firmware.bin_file = os.path.basename(firmware_dict[FirmwareKeys.BIN_FILENAME])
             _firmware.dat_file = os.path.basename(firmware_dict[FirmwareKeys.DAT_FILENAME])
 
-            if key == HexType.APPLICATION:
+            if key == HexType.APPLICATION or key == HexType.EXTERNAL_APPLICATION:
                 self.manifest.application = _firmware
             elif key == HexType.BOOTLOADER:
                 self.manifest.bootloader = _firmware
