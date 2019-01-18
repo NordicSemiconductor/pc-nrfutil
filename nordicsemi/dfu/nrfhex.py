@@ -68,7 +68,6 @@ class nRFHex(intelhex.IntelHex):
         :return: None
         """
         super(nRFHex, self).__init__()
-
         self.arch = arch
         self.file_format = 'hex'
 
@@ -77,7 +76,9 @@ class nRFHex(intelhex.IntelHex):
 
         self.loadfile(source, self.file_format)
 
-        self._removeuicr()
+        if self.file_format == 'hex':
+            self._removeuicr()
+            self._removembr()
 
         self.bootloaderhex = None
 
@@ -92,6 +93,13 @@ class nRFHex(intelhex.IntelHex):
         maxaddress = self.maxaddr()
         if maxaddress >= uicr_start_address:
             for i in range(uicr_start_address, maxaddress + 1):
+                self._buf.pop(i, 0)
+
+    def _removembr(self):
+        mbr_end_address = 0x1000
+        minaddress = super(nRFHex, self).minaddr()
+        if minaddress < mbr_end_address:
+            for i in range(minaddress, mbr_end_address):
                 self._buf.pop(i, 0)
 
     def address_has_magic_number(self, address):
