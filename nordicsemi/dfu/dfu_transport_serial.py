@@ -315,22 +315,21 @@ class DfuTransportSerial(DfuTransport):
                 libusb1_device = trigger.enter_bootloader_mode(device)
                 logger.debug("Serial: DFU bootloader was triggered")
 
-                retry_count = 5
+                retry_count = 10
                 wait_time_ms = 500
                 for checks in range(retry_count):
-                    logger.debug("Serial: Waiting {} ms for device to enter bootloader {}/{} time".format(500, checks + 1, retry_count + 1))
+                    logger.debug("Serial: Waiting {} ms for device to enter bootloader {}/{} time".format(500, checks + 1, retry_count))
                     time.sleep(wait_time_ms / 1000.0)
 
                     device = lister.get_device(serial_number = device_serial_number)
-                    if (device):
-                        if not self.__is_device_in_bootloader_mode(device):
-                            logger.debug("Serial: Device could not enter bootloader mode, or the bootloader has an unsupported product id.")
-                            # throw error?
-                        else:
-                            self.com_port = device.get_first_available_com_port()
-                        break
+                    if not self.__is_device_in_bootloader_mode(device):
+                        continue
+                    self.com_port = device.get_first_available_com_port()
+                    break
 
                 trigger.clean()
+            if not self.__is_device_in_bootloader_mode(device):
+                logger.debug("Serial: Device is either not in bootloader mode, or using an unsupported bootloader.")
 
     def __is_device_in_bootloader_mode(self, device):
         if not device:
