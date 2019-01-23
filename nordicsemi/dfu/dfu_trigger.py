@@ -18,9 +18,12 @@ NORDIC_SEM_VER_REQUEST = 8;
 NORDIC_DFU_INFO_REQUEST = 7;
 DFU_DETACH_REQUEST = 0;
 
-class dfu_trigger:
+class DFUTrigger:
     def __init__(self):
         self.context = usb1.USBContext()
+
+    def clean(self):
+        self.context.close()
 
     def select_device(self, listed_device):
         allDevices = self.context.getDeviceList()
