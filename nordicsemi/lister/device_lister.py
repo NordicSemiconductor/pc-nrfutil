@@ -1,18 +1,22 @@
 import sys
 from nordicsemi.lister.windows.lister_win32 import Win32Lister
-from nordicsemi.lister.linux.linux_lister import LinuxLister
+from nordicsemi.lister.unix.unix_lister import UnixLister
 
 class DeviceLister(object):
     def __init__(self):
         if sys.platform == 'win32':
             self.lister_backend = Win32Lister()
         elif 'linux' in sys.platform:
-            self.lister_backend = LinuxLister()
+            self.lister_backend = UnixLister()
+        elif sys.platform == 'darwin':
+            self.lister_backend = UnixLister()
         else:
             self.lister_backend = None
 
     def enumerate(self):
-        return self.lister_backend.enumerate()
+        if self.lister_backend:
+            return self.lister_backend.enumerate()
+        return []
     def get_device(self, get_all = False, **kwargs):
         devices = self.enumerate()
         matching_devices = []
