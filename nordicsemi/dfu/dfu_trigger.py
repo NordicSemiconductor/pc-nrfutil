@@ -1,4 +1,11 @@
+import os
+working_dir = os.getcwd()
+file_dir = os.path.dirname(__file__)
+os.chdir(file_dir)
+os.chdir("../libusb")
 import usb1
+os.chdir(working_dir)
+
 
 LIBUSB_ENDPOINT_IN = 0x80
 LIBUSB_ENDPOINT_OUT = 0x00
