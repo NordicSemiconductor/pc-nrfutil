@@ -193,7 +193,7 @@ class DfuTransportSerial(DfuTransport):
     def open(self):
         super(DfuTransportSerial, self).open()
         try:
-            self.__open_ensure_bootloader()
+            self.__ensure_bootloader()
             self.serial_port = Serial(port=self.com_port,
                 baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
             self.dfu_adapter = DFUAdapter(self.serial_port)
@@ -304,10 +304,9 @@ class DfuTransportSerial(DfuTransport):
 
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
 
-    def __open_ensure_bootloader(self):
+    def __ensure_bootloader(self):
         lister = DeviceLister()
         device = lister.get_device(com = self.com_port)
-
         if device:
             device_serial_number = device.serial_number
 
