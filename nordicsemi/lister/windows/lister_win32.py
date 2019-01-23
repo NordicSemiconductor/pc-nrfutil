@@ -66,7 +66,23 @@ def get_serial_serial_no(vendorId, productId, hDevInfo, deviceInfoData):
     winreg.CloseKey(vendorProductHKey)
 
 def com_port_is_open(port):
-    return True
+    hKeyPath = "HARDWARE\\DEVICEMAP\\SERIALCOMM"
+    try:
+        deviceHKey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hKeyPath)
+    except EnvironmentError as err:
+        return True # Unable to check enumerated serialports. Assume all are open.
+    nextKey = 0
+    while True:
+        try:
+            value = winreg.EnumValue(deviceHKey, nextKey)[1]
+            nextKey += 1
+            if port == value:
+                winreg.CloseKey(deviceHKey)
+                return True
+        except WindowsError:
+            break
+    winreg.CloseKey(deviceHKey)
+    return False
 
 
 def list_all_com_ports(vendorId, productId, serialNumber):
