@@ -82,7 +82,7 @@ class DFUTrigger:
             try:
                 device_handle.controlWrite(ReqTypeOUT, DFU_DETACH_REQUEST, 0, dfu_iface, arr)
             except Exception as err:
-                if "LIBUSB_ERROR_PIPE" in err:
+                if "LIBUSB_ERROR_PIPE" in str(err):
                     return
         raise NordicSemiException("Device did not exit application mode after dfu was triggered. Serial number: {}, product id 0x{}, vendor id: 0x{}\n\n"\
         .format(listed_device.serial_number, listed_device.product_id, listed_device.vendor_id))
