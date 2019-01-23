@@ -1,7 +1,7 @@
 import sys
 from nordicsemi.lister.lister_backend import AbstractLister
 
-if 'linux' in sys.platform:
+if 'linux' in sys.platform or sys.platform == 'darwin':
     from serial import Serial
     import serial.tools.list_ports
     from nordicsemi.lister.enumerated_device import EnumeratedDevice
@@ -9,7 +9,7 @@ if 'linux' in sys.platform:
 def create_id_string(sno, PID, VID):
     return "{}-{}-{}".format(sno, PID, VID)
 
-class LinuxLister(AbstractLister):
+class UnixLister(AbstractLister):
     def __init__(self):
         pass
 
@@ -28,7 +28,7 @@ class LinuxLister(AbstractLister):
 
             id = create_id_string(serial_number, product_id, vendor_id)
             if id in device_identities:
-                device_identities[id].com_ports.append(com_port)
+                device_identities[id].add_com_port(com_port)
             else:
                 device_identities[id] = EnumeratedDevice(vendor_id, product_id, serial_number, [com_port])
 
