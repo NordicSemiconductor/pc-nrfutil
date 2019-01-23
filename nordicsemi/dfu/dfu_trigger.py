@@ -2,10 +2,12 @@ import os
 working_dir = os.getcwd()
 file_dir = os.path.dirname(__file__)
 os.chdir(file_dir)
-os.chdir("../libusb")
+os.chdir("../../libusb")
 import usb1
 os.chdir(working_dir)
 
+
+from pc_ble_driver_py.exceptions    import NordicSemiException
 
 LIBUSB_ENDPOINT_IN = 0x80
 LIBUSB_ENDPOINT_OUT = 0x00
@@ -56,21 +58,31 @@ class DFUTrigger:
             for iface in cfg.iterInterfaces():
                 for setting in iface.iterSettings():
                     if setting.getClass() == 255 and \
-                    setting.getSubClass == 1 and \
-                    setting.getProtocol == 1:
+                    setting.getSubClass() == 1 and \
+                    setting.getProtocol() == 1:
                         # TODO: set configuration
                         return setting.getNumber()
-        return 0
+
+    def no_trigger_exception(self, device):
+        return NordicSemiException("No trigger interface found for device with serial number {}, product id 0x{} and vendor id 0x{}\n"\
+        .format(device.serial_number, device.product_id, device.vendor_id))
 
     def enter_bootloader_mode(self, listed_device):
         libusb_device = self.select_device(listed_device)
+        if libusb_device is None:
+            raise self.no_trigger_exception(listed_device)
         device_handle = libusb_device.open()
         dfu_iface = self.get_dfu_interface_num(libusb_device)
+
+        if dfu_iface is None:
+            raise self.no_trigger_exception(listed_device)
+
         with device_handle.claimInterface(dfu_iface):
             arr = bytearray("0", 'utf-8')
             try:
-                written = device_handle.controlWrite(ReqTypeOUT, DFU_DETACH_REQUEST, 0, dfu_iface, arr)
+                device_handle.controlWrite(ReqTypeOUT, DFU_DETACH_REQUEST, 0, dfu_iface, arr)
             except Exception as err:
                 if "LIBUSB_ERROR_PIPE" in err:
                     return
-        # throw exception indicating that the device didn't exit application mode
+        raise NordicSemiException("Device did not exit application mode after dfu was triggered. Serial number: {}, product id 0x{}, vendor id: 0x{}\n\n"\
+        .format(listed_device.serial_number, listed_device.product_id, listed_device.vendor_id))
