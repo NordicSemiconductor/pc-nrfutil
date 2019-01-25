@@ -67,7 +67,7 @@ To install nrfutil from source the following prerequisites must be satisfied:
 * [pip](https://pip.pypa.io/en/stable/installing.html)
 * setuptools (upgrade to latest version): `pip install -U setuptools`
 
-Additionally, if you want to generate a self-contained executable:  
+Additionally, if you want to generate a self-contained executable:
 
 * PyInstaller: `pip install pyinstaller`
 
@@ -90,12 +90,12 @@ python nordicsemi/__main__.py
 
 ### Installing from source
 
-To install the library to the local Python site-packages and script folder:  
+To install the library to the local Python site-packages and script folder:
 ```
 python setup.py install
 ```
 
-To generate a self-contained executable version of the utility:  
+To generate a self-contained executable version of the utility:
 ```
 pyinstaller nrfutil.spec
 
@@ -149,6 +149,8 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_2.0.0`    | 0x81
 `s130_nrf51_2.0.1`    | 0x87
 `s132_nrf52_2.0.1`    | 0x88
+`s212_nrf52_2.0.1`    | 0x8D
+`s332_nrf52_2.0.1`    | 0x8E
 `s132_nrf52_3.0.0`    | 0x8C
 `s132_nrf52_3.1.0`    | 0x91
 `s132_nrf52_4.0.0`    | 0x95
@@ -156,7 +158,11 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_4.0.3`    | 0x99
 `s132_nrf52_4.0.4`    | 0x9E
 `s132_nrf52_4.0.5`    | 0x9F
+`s212_nrf52_4.0.5`    | 0x93
+`s332_nrf52_4.0.5`    | 0x94
 `s132_nrf52_5.0.0`    | 0x9D
+`s212_nrf52_5.0.0`    | 0x9C
+`s332_nrf52_5.0.0`    | 0x9B
 `s132_nrf52_5.1.0`    | 0xA5
 `s132_nrf52_6.0.0`    | 0xA8
 `s132_nrf52_6.1.0`    | 0xAF
@@ -164,6 +170,10 @@ SoftDevice            | FWID (sd-req)
 `s140_nrf52_6.0.0`    | 0xA9
 `s140_nrf52_6.1.0`    | 0xAE
 `s140_nrf52_6.1.1`    | 0xB6
+`s212_nrf52_6.1.1`    | 0xBC
+`s332_nrf52_6.1.1`    | 0xBA
+`s340_nrf52_6.1.1`    | 0xB9
+
 
 **Note**: The Thread and Zigbee stacks don't use a SoftDevice but --sd-req option is required for compatibility reasons. You can provide any value for the option as it is ignored during DFU.
 
@@ -224,9 +234,9 @@ Perform a full DFU procedure over an ANT connection. This command takes several 
 ```
 nrfutil dfu ant --help
 ```
-Below is an example of the execution of a DFU procedure of the file generated above over ANT using an nRF52 connectivity IC connected to COM3, where the remote ANT device to be upgraded is called "MyDevice":
+Below is an example of the execution of a DFU procedure of the file generated above over ANT using an nRF52 connectivity IC connected to COM3:
 ```
-nrfutil dfu ant -ic NRF52 -pkg app_dfu_package.zip -p COM3 -n "MyDevice" -f
+nrfutil dfu ant -ic NRF52 -pkg app_dfu_package.zip -p COM3 -f
 ```
 The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a serialized SoftDevice. Use with caution as this will overwrite the contents of the IC's flash memory.
 
