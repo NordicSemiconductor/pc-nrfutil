@@ -47,7 +47,8 @@ import sys
 # Python 3rd party imports
 try:
     import antlib
-    from antlib import antmessage as antdefs
+    import antlib.antdefines as antdefines
+    import antlib.antmessage as antmessage
 except ImportError as e:
     print(e)
     raise Exception("Try running 'pip install antlib'.")
@@ -115,10 +116,10 @@ class DfuAdapter(object):
     ANT_NET_KEY_IDX = 0
 
     DATA_MESGS = (
-        antdefs.MESG_BROADCAST_DATA_ID,
-        antdefs.MESG_ACKNOWLEDGED_DATA_ID,
-        antdefs.MESG_BURST_DATA_ID,
-        antdefs.MESG_ADV_BURST_DATA_ID)
+        antmessage.MESG_BROADCAST_DATA_ID,
+        antmessage.MESG_ACKNOWLEDGED_DATA_ID,
+        antmessage.MESG_BURST_DATA_ID,
+        antmessage.MESG_ADV_BURST_DATA_ID)
 
     def __init__(self, ant_dev, timeout, search_timeout, ant_config):
         self.ant_dev = ant_dev
@@ -144,7 +145,7 @@ class DfuAdapter(object):
             self.ant_dev.set_network_key(self.ANT_NET_KEY_IDX,
                 self.ant_config.network_key)
 
-        self.ant_dev.assign_channel(self.ANT_DFU_CHAN, antdefs.CHTYPE_SLAVE,
+        self.ant_dev.assign_channel(self.ANT_DFU_CHAN, antdefines.CHANNEL_TYPE_SLAVE,
             self.ANT_NET_KEY_IDX, response_time_msec=self.ANT_RSP_TIMEOUT)
 
         # The params here are fairly arbitrary, but must match what the device
@@ -222,12 +223,12 @@ class DfuAdapter(object):
 
         if (mesg.msgid in self.DATA_MESGS):
             self.__process_data_mesg(mesg)
-        elif (mesg.msgid == antdefs.MESG_RESPONSE_EVENT_ID):
-            if (mesg.data[1] == antdefs.MESG_EVENT_ID):
+        elif (mesg.msgid == antmessage.MESG_RESPONSE_EVENT_ID):
+            if (mesg.data[1] == antmessage.MESG_EVENT_ID):
                 self.__process_evt(mesg.data[2])
 
     def __process_data_mesg(self, mesg):
-        if (mesg.msgid == antdefs.MESG_BROADCAST_DATA_ID):
+        if (mesg.msgid == antmessage.MESG_BROADCAST_DATA_ID):
             self.connected = True
             self.beacon_rx = True
             # Broadcast data should always contain the current sequence numbers.
@@ -241,18 +242,18 @@ class DfuAdapter(object):
             # Ignore non-broadcast data until connection is established.
             return
 
-        data = mesg.data[1:1+antdefs.STANDARD_DATA_SIZE]
+        data = mesg.data[1:1+antdefines.ANT_STANDARD_DATA_PAYLOAD_SIZE]
         is_first = False
         is_last = False
 
-        if (mesg.msgid == antdefs.MESG_ACKNOWLEDGED_DATA_ID):
+        if (mesg.msgid == antmessage.MESG_ACKNOWLEDGED_DATA_ID):
             is_first = is_last = True
         else:
-            if mesg.sequence_number == antdefs.SEQUENCE_FIRST_MESSAGE:
+            if mesg.sequence_number == antdefines.SEQUENCE_FIRST_MESSAGE:
                 is_first = True
-            if (mesg.sequence_number & antdefs.SEQUENCE_LAST_MESSAGE) != 0:
+            if (mesg.sequence_number & antdefines.SEQUENCE_LAST_MESSAGE) != 0:
                 is_last = True
-            if (mesg.msgid == antdefs.MESG_ADV_BURST_DATA_ID):
+            if (mesg.msgid == antmessage.MESG_ADV_BURST_DATA_ID):
                 data = mesg.data[1:]
 
         if is_first:
@@ -275,13 +276,13 @@ class DfuAdapter(object):
         self.resp_queue.put(self.rx_data[3:size])
 
     def __process_evt(self, evt):
-        if (evt == antdefs.EVENT_CHANNEL_CLOSED):
+        if (evt == antdefines.EVENT_CHANNEL_CLOSED):
             raise NordicSemiException("Device connection lost")
-        elif (evt == antdefs.EVENT_TRANSFER_TX_COMPLETED):
+        elif (evt == antdefines.EVENT_TRANSFER_TX_COMPLETED):
             self.tx_result = True
-        elif (evt == antdefs.EVENT_TRANSFER_TX_FAILED):
+        elif (evt == antdefines.EVENT_TRANSFER_TX_FAILED):
             self.tx_result = False
-        elif (evt == antdefs.EVENT_TRANSFER_RX_FAILED):
+        elif (evt == antdefines.EVENT_TRANSFER_RX_FAILED):
             self.rx_data = None
 
     def __get_ant_mesg(self, timeout):
@@ -342,10 +343,9 @@ class DfuTransportAnt(DfuTransport):
     def open(self):
         super(DfuTransportAnt, self).open()
         try:
-            ant_dev = antlib.ANTDevice()
-            # TODO: proper init once complete.
-            ant_dev.init(self.port, 57600, ant_dev.USB_PORT_TYPE,
-                ant_dev.FRAMER_TYPE_BASIC)
+            ant_dev = antlib.ANTDevice(self.port, 57600,
+                antlib.antdevice.ANTDevice.USB_PORT_TYPE,
+                antlib.antdevice.ANTDevice.FRAMER_TYPE_BASIC)
             ant_dev.reset_system(response_time_msec=self.ANT_RST_TIMEOUT_MS)
             # There might be a back log of messages, clear them out.
             while ant_dev.get_message():
