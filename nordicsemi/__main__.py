@@ -50,7 +50,6 @@ from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.dfu import Dfu
 from nordicsemi.dfu.dfu_transport import DfuEvent, TRANSPORT_LOGGING_LEVEL
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
-from nordicsemi.dfu.dfu_transport_ant import DfuTransportAnt, AntParams
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
@@ -911,7 +910,7 @@ def update_progress(progress=0):
     if global_bar:
         global_bar.update(progress)
 
-@cli.group(short_help='Perform a Device Firmware Update over, BLE, Thread, or serial transport given a DFU package (zip file).')
+@cli.group(short_help='Perform a Device Firmware Update over, ANT, BLE, Thread, or serial transport given a DFU package (zip file).')
 def dfu():
     """
     This set of commands supports Device Firmware Upgrade procedures over both BLE and serial transports.
@@ -1120,13 +1119,14 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
 
     click.echo("Device programmed.")
 
+
 @dfu.command(short_help="Update the firmware on a device over an ANT connection.")
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
               required=True)
 @click.option('-p', '--port',
-              help='ANT USB device to use for performing the update',
+              help='ANT USB device to use for performing the update.',
               type=click.INT,
               required=False)
 @click.option('-cd', '--connect-delay',
@@ -1134,19 +1134,19 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
               type=click.INT,
               required=False)
 @click.option('-prn', '--packet-receipt-notification',
-              help='Set the packet receipt notification value',
+              help='Set the packet receipt notification value.',
               type=click.INT,
               required=False)
 @click.option('--period',
-              help='Set the ANT Channel period',
+              help='Set the ANT Channel period.',
               type=click.INT,
               required=False)
 @click.option('--freq',
-              help='Set the ANT RF Frequency',
+              help='Set the ANT RF Frequency.',
               type=click.INT,
               required=False)
 @click.option('--net-key',
-              help='Set the ANT network key. Must be formated as hexadecimal numbers seperated by dashes ("-")',
+              help='Set the ANT network key. Must be formated as hexadecimal numbers seperated by dashes ("-").',
               type=click.STRING,
               required=False)
 @click.option('--dev-type',
@@ -1154,15 +1154,24 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
               type=click.INT,
               required=False)
 @click.option('-srn', '--serial',
-              help='Serial number of device to search for',
+              help='Serial number of device to search for.',
               type=click.INT,
               required=False)
 @click.option('-d', '--debug/--no-debug',
-              help='Enable ANT debug logs',
+              help='Enable ANT debug logs.',
               default=False,
               required=False)
 def ant(package, port, connect_delay, packet_receipt_notification, period,
         freq, net_key, dev_type, serial, debug):
+
+    from nordicsemi.dfu.dfu_transport_ant import platform_supported
+
+    if not platform_supported():
+        return
+
+    # This import needs to happen only if the platform is supported.
+    from nordicsemi.dfu.dfu_transport_ant import DfuTransportAnt, AntParams
+
     ant_config = AntParams()
     if port is None:
         port = DfuTransportAnt.DEFAULT_PORT
