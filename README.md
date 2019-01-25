@@ -49,7 +49,7 @@ This will also retrieve and install all additional required packages.
 
 **Note**: When installing on macOS, you may need to add ` --ignore-installed six` when running pip. See [issue #79](https://github.com/NordicSemiconductor/pc-nrfutil/issues/79).
 
-**Note**: To use the `dfu ble`, `dfu thread` or `dfu zigbee` or `dfu ant` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
+**Note**: To use the `dfu ble`, `dfu thread`, `dfu zigbee` or `dfu ant` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
 
 ## Downloading precompiled Windows executable
 
@@ -236,9 +236,8 @@ nrfutil dfu ant --help
 ```
 Below is an example of the execution of a DFU procedure of the file generated above over ANT using an nRF52 connectivity IC connected to COM3:
 ```
-nrfutil dfu ant -ic NRF52 -pkg app_dfu_package.zip -p COM3 -f
+nrfutil dfu ant -pkg app_dfu_package.zip --port 0
 ```
-The `-f` option instructs nrfutil to actually program the board connected to COM3 with the connectivity software required to operate as a serialized SoftDevice. Use with caution as this will overwrite the contents of the IC's flash memory.
 
 ##### ble
 Perform a full DFU procedure over a BLE connection. This command takes several options that you can list using:
