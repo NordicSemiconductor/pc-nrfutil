@@ -41,14 +41,44 @@ from datetime import datetime, timedelta
 import logging
 import Queue
 import struct
+import sys
+
 
 # Python 3rd party imports
-import antlib
-from antlib import antmessage as antdefs
+try:
+    import antlib
+    from antlib import antmessage as antdefs
+except ImportError as e:
+    print(e)
+    raise Exception("Try running 'pip install antlib'.")
 
 # Nordic Semiconductor imports
 from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent, TRANSPORT_LOGGING_LEVEL
 from pc_ble_driver_py.exceptions    import NordicSemiException
+
+
+def platform_supported():
+    """
+    A platform check should be performed before using this module.
+    Only a python 32bit interpreter on windows is supported. The 'antlib'
+    package depends on precompiled windows 32bit libraries.
+
+    :return: True if platform is windows 32bit or False otherwise.
+    :rtype: bool
+    """
+    can_run = False
+
+    if sys.platform in ["win32", "win64"]:
+        # Check if Python is 32 bit.
+        if struct.calcsize("P") * 8 == 32:
+            can_run = True
+
+    if not can_run:
+        print("The ant dfu command is only available on Windows with a 32bit Python \n"
+              "which can be downloaded here: 'https://www.python.org/downloads/windows/'.")
+
+    return can_run
+
 
 class ValidationException(NordicSemiException):
     """"
@@ -57,6 +87,7 @@ class ValidationException(NordicSemiException):
     pass
 
 logger = logging.getLogger(__name__)
+
 
 class AntParams(object):
     # 2466 MHz
@@ -76,6 +107,7 @@ class AntParams(object):
         self.device_type = self.DEF_DEVICE_TYPE
         self.trans_type = self.DEF_TRANS_TYPE
         self.network_key = self.DEF_NETWORK_KEY
+
 
 class DfuAdapter(object):
     ANT_RSP_TIMEOUT = 100
