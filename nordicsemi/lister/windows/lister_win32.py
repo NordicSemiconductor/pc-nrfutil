@@ -57,119 +57,124 @@ MAX_BUFSIZE = 1000
 
 
 
-def get_serial_serial_no(vendorId, productId, hDevInfo, deviceInfoData):
+def get_serial_serial_no(vendor_id, product_id, h_dev_info, device_info_data):
     prop_type = ctypes.c_ulong()
     required_size = ctypes.c_ulong()
 
     instance_id_buffer = ctypes.create_string_buffer(MAX_BUFSIZE)
 
-    res = setup_api.SetupDiGetDevicePropertyW(hDevInfo, ctypes.byref(deviceInfoData), ctypes.byref(DEVPKEY.Device.ContainerId), ctypes.byref(prop_type), ctypes.byref(instance_id_buffer),
-                                                           MAX_BUFSIZE, ctypes.byref(required_size), 0)
+    res = setup_api.SetupDiGetDevicePropertyW(h_dev_info, ctypes.byref(device_info_data), ctypes.byref(DEVPKEY.Device.ContainerId),
+    ctypes.byref(prop_type), ctypes.byref(instance_id_buffer), MAX_BUFSIZE, ctypes.byref(required_size), 0)
 
-    wantedGUID = GUID(ctypesInternalGUID(instance_id_buffer))
+    wanted_GUID = GUID(ctypesInternalGUID(instance_id_buffer))
 
-    hKeyPath = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}".format(vendorId, productId)
+    hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}".format(vendor_id, product_id)
     try:
-        vendorProductHKey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hKeyPath)
+        vendor_product_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
     except EnvironmentError as err:
         return
 
-    serialNumbersCount = winreg.QueryInfoKey(vendorProductHKey)[0]
+    serial_numbers_count = winreg.QueryInfoKey(vendor_product_hkey)[0]
 
-    for serialNumberIdx in range(serialNumbersCount):
+    for serial_number_idx in range(serial_numbers_count):
         try:
-            serialNumber = winreg.EnumKey(vendorProductHKey, serialNumberIdx)
+            serial_number = winreg.EnumKey(vendor_product_hkey, serial_number_idx)
         except EnvironmentError as err:
             continue
 
-        hKeyPath = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}".format(vendorId, productId,serialNumber)
+        hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}"\
+        .format(vendor_id, product_id, serial_number)
+
         try:
-            deviceHKey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hKeyPath)
+            device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
         except EnvironmentError as err:
             continue
 
         try:
-            queriedContainerId = winreg.QueryValueEx(deviceHKey, "ContainerID")[0]
+            queried_container_id = winreg.QueryValueEx(device_hkey, "ContainerID")[0]
         except EnvironmentError as err:
-            winreg.CloseKey(deviceHKey)
+            winreg.CloseKey(device_hkey)
             continue
 
-        winreg.CloseKey(deviceHKey)
+        winreg.CloseKey(device_hkey)
 
-        if queriedContainerId.lower() == str(wantedGUID).lower():
-            winreg.CloseKey(vendorProductHKey)
-            return serialNumber
+        if queried_container_id.lower() == str(wanted_GUID).lower():
+            winreg.CloseKey(vendor_product_hkey)
+            return serial_number
 
-    winreg.CloseKey(vendorProductHKey)
+    winreg.CloseKey(vendor_product_hkey)
 
 def com_port_is_open(port):
-    hKeyPath = "HARDWARE\\DEVICEMAP\\SERIALCOMM"
+    hkey_path = "HARDWARE\\DEVICEMAP\\SERIALCOMM"
     try:
-        deviceHKey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hKeyPath)
+        device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
     except EnvironmentError as err:
-        return True # Unable to check enumerated serialports. Assume all are open.
-    nextKey = 0
+        return True # Unable to check enumerated serialports. Assume open.
+    next_key = 0
     while True:
         try:
-            value = winreg.EnumValue(deviceHKey, nextKey)[1]
-            nextKey += 1
+            value = winreg.EnumValue(device_hkey, next_key)[1]
+            next_key += 1
             if port == value:
-                winreg.CloseKey(deviceHKey)
+                winreg.CloseKey(device_hkey)
                 return True
         except WindowsError:
             break
-    winreg.CloseKey(deviceHKey)
+    winreg.CloseKey(device_hkey)
     return False
 
 
-def list_all_com_ports(vendorId, productId, serialNumber):
+def list_all_com_ports(vendor_id, product_id, serial_number):
     ports = []
 
-    hKeyPath = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}".format(vendorId, productId,serialNumber)
+    hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}"\
+    .format(vendor_id, product_id, serial_number)
+
     try:
-        deviceHKey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hKeyPath)
+        device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
     except EnvironmentError as err:
         return ports
 
     try:
-        parentId = winreg.QueryValueEx(deviceHKey, "ParentIdPrefix")[0]
+        parent_id = winreg.QueryValueEx(device_hkey, "ParentIdPrefix")[0]
     except EnvironmentError as err:
-        winreg.CloseKey(deviceHKey)
+        winreg.CloseKey(device_hkey)
         return ports
 
-    winreg.CloseKey(deviceHKey)
+    winreg.CloseKey(device_hkey)
 
-    hKeyPath = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}\\Device Parameters".format(vendorId, productId, serialNumber)
+    hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}\\Device Parameters"\
+    .format(vendor_id, product_id, serial_number)
     try:
-        deviceHKey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hKeyPath)
+        device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
         try:
-            COMPort = winreg.QueryValueEx(deviceHKey, "PortName")[0]
-            ports.append(COMPort)
+            COM_port = winreg.QueryValueEx(device_hkey, "PortName")[0]
+            ports.append(COM_port)
         except EnvironmentError as err:
             pass # No COM port for root device.
-        winreg.CloseKey(deviceHKey)
+        winreg.CloseKey(device_hkey)
     except EnvironmentError as err:
         pass # Root device has no device parameters
 
-    iFaceId = 0
+    iface_id = 0
     while True:
-        hKeyPath = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{vid_val}&PID_{pid_val}&MI_{mi_val}\\{parent_val}&{parent_iface}\\Device Parameters"\
-        .format(vid_val= vendorId, pid_val = productId, mi_val = str(iFaceId).zfill(2), parent_val = parentId, parent_iface = str(iFaceId).zfill(4))
-        iFaceId += 1
+        hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{vid_val}&PID_{pid_val}&MI_{mi_val}\\{parent_val}&{parent_iface}\\Device Parameters"\
+        .format(vid_val= vendor_id, pid_val = product_id, mi_val = str(iface_id).zfill(2), parent_val = parent_id, parent_iface = str(iface_id).zfill(4))
+        iface_id += 1
         try:
-            deviceHKey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hKeyPath)
+            device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
         except EnvironmentError as err:
             break
 
         try:
-            portName = winreg.QueryValueEx(deviceHKey, "PortName")[0]
+            port_name = winreg.QueryValueEx(device_hkey, "PortName")[0]
         except EnvironmentError as err:
-            winreg.CloseKey(deviceHKey)
+            winreg.CloseKey(device_hkey)
             continue
 
-        winreg.CloseKey(deviceHKey)
-        if com_port_is_open(portName):
-            ports.append(portName)
+        winreg.CloseKey(device_hkey)
+        if com_port_is_open(port_name):
+            ports.append(port_name)
 
     return ports
 
@@ -181,35 +186,36 @@ class Win32Lister(AbstractLister):
         return {};
 
     def enumerate(self):
-        enumeratedDevices = []
-        devInfoData = DeviceInfoData()
-        hDevInfo = setup_api.SetupDiGetClassDevsW(ctypes.byref(self.GUID_DEVINTERFACE_USB_DEVICE._guid), None, None, DIGCF_PRESENT|DIGCF_DEVICEINTERFACE)
-        if hDevInfo == -1:
+        enumerated_devices = []
+        dev_info_data = DeviceInfoData()
+        h_dev_info = setup_api.SetupDiGetClassDevsW(ctypes.byref(self.GUID_DEVINTERFACE_USB_DEVICE._guid), None, None, DIGCF_PRESENT|DIGCF_DEVICEINTERFACE)
+        if h_dev_info == -1:
             return enumeratedDevices
 
-        nextEnum = 0
+        next_enum = 0
         while True:
-            res = setup_api.SetupDiEnumDeviceInfo(hDevInfo, nextEnum, ctypes.byref(devInfoData))
-            nextEnum += 1
+            res = setup_api.SetupDiEnumDeviceInfo(h_dev_info, next_enum, ctypes.byref(dev_info_data))
+            next_enum += 1
             if res == False:
-                return enumeratedDevices
+                return enumerated_devices
 
-            szBuffer = ctypes.create_string_buffer(MAX_BUFSIZE)
-            dwSize = ctypes.c_ulong()
-            res = setup_api.SetupDiGetDeviceInstanceIdA(hDevInfo, ctypes.byref(devInfoData), ctypes.byref(szBuffer), MAX_BUFSIZE, ctypes.byref(dwSize))
+            sz_buffer = ctypes.create_string_buffer(MAX_BUFSIZE)
+            dw_size = ctypes.c_ulong()
+            res = setup_api.SetupDiGetDeviceInstanceIdA(h_dev_info, ctypes.byref(dev_info_data), ctypes.byref(sz_buffer), MAX_BUFSIZE, ctypes.byref(dw_size))
             if res == False:
                 continue # failed to fetch pid vid
-            vendorId = szBuffer.raw[8:12]
-            productId =szBuffer.raw[17:21]
+            vendor_id = sz_buffer.raw[8:12]
+            product_id = sz_buffer.raw[17:21]
 
-            serialNumber = get_serial_serial_no(vendorId, productId, hDevInfo, devInfoData)
-            if not serialNumber:
+            serial_number = get_serial_serial_no(vendor_id, product_id, h_dev_info, dev_info_data)
+            if not serial_number:
                 continue
 
-            COMPorts = list_all_com_ports(vendorId, productId, serialNumber)
+            COM_ports = list_all_com_ports(vendor_id, product_id, serial_number)
 
-            if len(COMPorts) > 0:
-                device = EnumeratedDevice(vendorId, productId, serialNumber, COMPorts)
-                enumeratedDevices.append(device)
+            if len(COM_ports) > 0:
+                device = EnumeratedDevice(vendor_id, product_id, serial_number, COM_ports)
+                enumerated_devices.append(device)
 
-        return enumeratedDevices
+        return enumerated_devices
+

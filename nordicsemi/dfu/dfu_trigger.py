@@ -73,20 +73,20 @@ class DFUTrigger:
         self.context.close()
 
     def select_device(self, listed_device):
-        allDevices = self.context.getDeviceList()
-        filteredDevices = [dev for dev in allDevices\
+        all_devices = self.context.getDeviceList()
+        filtered_devices = [dev for dev in all_devices\
         if hex(dev.getVendorID())[2:].lower() == listed_device.vendor_id.lower() and \
         hex(dev.getProductID())[2:].lower() == listed_device.product_id.lower()]
 
         access_error = False
 
-        for nordicDevice in filteredDevices:
+        for nordic_device in filtered_devices:
             try:
-                handle = nordicDevice.open()
+                handle = nordic_device.open()
                 SNO = handle.getSerialNumber()
                 handle.close()
                 if (SNO.lower() == listed_device.serial_number.lower()):
-                    return nordicDevice
+                    return nordic_device
 
             except usb1.USBErrorNotFound as err:
                 pass
@@ -97,14 +97,11 @@ class DFUTrigger:
             raise NordicSemiException("LIBUSB_ERROR_ACCESS: Unable to connect to trigger interface.")
 
     def get_dfu_interface_num(self, libusb_device):
-        for cfg in libusb_device.iterConfigurations():
-            for iface in cfg.iterInterfaces():
-                for setting in iface.iterSettings():
-                    if setting.getClass() == 255 and \
-                    setting.getSubClass() == 1 and \
-                    setting.getProtocol() == 1:
-                        # TODO: set configuration
-                        return setting.getNumber()
+        for setting in libusb_device.iterSettings():
+            if setting.getClass() == 255 and \
+            setting.getSubClass() == 1 and \
+            setting.getProtocol() == 1:
+                return setting.getNumber()
 
     def no_trigger_exception(self, device):
         return NordicSemiException("No trigger interface found for device with serial number {}, product id 0x{} and vendor id 0x{}\n"\
