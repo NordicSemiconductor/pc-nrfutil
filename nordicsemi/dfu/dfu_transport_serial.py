@@ -306,7 +306,7 @@ class DfuTransportSerial(DfuTransport):
 
     def __ensure_bootloader(self):
         lister = DeviceLister()
-        device = lister.get_device(com = self.com_port)
+        device = lister.get_device(com=self.com_port)
         if device:
             device_serial_number = device.serial_number
 
@@ -318,7 +318,9 @@ class DfuTransportSerial(DfuTransport):
                 retry_count = 10
                 wait_time_ms = 500
                 for checks in range(retry_count):
-                    logger.debug("Serial: Waiting {} ms for device to enter bootloader {}/{} time".format(500, checks + 1, retry_count))
+                    logger.debug("Serial: Waiting {} ms for device to enter bootloader {}/{} time"\
+                    .format(500, checks + 1, retry_count))
+
                     time.sleep(wait_time_ms / 1000.0)
 
                     device = lister.get_device(serial_number = device_serial_number)

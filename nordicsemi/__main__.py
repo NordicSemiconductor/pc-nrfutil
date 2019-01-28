@@ -44,6 +44,7 @@ import click
 import time
 import logging
 import subprocess
+sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.dfu import Dfu
@@ -938,7 +939,7 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
         ping = False
     if port is None:
         device_lister = DeviceLister()
-        device = device_lister.get_device(serial_number = serial_number)
+        device = device_lister.get_device(serial_number=serial_number)
         if device is None:
             raise NordicSemiException("A device with serial number %s is not connected." % serial_number)
         port = device.get_first_available_com_port()

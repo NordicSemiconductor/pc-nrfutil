@@ -54,6 +54,7 @@ class DeviceLister(object):
         if self.lister_backend:
             return self.lister_backend.enumerate()
         return []
+
     def get_device(self, get_all = False, **kwargs):
         devices = self.enumerate()
         matching_devices = []

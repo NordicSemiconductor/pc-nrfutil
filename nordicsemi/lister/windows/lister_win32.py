@@ -54,17 +54,16 @@ DIREG_DEV = 1
 INVALID_HANDLE_VALUE = -1
 MAX_BUFSIZE = 1000
 
-
-
-
 def get_serial_serial_no(vendor_id, product_id, h_dev_info, device_info_data):
     prop_type = ctypes.c_ulong()
     required_size = ctypes.c_ulong()
 
     instance_id_buffer = ctypes.create_string_buffer(MAX_BUFSIZE)
 
-    res = setup_api.SetupDiGetDevicePropertyW(h_dev_info, ctypes.byref(device_info_data), ctypes.byref(DEVPKEY.Device.ContainerId),
-    ctypes.byref(prop_type), ctypes.byref(instance_id_buffer), MAX_BUFSIZE, ctypes.byref(required_size), 0)
+    res = setup_api.SetupDiGetDevicePropertyW(h_dev_info, ctypes.byref(device_info_data),
+        ctypes.byref(DEVPKEY.Device.ContainerId), ctypes.byref(prop_type), ctypes.byref(instance_id_buffer),
+        MAX_BUFSIZE, ctypes.byref(required_size), 0)
+
 
     wanted_GUID = GUID(ctypesInternalGUID(instance_id_buffer))
 
@@ -158,8 +157,11 @@ def list_all_com_ports(vendor_id, product_id, serial_number):
 
     iface_id = 0
     while True:
-        hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{vid_val}&PID_{pid_val}&MI_{mi_val}\\{parent_val}&{parent_iface}\\Device Parameters"\
-        .format(vid_val= vendor_id, pid_val = product_id, mi_val = str(iface_id).zfill(2), parent_val = parent_id, parent_iface = str(iface_id).zfill(4))
+        hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{vid_val}&PID_{pid_val}&\
+        MI_{mi_val}\\{parent_val}&{parent_iface}\\Device Parameters"
+        .format(vid_val= vendor_id, pid_val = product_id, mi_val = str(iface_id).zfill(2),
+        parent_val = parent_id, parent_iface = str(iface_id).zfill(4))
+
         iface_id += 1
         try:
             device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
@@ -188,7 +190,8 @@ class Win32Lister(AbstractLister):
     def enumerate(self):
         enumerated_devices = []
         dev_info_data = DeviceInfoData()
-        h_dev_info = setup_api.SetupDiGetClassDevsW(ctypes.byref(self.GUID_DEVINTERFACE_USB_DEVICE._guid), None, None, DIGCF_PRESENT|DIGCF_DEVICEINTERFACE)
+        h_dev_info = setup_api.SetupDiGetClassDevsW(ctypes.byref(self.GUID_DEVINTERFACE_USB_DEVICE._guid),
+        None, None, DIGCF_PRESENT|DIGCF_DEVICEINTERFACE)
         if h_dev_info == -1:
             return enumeratedDevices
 
@@ -201,7 +204,8 @@ class Win32Lister(AbstractLister):
 
             sz_buffer = ctypes.create_string_buffer(MAX_BUFSIZE)
             dw_size = ctypes.c_ulong()
-            res = setup_api.SetupDiGetDeviceInstanceIdA(h_dev_info, ctypes.byref(dev_info_data), ctypes.byref(sz_buffer), MAX_BUFSIZE, ctypes.byref(dw_size))
+            res = setup_api.SetupDiGetDeviceInstanceIdA(h_dev_info, ctypes.byref(dev_info_data),
+            ctypes.byref(sz_buffer), MAX_BUFSIZE, ctypes.byref(dw_size))
             if res == False:
                 continue # failed to fetch pid vid
             vendor_id = sz_buffer.raw[8:12]
@@ -218,4 +222,3 @@ class Win32Lister(AbstractLister):
                 enumerated_devices.append(device)
 
         return enumerated_devices
-

@@ -43,7 +43,7 @@ os.chdir(file_dir)
 os.chdir("../../libusb")
 import usb1
 os.chdir(working_dir)
-
+import logging
 
 from pc_ble_driver_py.exceptions    import NordicSemiException
 
@@ -58,12 +58,14 @@ LIBUSB_RECIPIENT_INTERFACE = 0x01
 LIBUSB_RECIPIENT_ENDPOINT = 0x02
 LIBUSB_RECIPIENT_OTHER = 0x03
 
-ReqTypeInterfaceClass = LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE;
-ReqTypeIN = ReqTypeInterfaceClass | LIBUSB_ENDPOINT_IN;
-ReqTypeOUT = ReqTypeInterfaceClass | LIBUSB_ENDPOINT_OUT;
-NORDIC_SEM_VER_REQUEST = 8;
-NORDIC_DFU_INFO_REQUEST = 7;
-DFU_DETACH_REQUEST = 0;
+ReqTypeInterfaceClass = LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE
+ReqTypeIN = ReqTypeInterfaceClass | LIBUSB_ENDPOINT_IN
+ReqTypeOUT = ReqTypeInterfaceClass | LIBUSB_ENDPOINT_OUT
+NORDIC_SEM_VER_REQUEST = 8
+NORDIC_DFU_INFO_REQUEST = 7
+DFU_DETACH_REQUEST = 0
+
+logger = logging.getLogger(__name__)
 
 class DFUTrigger:
     def __init__(self):
@@ -74,11 +76,12 @@ class DFUTrigger:
 
     def select_device(self, listed_device):
         all_devices = self.context.getDeviceList()
-        filtered_devices = [dev for dev in all_devices\
-        if hex(dev.getVendorID())[2:].lower() == listed_device.vendor_id.lower() and \
-        hex(dev.getProductID())[2:].lower() == listed_device.product_id.lower()]
+        filtered_devices = [dev for dev in all_devices
+            if hex(dev.getVendorID())[2:].lower() == listed_device.vendor_id.lower() and
+            hex(dev.getProductID())[2:].lower() == listed_device.product_id.lower()]
 
         access_error = False
+        triggerless_devices = 0
 
         for nordic_device in filtered_devices:
             try:
@@ -89,10 +92,17 @@ class DFUTrigger:
                     return nordic_device
 
             except usb1.USBErrorNotFound as err:
-                pass
-            except Exception as err: # LIBUSB_ERROR_NOT_SUPPORTED
-                if "LIBUSB_ERROR_ACCESS" in str(err):
-                    access_error = True
+                # Devices with matching VID and PID as target, but without a trigger iface.
+                triggerless_devices += 1
+            except usb1.USBErrorAccess as err:
+                access_error = True
+            except usb1.USBErrorNotSupported as err:
+                pass # Unsupported device. Moving on
+
+        if triggerless_devices > 0:
+            logger.debug("DFU trigger: Could not find trigger interface for device with serial number {}. \
+            {}/{} devices with same VID/PID were missing a trigger interface.")
+            .format(listed_device.serial_number, triggerless_devices, len(filtered_devices))
         if access_error:
             raise NordicSemiException("LIBUSB_ERROR_ACCESS: Unable to connect to trigger interface.")
 
@@ -104,7 +114,7 @@ class DFUTrigger:
                 return setting.getNumber()
 
     def no_trigger_exception(self, device):
-        return NordicSemiException("No trigger interface found for device with serial number {}, product id 0x{} and vendor id 0x{}\n"\
+        return NordicSemiException("No trigger interface found for device with serial number {}, product id 0x{} and vendor id 0x{}\n"
         .format(device.serial_number, device.product_id, device.vendor_id))
 
     def enter_bootloader_mode(self, listed_device):
@@ -124,5 +134,14 @@ class DFUTrigger:
             except Exception as err:
                 if "LIBUSB_ERROR_PIPE" in str(err):
                     return
-        raise NordicSemiException("Device did not exit application mode after dfu was triggered. Serial number: {}, product id 0x{}, vendor id: 0x{}\n\n"\
+        raise NordicSemiException("Device did not exit application mode after dfu was triggered. Serial number: {}, product id 0x{}, vendor id: 0x{}\n\n"
         .format(listed_device.serial_number, listed_device.product_id, listed_device.vendor_id))
+
+if __name__ == "__main__":
+    import sys
+    sys.path.insert(0, os.getcwd())
+    from nordicsemi.lister.device_lister import DeviceLister
+    lister = DeviceLister()
+    dev = lister.get_device(serial_number = "E020C93E0B96")
+    trigger = DFUTrigger()
+    trigger.enter_bootloader_mode(dev)
