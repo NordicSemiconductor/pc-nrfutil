@@ -78,6 +78,8 @@ class DFUTrigger:
         if hex(dev.getVendorID())[2:].lower() == listed_device.vendor_id.lower() and \
         hex(dev.getProductID())[2:].lower() == listed_device.product_id.lower()]
 
+        access_error = False
+
         for nordicDevice in filteredDevices:
             try:
                 handle = nordicDevice.open()
@@ -89,7 +91,10 @@ class DFUTrigger:
             except usb1.USBErrorNotFound as err:
                 pass
             except Exception as err: # LIBUSB_ERROR_NOT_SUPPORTED
-                pass
+                if "LIBUSB_ERROR_ACCESS" in str(err):
+                    access_error = True
+        if access_error:
+            raise NordicSemiException("LIBUSB_ERROR_ACCESS: Unable to connect to trigger interface.")
 
     def get_dfu_interface_num(self, libusb_device):
         for cfg in libusb_device.iterConfigurations():
