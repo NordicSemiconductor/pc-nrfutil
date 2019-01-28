@@ -44,7 +44,6 @@ import click
 import time
 import logging
 import subprocess
-sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.dfu import Dfu
