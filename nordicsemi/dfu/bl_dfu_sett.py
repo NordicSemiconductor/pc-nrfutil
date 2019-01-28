@@ -45,7 +45,6 @@ import struct
 import binascii
 from enum import Enum
 
-
 # Nordic libraries
 from nordicsemi.dfu import intelhex
 from nordicsemi.dfu.intelhex import IntelHexError
@@ -57,17 +56,46 @@ logger = logging.getLogger(__name__)
 
 class BLDFUSettingsStructV1(object):
 
-    def __init__(self):
-        self.uint32_count = (4 + 2 + (3 * 2) + 2 + (3 + 1 + 4) + 1)
-        self.offs_crc               = 0
-        self.offs_sett_ver          = 1
-        self.offs_app_ver           = 2
-        self.offs_bl_ver            = 3
-        self.offs_bank_layout       = 4
-        self.offs_bank_current      = 5
-        self.offs_bank0_img_sz      = 6
-        self.offs_bank0_img_crc     = 7
-        self.offs_bank0_bank_code   = 8
+    def __init__(self, settings_address):
+        self.bytes_count = 92
+        self.crc               = settings_address + 0x0
+        self.sett_ver          = settings_address + 0x4
+        self.app_ver           = settings_address + 0x8
+        self.bl_ver            = settings_address + 0xC
+        self.bank_layout       = settings_address + 0x10
+        self.bank_current      = settings_address + 0x14
+        self.bank0_img_sz      = settings_address + 0x18
+        self.bank0_img_crc     = settings_address + 0x1C
+        self.bank0_bank_code   = settings_address + 0x20
+        self.sd_sz             = settings_address + 0x34
+
+        self.init_cmd          = settings_address + 0x5C
+        self.last_addr         = settings_address + 0x5C
+
+
+class BLDFUSettingsStructV2(object):
+
+    def __init__(self, settings_address):
+        self.bytes_count = 803 # Entire settings page
+        self.crc                  = settings_address + 0x0
+        self.sett_ver             = settings_address + 0x4
+        self.app_ver              = settings_address + 0x8
+        self.bl_ver               = settings_address + 0xC
+        self.bank_layout          = settings_address + 0x10
+        self.bank_current         = settings_address + 0x14
+        self.bank0_img_sz         = settings_address + 0x18
+        self.bank0_img_crc        = settings_address + 0x1C
+        self.bank0_bank_code      = settings_address + 0x20
+        self.sd_sz                = settings_address + 0x34
+        self.init_cmd             = settings_address + 0x5C
+
+        self.boot_validataion_crc = settings_address + 0x25C
+        self.sd_validation_type   = settings_address + 0x260
+        self.sd_validation_bytes  = settings_address + 0x261
+        self.app_validation_type  = settings_address + 0x2A1
+        self.app_validation_bytes = settings_address + 0x2A2
+
+        self.last_addr            = settings_address + 0x322
 
 
 class BLDFUSettings(object):
@@ -128,29 +156,36 @@ class BLDFUSettings(object):
         else:
             raise RuntimeError("Unknown architecture")
 
-    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr, no_backup, backup_address):
-        """
-        Populates the settings object based on the given parameters.
+    def _add_value_tohex(self, addr, value, format='<I'):
+        self.ihex.puts(addr, struct.pack(format, value))
 
-        :param arch: Architecture family string, e.g. NRF51
-        :param app_file: Path to application file
-        :param app_ver: Application version number
-        :param bl_ver: Bootloader version number
-        :param bl_sett_ver: Bootloader settings version number
-        :param custom_bl_sett_addr: Custom start address for the settings page
-        :param no_backup: Do not generate DFU setting backup page
-        :param backup_address: Custom bootloader settings backup page address
-        :return:
-        """
+    def _get_value_fromhex(self, addr, size=4, format='<I'):
+        return struct.unpack(format, self.ihex.gets(addr, size))[0] & 0xffffffff
 
-        # Set the architecture
+    def _calculate_crc32_from_hex(self, ih_object, start_addr=None, end_addr=None):
+        list = []
+        if start_addr == None and end_addr == None:
+            hex_dict = ih_object.todict()
+            for addr, byte in hex_dict.items():
+                list.append(byte)
+        else:
+            for addr in range(start_addr, end_addr + 1):
+                list.append(ih_object[addr])
+
+        return binascii.crc32(bytearray(list)) & 0xFFFFFFFF
+
+    def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr, no_backup,
+                 backup_address, app_boot_validation_type, sd_boot_validation_type, sd_file, key_file):
+
         self.set_arch(arch)
 
         if custom_bl_sett_addr is not None:
             self.bl_sett_addr = custom_bl_sett_addr
 
         if bl_sett_ver == 1:
-            self.setts = BLDFUSettingsStructV1()
+            self.setts = BLDFUSettingsStructV1(self.bl_sett_addr)
+        elif bl_sett_ver == 2:
+            self.setts = BLDFUSettingsStructV2(self.bl_sett_addr)
         else:
             raise NordicSemiException("Unknown bootloader settings version")
 
@@ -171,88 +206,152 @@ class BLDFUSettings(object):
             self.app_sz = int(Package.calculate_file_size(self.app_bin)) & 0xffffffff
             self.app_crc = int(Package.calculate_crc(32, self.app_bin)) & 0xffffffff
             self.bank0_bank_code = 0x1 & 0xffffffff
+
+            # Calculate Boot validation fields for app
+            if app_boot_validation_type == 'VALIDATE_GENERATED_CRC':
+                self.app_boot_validation_type = 1 & 0xffffffff
+                self.app_boot_validation_bytes = struct.pack('<I', self.app_crc)
+            elif app_boot_validation_type == 'VALIDATE_GENERATED_SHA256':
+                self.app_boot_validation_type = 2 & 0xffffffff
+                sha256 = Package.calculate_sha256_hash(self.app_bin)
+                self.app_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(sha256)][31::-1])
+            elif app_boot_validation_type == 'VALIDATE_ECDSA_P256_SHA256':
+                self.app_boot_validation_type = 3 & 0xffffffff
+                ecdsa = Package.sign_firmware(key_file, self.app_bin)
+                self.app_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(ecdsa)])
+            else:  # This also covers 'NO_VALIDATION' case
+                self.app_boot_validation_type = 0 & 0xffffffff
+                self.app_boot_validation_bytes = bytearray(0)
         else:
             self.app_sz = 0x0 & 0xffffffff
             self.app_crc = 0x0 & 0xffffffff
             self.bank0_bank_code = 0x0 & 0xffffffff
+            self.app_boot_validation_type = 0x0 & 0xffffffff
+            self.app_boot_validation_bytes = bytearray(0)
 
-        # build the uint32_t array
-        arr = [0x0] * self.setts.uint32_count
+        if sd_file is not None:
+            # Load SD to calculate CRC
+            self.temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_bl_sett")
+            temp_sd_file = os.path.join(os.getcwd(), 'temp_sd_file.hex')
+
+            # Load SD hex file and remove MBR before calculating keys
+            ih_sd = intelhex.IntelHex(sd_file)
+            ih_sd_no_mbr = intelhex.IntelHex()
+            ih_sd_no_mbr.merge(ih_sd[0x1000:], overlap='error')
+            ih_sd_no_mbr.write_hex_file(temp_sd_file)
+
+            self.sd_bin = Package.normalize_firmware_to_bin(self.temp_dir, temp_sd_file)
+            os.remove(temp_sd_file)
+
+            self.sd_sz = int(Package.calculate_file_size(self.sd_bin)) & 0xffffffff
+
+            # Calculate Boot validation fields for SD
+            if sd_boot_validation_type == 'VALIDATE_GENERATED_CRC':
+                self.sd_boot_validation_type = 1 & 0xffffffff
+                sd_crc = int(Package.calculate_crc(32, self.sd_bin)) & 0xffffffff
+                self.sd_boot_validation_bytes = struct.pack('<I', sd_crc)
+            elif sd_boot_validation_type == 'VALIDATE_GENERATED_SHA256':
+                self.sd_boot_validation_type = 2 & 0xffffffff
+                sha256 = Package.calculate_sha256_hash(self.sd_bin)
+                self.sd_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(sha256)][31::-1])
+            elif sd_boot_validation_type == 'VALIDATE_ECDSA_P256_SHA256':
+                self.sd_boot_validation_type = 3 & 0xffffffff
+                ecdsa = Package.sign_firmware(key_file, self.sd_bin)
+                self.sd_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(ecdsa)])
+            else:  # This also covers 'NO_VALIDATION_CASE'
+                self.sd_boot_validation_type = 0 & 0xffffffff
+                self.sd_boot_validation_bytes = bytearray(0)
+        else:
+            self.sd_sz = 0x0 & 0xffffffff
+            self.sd_boot_validation_type = 0 & 0xffffffff
+            self.sd_boot_validation_bytes = bytearray(0)
 
         # additional harcoded values
         self.bank_layout = 0x0 & 0xffffffff
         self.bank_current = 0x0 & 0xffffffff
 
-        # fill in the settings
-        arr[self.setts.offs_sett_ver] = self.bl_sett_ver
-        arr[self.setts.offs_app_ver] = self.app_ver
-        arr[self.setts.offs_bl_ver] = self.bl_ver
-        arr[self.setts.offs_bank_layout] = self.bank_layout
-        arr[self.setts.offs_bank_current] = self.bank_current
-        arr[self.setts.offs_bank0_img_sz] = self.app_sz
-        arr[self.setts.offs_bank0_img_crc] = self.app_crc
-        arr[self.setts.offs_bank0_bank_code] = self.bank0_bank_code
+        # Fill the entire settings page with 0's
+        for offset in range(0, self.setts.bytes_count):
+            self.ihex[self.bl_sett_addr + offset] = 0x00
 
-        # calculate the CRC32 from the filled-in settings
-        crc_format_str = '<' + ('I' * (self.setts.uint32_count - 1))
-        crc_arr = arr[1:]
-        crc_data = struct.pack(crc_format_str, *crc_arr)
-        self.crc = binascii.crc32(crc_data) & 0xffffffff
+        self._add_value_tohex(self.setts.sett_ver, self.bl_sett_ver)
+        self._add_value_tohex(self.setts.app_ver, self.app_ver)
+        self._add_value_tohex(self.setts.bl_ver, self.bl_ver)
+        self._add_value_tohex(self.setts.bank_layout, self.bank_layout)
+        self._add_value_tohex(self.setts.bank_current, self.bank_current)
+        self._add_value_tohex(self.setts.bank0_img_sz, self.app_sz)
+        self._add_value_tohex(self.setts.bank0_img_crc, self.app_crc)
+        self._add_value_tohex(self.setts.bank0_bank_code, self.bank0_bank_code)
+        self._add_value_tohex(self.setts.sd_sz, self.sd_sz)
 
-        # fill in the calculated CRC32
-        arr[self.setts.offs_crc] = self.crc
+        self.boot_validation_crc = 0x0 & 0xffffffff
+        if self.bl_sett_ver == 2:
+            self._add_value_tohex(self.setts.sd_validation_type, self.sd_boot_validation_type, '<b')
+            self.ihex.puts(self.setts.sd_validation_bytes, self.sd_boot_validation_bytes)
 
-        format_str = '<' + ('I' * self.setts.uint32_count)
+            self._add_value_tohex(self.setts.app_validation_type, self.app_boot_validation_type, '<b')
+            self.ihex.puts(self.setts.app_validation_bytes, self.app_boot_validation_bytes)
 
-        # Get the packed data to insert into the hex instance
-        data = struct.pack(format_str, *arr)
+            self.boot_validation_crc = self._calculate_crc32_from_hex(self.ihex,
+                                                                      start_addr=self.setts.sd_validation_type,
+                                                                      end_addr=self.setts.last_addr) & 0xffffffff
+            self._add_value_tohex(self.setts.boot_validataion_crc, self.boot_validation_crc)
 
-        # insert the data at the correct address
-        self.ihex.puts(self.bl_sett_addr, data)
+        self.crc = self._calculate_crc32_from_hex(self.ihex,
+                                                  start_addr=self.bl_sett_addr+4,
+                                                  end_addr=self.setts.init_cmd - 1) & 0xffffffff
+        self._add_value_tohex(self.setts.crc, self.crc)
 
         if backup_address is None:
             self.backup_address = self.bl_sett_addr - self.bl_sett_backup_offset
         else:
             self.backup_address = backup_address
 
-        if no_backup == False:
-            # Update DFU settings backup page.
-            self.ihex.puts(self.backup_address, data)
+        if not no_backup:
+            for offset in range(0, self.setts.bytes_count):
+                self.ihex[self.backup_address + offset] = self.ihex[self.bl_sett_addr + offset]
 
     def probe_settings(self, base):
-
         # Unpack CRC and version
         fmt = '<I'
-
         crc = struct.unpack(fmt, self.ihex.gets(base + 0, 4))[0] & 0xffffffff
         ver = struct.unpack(fmt, self.ihex.gets(base + 4, 4))[0] & 0xffffffff
 
         if ver == 1:
-            self.setts = BLDFUSettingsStructV1()
+            self.setts = BLDFUSettingsStructV1(base)
+        elif ver == 2:
+            self.setts = BLDFUSettingsStructV2(base)
         else:
             raise RuntimeError("Unknown Bootloader DFU settings version: {0}".format(ver))
 
         # calculate the CRC32 over the data
-        crc_data = self.ihex.gets(base + 4, (self.setts.uint32_count - 1) * 4)
-        _crc = binascii.crc32(crc_data) & 0xffffffff
+        _crc = self._calculate_crc32_from_hex(self.ihex,
+                                              start_addr=base + 4,
+                                              end_addr=self.setts.init_cmd - 1) & 0xffffffff
 
         if _crc != crc:
-            raise RuntimeError("CRC32 mismtach: flash: {0} calculated: {1}".format(crc, _crc))
+            raise RuntimeError("CRC32 mismtach: flash: {0} calculated: {1}".format(hex(crc), hex(_crc)))
 
         self.crc = crc
+        self.bl_sett_ver     = self._get_value_fromhex(self.setts.sett_ver)
+        self.app_ver         = self._get_value_fromhex(self.setts.app_ver)
+        self.bl_ver          = self._get_value_fromhex(self.setts.bl_ver)
+        self.bank_layout     = self._get_value_fromhex(self.setts.bank_layout)
+        self.bank_current    = self._get_value_fromhex(self.setts.bank_current)
+        self.app_sz          = self._get_value_fromhex(self.setts.bank0_img_sz)
+        self.app_crc         = self._get_value_fromhex(self.setts.bank0_img_crc)
+        self.bank0_bank_code = self._get_value_fromhex(self.setts.bank0_bank_code)
 
-        fmt = '<' + ('I' * (self.setts.uint32_count))
-        arr = struct.unpack(fmt, self.ihex.gets(base, (self.setts.uint32_count) * 4))
-
-        self.bl_sett_ver = arr[self.setts.offs_sett_ver] & 0xffffffff
-        self.app_ver = arr[self.setts.offs_app_ver] & 0xffffffff
-        self.bl_ver = arr[self.setts.offs_bl_ver] & 0xffffffff
-        self.bank_layout = arr[self.setts.offs_bank_layout] & 0xffffffff
-        self.bank_current = arr[self.setts.offs_bank_current] & 0xffffffff
-        self.app_sz = arr[self.setts.offs_bank0_img_sz] & 0xffffffff
-        self.app_crc = arr[self.setts.offs_bank0_img_crc] & 0xffffffff
-        self.bank0_bank_code = arr[self.setts.offs_bank0_bank_code] & 0xffffffff
-
+        if self.bl_sett_ver == 2:
+            self.sd_sz                    = self._get_value_fromhex(self.setts.sd_sz)
+            self.boot_validation_crc      = self._get_value_fromhex(self.setts.boot_validataion_crc)
+            self.sd_boot_validation_type  = self._get_value_fromhex(self.setts.sd_validation_type, size=1, format='<b')
+            self.app_boot_validation_type = self._get_value_fromhex(self.setts.app_validation_type, size=1, format='<b')
+        else:
+            self.sd_sz                    = 0x0 & 0xffffffff
+            self.boot_validation_crc      = 0x0 & 0xffffffff
+            self.sd_boot_validation_type  = 0x0 & 0xffffffff
+            self.app_boot_validation_type = 0x0 & 0xffffffff
 
     def fromhexfile(self, f, arch=None):
         self.hex_file = f
@@ -267,6 +366,7 @@ class BLDFUSettings(object):
                 self.probe_settings(BLDFUSettings.bl_sett_52_addr)
                 self.set_arch('NRF52')
             except Exception as e:
+                print(e)
                 try:
                     self.probe_settings(BLDFUSettings.bl_sett_52_qfab_addr)
                     self.set_arch('NRF52QFAB')
@@ -283,23 +383,28 @@ class BLDFUSettings(object):
 
         self.bl_sett_addr = self.ihex.minaddr()
 
-
     def __str__(self):
         s = """
 Bootloader DFU Settings:
-* File:                 {0}
-* Family:               {1}
-* Start Address:        0x{2:08X}
-* CRC:                  0x{3:08X}
-* Settings Version:     0x{4:08X} ({4})
-* App Version:          0x{5:08X} ({5})
-* Bootloader Version:   0x{6:08X} ({6})
-* Bank Layout:          0x{7:08X}
-* Current Bank:         0x{8:08X}
-* Application Size:     0x{9:08X} ({9} bytes)
-* Application CRC:      0x{10:08X}
-* Bank0 Bank Code:      0x{11:08X}
-""".format(self.hex_file, self.arch_str, self.bl_sett_addr, self.crc, self.bl_sett_ver, self.app_ver, self.bl_ver, self.bank_layout, self.bank_current, self.app_sz, self.app_crc, self.bank0_bank_code)
+* File:                     {0}
+* Family:                   {1}
+* Start Address:            0x{2:08X}
+* CRC:                      0x{3:08X}
+* Settings Version:         0x{4:08X} ({4})
+* App Version:              0x{5:08X} ({5})
+* Bootloader Version:       0x{6:08X} ({6})
+* Bank Layout:              0x{7:08X}
+* Current Bank:             0x{8:08X}
+* Application Size:         0x{9:08X} ({9} bytes)
+* Application CRC:          0x{10:08X}
+* Bank0 Bank Code:          0x{11:08X}
+* Softdevice Size:          0x{12:08X} ({12} bytes)
+* Boot Validation CRC:      0x{13:08X}
+* SD Boot Validation Type:  0x{14:08X} ({14})
+* App Boot Validation Type: 0x{15:08X} ({15})
+""".format(self.hex_file, self.arch_str, self.bl_sett_addr, self.crc, self.bl_sett_ver, self.app_ver,
+           self.bl_ver, self.bank_layout, self.bank_current, self.app_sz, self.app_crc, self.bank0_bank_code,
+           self.sd_sz, self.boot_validation_crc, self.sd_boot_validation_type, self.app_boot_validation_type)
         return s
 
     def tohexfile(self, f):
