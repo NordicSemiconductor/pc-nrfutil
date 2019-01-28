@@ -333,7 +333,10 @@ class DfuTransportSerial(DfuTransport):
     def __is_device_in_bootloader_mode(self, device):
         if not device:
             return False
-        return device.vendor_id.lower() == '1915' and device.product_id.lower() == '521f'
+
+        # Return true if nrf bootloader or Jlink interface detected.
+        return (device.vendor_id.lower() == '1915' and device.product_id.lower() == '521f')  \
+        or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '0105')
 
 
     def __set_prn(self):
