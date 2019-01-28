@@ -312,7 +312,7 @@ class DfuTransportSerial(DfuTransport):
 
             if not self.__is_device_in_bootloader_mode(device):
                 trigger = DFUTrigger()
-                libusb1_device = trigger.enter_bootloader_mode(device)
+                trigger.enter_bootloader_mode(device)
                 logger.debug("Serial: DFU bootloader was triggered")
 
                 retry_count = 10
@@ -322,10 +322,9 @@ class DfuTransportSerial(DfuTransport):
                     time.sleep(wait_time_ms / 1000.0)
 
                     device = lister.get_device(serial_number = device_serial_number)
-                    if not self.__is_device_in_bootloader_mode(device):
-                        continue
-                    self.com_port = device.get_first_available_com_port()
-                    break
+                    if self.__is_device_in_bootloader_mode(device):
+                        self.com_port = device.get_first_available_com_port()
+                        break
 
                 trigger.clean()
             if not self.__is_device_in_bootloader_mode(device):
