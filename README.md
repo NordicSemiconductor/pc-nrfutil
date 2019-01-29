@@ -225,7 +225,7 @@ nrfutil pkg display package.zip
 ```
 
 #### dfu
-This set of commands allow you to perform an actual firmware update over a serial, ANT, BLE, Thread or Zigbee connection.
+This set of commands allow you to perform an actual firmware update over a serial, BLE, Thread, Zigbee or ANT connection.
 
 **Note**: When using Homebrew Python on macOS, you may encounter an error: `Fatal Python error: PyThreadState_Get: no current thread Abort trap: 6`. See [issue #46](https://github.com/NordicSemiconductor/pc-nrfutil/issues/46#issuecomment-383930818).
 
