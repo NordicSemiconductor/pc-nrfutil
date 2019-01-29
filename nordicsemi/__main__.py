@@ -910,7 +910,7 @@ def update_progress(progress=0):
     if global_bar:
         global_bar.update(progress)
 
-@cli.group(short_help='Perform a Device Firmware Update over, ANT, BLE, Thread, or serial transport given a DFU package (zip file).')
+@cli.group(short_help='Perform a Device Firmware Update over serial, BLE, Thread, Zigbee or ANT transport given a DFU package (zip file).')
 def dfu():
     """
     This set of commands supports Device Firmware Upgrade procedures over both BLE and serial transports.
