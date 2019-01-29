@@ -1175,7 +1175,7 @@ def ant(package, port, connect_delay, packet_receipt_notification, period,
     ant_backend = DfuTransportAnt(port=port, prn=packet_receipt_notification,
         ant_config=ant_config, debug=debug)
     ant_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu = Dfu(zip_file_path = package, dfu_transport = ant_backend, connect_delay = connect_delay)
+    dfu = Dfu(zip_file_path=package, dfu_transport=ant_backend, connect_delay=connect_delay)
 
     try:
         if logger.getEffectiveLevel() > logging.INFO:
