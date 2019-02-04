@@ -342,6 +342,7 @@ class DfuTransportAnt(DfuTransport):
 
     def open(self):
         super(DfuTransportAnt, self).open()
+        ant_dev = None
         try:
             ant_dev = antlib.ANTDevice(self.port, 57600,
                 antlib.antdevice.ANTDevice.USB_PORT_TYPE,
