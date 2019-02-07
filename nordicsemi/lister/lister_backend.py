@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016 Nordic Semiconductor ASA
+# Copyright (c) 2019 Nordic Semiconductor ASA
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -34,7 +34,15 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import abc
 
-""" Version definition for nrfutil. """
 
-NRFUTIL_VERSION = "5.0.0"
+class AbstractLister(object):
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def enumerate(self):
+        """
+        Enumerate all usb devices
+        """
+        pass

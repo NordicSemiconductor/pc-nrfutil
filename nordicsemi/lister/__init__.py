@@ -35,6 +35,4 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-""" Version definition for nrfutil. """
-
-NRFUTIL_VERSION = "5.0.0"
+"""Package marker file."""
