@@ -311,14 +311,20 @@ class DfuTransportSerial(DfuTransport):
             device_serial_number = device.serial_number
 
             if not self.__is_device_in_bootloader_mode(device):
-                trigger = DFUTrigger()
-                trigger.enter_bootloader_mode(device)
-                logger.debug("Serial: DFU bootloader was triggered")
-
                 retry_count = 10
                 wait_time_ms = 500
+
+                trigger = DFUTrigger()
+                try:
+                    trigger.enter_bootloader_mode(device)
+                    logger.info("Serial: DFU bootloader was triggered")
+                except NordicSemiException as err:
+                    logger.error(err)
+                    retry_count = 0
+
+
                 for checks in range(retry_count):
-                    logger.debug("Serial: Waiting {} ms for device to enter bootloader {}/{} time"\
+                    logger.info("Serial: Waiting {} ms for device to enter bootloader {}/{} time"\
                     .format(500, checks + 1, retry_count))
 
                     time.sleep(wait_time_ms / 1000.0)
@@ -330,7 +336,7 @@ class DfuTransportSerial(DfuTransport):
 
                 trigger.clean()
             if not self.__is_device_in_bootloader_mode(device):
-                logger.debug("Serial: Device is either not in bootloader mode, or using an unsupported bootloader.")
+                logger.info("Serial: Device is either not in bootloader mode, or using an unsupported bootloader.")
 
     def __is_device_in_bootloader_mode(self, device):
         if not device:
