@@ -162,11 +162,10 @@ def list_all_com_ports(vendor_id, product_id, serial_number):
 
     iface_id = 0
     while True:
-        hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{vid_val}&PID_{pid_val}&\
-        MI_{mi_val}\\{parent_val}&{parent_iface}\\Device Parameters"
+        hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{vid_val}&PID_{pid_val}&"\
+        "MI_{mi_val}\\{parent_val}&{parent_iface}\\Device Parameters"\
         .format(vid_val=vendor_id, pid_val=product_id, mi_val=str(iface_id).zfill(2),
                 parent_val=parent_id, parent_iface=str(iface_id).zfill(4))
-
         iface_id += 1
         try:
             device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)

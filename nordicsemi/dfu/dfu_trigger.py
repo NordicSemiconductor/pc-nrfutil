@@ -101,9 +101,10 @@ class DFUTrigger:
                 pass #  Unsupported device. Moving on
 
         if triggerless_devices > 0:
-            logger.debug("DFU trigger: Could not find trigger interface for device with serial number {}. \
-            {}/{} devices with same VID/PID were missing a trigger interface.")
-            .format(listed_device.serial_number, triggerless_devices, len(filtered_devices))
+            logger.debug("DFU trigger: Could not find trigger interface for device with serial number {}. "\
+            "{}/{} devices with same VID/PID were missing a trigger interface."\
+            .format(listed_device.serial_number, triggerless_devices, len(filtered_devices)))
+
         if access_error:
             raise NordicSemiException("LIBUSB_ERROR_ACCESS: Unable to connect to trigger interface.")
 
