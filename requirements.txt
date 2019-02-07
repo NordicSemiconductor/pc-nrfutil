@@ -4,7 +4,7 @@ enum34 >= 1.0.4
 click >= 6.0
 ecdsa >= 0.13
 behave
-protobuf
+protobuf >= 3.6
 pc_ble_driver_py >= 0.11.4
 tqdm
 piccata
@@ -12,3 +12,5 @@ pyspinel == 1.0.0a3
 intelhex
 pyyaml
 crcmod
+antlib ; sys_platform == 'win32'
+libusb1
