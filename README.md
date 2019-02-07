@@ -296,6 +296,11 @@ Below is an example of the execution of a DFU procedure of the file generated ab
 nrfutil dfu serial -pkg app_dfu_package.zip -p COM3
 ```
 
+Alternatively, the serial number of a connected device can be specified:
+```
+nrfutil dfu serial -pkg app_dfu_package.zip -snr 00FEFEAB1234
+```
+
 ##### usb_serial
 
 Perform a full DFU procedure over a CDC ACM USB connection (A.K.A. "USB virtual serial port"). The DFU target shall be a chip with USB pins (i.e. nRF52840), and shall be running a bootloader enabling a USB-CDC interface.
@@ -311,6 +316,11 @@ Below is an example of the execution of a DFU procedure of the file generated ab
 
 ```
 nrfutil dfu usb_serial -pkg app_dfu_package.zip -p COM3
+```
+
+Alternatively, the serial number of a connected device can be specified:
+```
+nrfutil dfu usb_serial -pkg app_dfu_package.zip -snr 00FEFEAB1234
 ```
 
 #### keys

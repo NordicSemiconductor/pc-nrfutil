@@ -54,7 +54,7 @@ from nordicsemi import version
 install_package = True
 try:
     #    If the version that is being installed is older than the one currently installed, suggest to use a virtual environment.
-    
+
     import pkg_resources
     installed_packages = [d for d in pkg_resources.working_set]
     flat_installed_packages = [package.project_name for package in installed_packages]
@@ -68,7 +68,7 @@ try:
         if v2 < v1:
             legacy_version = True
         break
-    
+
     if legacy_version:
         valid_response = ["y", "yes"]
         msg = "A newer version of nrfutil may already be installed. Consider using a separate virtual environment when installing legacy versions. \nProceed (y/N)? "
@@ -138,7 +138,7 @@ setup(
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
     package_data = {
-                '': ['../requirements.txt', 'thread/hex/ncp.hex', 'zigbee/hex/ota.hex']
+                '': ['../requirements.txt', 'thread/hex/ncp.hex', 'zigbee/hex/ota.hex', '../libusb/x86/libusb-1.0.dll', '../libusb/x86/libusb-1.0.dylib', '../libusb/LICENSE']
     },
     install_requires=reqs,
     zipfile=None,
