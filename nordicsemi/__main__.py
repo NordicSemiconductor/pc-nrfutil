@@ -524,7 +524,7 @@ def pkg():
               type=BASED_INT_OR_NONE)
 @click.option('--hw-version',
               help='The hardware version.',
-              required=True,
+              required=False,
               type=BASED_INT)
 @click.option('--sd-req',
               help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs '
@@ -556,6 +556,7 @@ def pkg():
                    '\n|s140_nrf52_6.1.0|0xAE|'
                    '\n|s140_nrf52_6.1.1|0xB6|',
               type=click.STRING,
+              required=False,
               multiple=True)
 @click.option('--sd-id',
               help='The new SoftDevice ID to be used as --sd-req for the Application update in case the ZIP '
