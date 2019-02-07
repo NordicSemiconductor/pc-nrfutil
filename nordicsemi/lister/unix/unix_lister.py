@@ -43,8 +43,10 @@ if 'linux' in sys.platform or sys.platform == 'darwin':
     import serial.tools.list_ports
     from nordicsemi.lister.enumerated_device import EnumeratedDevice
 
+
 def create_id_string(sno, PID, VID):
     return "{}-{}-{}".format(sno, PID, VID)
+
 
 class UnixLister(AbstractLister):
 
@@ -53,7 +55,7 @@ class UnixLister(AbstractLister):
         available_ports = serial.tools.list_ports.comports()
 
         for port in available_ports:
-            if port.pid == None or port.vid == None or port.serial_number == None:
+            if port.pid is None or port.vid is None or port.serial_number is None:
                 continue
 
             serial_number = port.serial_number

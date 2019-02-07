@@ -45,7 +45,7 @@ import usb1
 os.chdir(working_dir)
 import logging
 
-from pc_ble_driver_py.exceptions    import NordicSemiException
+from pc_ble_driver_py.exceptions import NordicSemiException
 
 LIBUSB_ENDPOINT_IN = 0x80
 LIBUSB_ENDPOINT_OUT = 0x00
@@ -66,6 +66,7 @@ NORDIC_DFU_INFO_REQUEST = 7
 DFU_DETACH_REQUEST = 0
 
 logger = logging.getLogger(__name__)
+
 
 class DFUTrigger:
     def __init__(self):
@@ -92,12 +93,12 @@ class DFUTrigger:
                     return nordic_device
 
             except usb1.USBErrorNotFound as err:
-                # Devices with matching VID and PID as target, but without a trigger iface.
+                #  Devices with matching VID and PID as target, but without a trigger iface.
                 triggerless_devices += 1
             except usb1.USBErrorAccess as err:
                 access_error = True
             except usb1.USBErrorNotSupported as err:
-                pass # Unsupported device. Moving on
+                pass #  Unsupported device. Moving on
 
         if triggerless_devices > 0:
             logger.debug("DFU trigger: Could not find trigger interface for device with serial number {}. \
@@ -136,12 +137,3 @@ class DFUTrigger:
                     return
         raise NordicSemiException("Device did not exit application mode after dfu was triggered. Serial number: {}, product id 0x{}, vendor id: 0x{}\n\n"
         .format(listed_device.serial_number, listed_device.product_id, listed_device.vendor_id))
-
-if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, os.getcwd())
-    from nordicsemi.lister.device_lister import DeviceLister
-    lister = DeviceLister()
-    dev = lister.get_device(serial_number = "E020C93E0B96")
-    trigger = DFUTrigger()
-    trigger.enter_bootloader_mode(dev)

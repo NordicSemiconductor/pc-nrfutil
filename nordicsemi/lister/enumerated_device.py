@@ -37,6 +37,7 @@
 
 import sys
 
+
 class EnumeratedDevice:
     def __init__(self, vendor_id, product_id, serial_number, com_ports):
         self.vendor_id = vendor_id
@@ -48,8 +49,8 @@ class EnumeratedDevice:
 
     def add_com_port(self, port):
         if sys.platform == 'darwin':
-            # Ports are sometimes listed under /dev/cu on MacOS,
-            # but pyserial can only open /dev/tty* ports. 
+            #  Ports are sometimes listed under /dev/cu on MacOS,
+            #  but pyserial can only open /dev/tty* ports.
             port = port.replace('/dev/cu.', '/dev/tty.')
         self.com_ports.append(port)
 

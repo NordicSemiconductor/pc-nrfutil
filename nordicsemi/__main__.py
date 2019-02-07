@@ -194,6 +194,7 @@ BOOT_VALIDATION_ARGS =\
 ]
 DEFAULT_BOOT_VALIDATION = 'VALIDATE_GENERATED_CRC'
 
+
 class OptionRequiredIf(click.Option):
 
     def full_process_value(self, ctx, value):

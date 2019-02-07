@@ -39,6 +39,7 @@ import sys
 from nordicsemi.lister.windows.lister_win32 import Win32Lister
 from nordicsemi.lister.unix.unix_lister import UnixLister
 
+
 class DeviceLister(object):
     def __init__(self):
         if sys.platform == 'win32':
@@ -55,7 +56,7 @@ class DeviceLister(object):
             return self.lister_backend.enumerate()
         return []
 
-    def get_device(self, get_all = False, **kwargs):
+    def get_device(self, get_all=False, **kwargs):
         devices = self.enumerate()
         matching_devices = []
         for dev in devices:

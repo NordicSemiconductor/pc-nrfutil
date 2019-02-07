@@ -323,7 +323,7 @@ class DfuTransportSerial(DfuTransport):
 
                     time.sleep(wait_time_ms / 1000.0)
 
-                    device = lister.get_device(serial_number = device_serial_number)
+                    device = lister.get_device(serial_number=device_serial_number)
                     if self.__is_device_in_bootloader_mode(device):
                         self.com_port = device.get_first_available_com_port()
                         break
@@ -336,7 +336,7 @@ class DfuTransportSerial(DfuTransport):
         if not device:
             return False
 
-        # Return true if nrf bootloader or Jlink interface detected.
+        #  Return true if nrf bootloader or Jlink interface detected.
         return (device.vendor_id.lower() == '1915' and device.product_id.lower() == '521f')  \
         or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '0105')
 
