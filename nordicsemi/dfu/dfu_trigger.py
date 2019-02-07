@@ -37,10 +37,16 @@
 
 # Importing libusb1 library
 import os
+import ctypes
+is_32_bit = ctypes.sizeof(ctypes.c_voidp) == 4
 working_dir = os.getcwd()
 file_dir = os.path.dirname(__file__)
 os.chdir(file_dir)
-os.chdir("../../libusb")
+if is_32_bit:
+    os.chdir("../../libusb/x86")
+else:
+    raise NotImplementedError("DFU trigger: 64 bit Python is not supported.")
+    os.chdir("../../libusb/x64")
 import usb1
 os.chdir(working_dir)
 import logging
