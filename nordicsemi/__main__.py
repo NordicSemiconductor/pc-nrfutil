@@ -56,6 +56,7 @@ from nordicsemi.dfu.signing import Signing
 from nordicsemi.dfu.util import query_func
 from nordicsemi.zigbee.prod_config import ProductionConfig, ProductionConfigWrongException, ProductionConfigTooLargeException
 from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
+from nordicsemi.lister.device_lister import DeviceLister
 
 logger = logging.getLogger(__name__)
 
@@ -124,21 +125,9 @@ def display_debug_warning():
 
 def display_settings_backup_warning():
     debug_warning = """
-|===============================================================|
-|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
-|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
-|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
-|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
-|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
-|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
-| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
-|===============================================================|
-|You are generating a DFU settings page with backup page        |
-|included. This is only required for bootloaders from nRF SDK   |
-|15.1 and newer. If you want to skip backup page genetation,    |
-|use --no-backup option.                                        |
-|===============================================================|
-"""
+Note: Generating a DFU settings page with backup page included.
+This is only required for bootloaders from nRF5 SDK 15.1 and newer.
+If you want to skip backup page generation, use --no-backup option."""
     click.echo("{}".format(debug_warning))
 
 def int_as_text_to_int(value):
@@ -192,6 +181,16 @@ BOOT_VALIDATION_ARGS =\
     'VALIDATE_ECDSA_P256_SHA256',
 ]
 DEFAULT_BOOT_VALIDATION = 'VALIDATE_GENERATED_CRC'
+
+
+class OptionRequiredIf(click.Option):
+
+    def full_process_value(self, ctx, value):
+        value = super(OptionRequiredIf, self).full_process_value(ctx, value)
+        if ('serial_number' not in ctx.params or not ctx.params['serial_number']) and value is None:
+            msg = 'Required if "-snr" / "--serial-number" is not defined.'
+            raise click.MissingParameter(ctx=ctx, param=self, message=msg)
+        return value
 
 @click.group()
 @click.option('-v', '--verbose',
@@ -346,7 +345,7 @@ def generate(hex_file,
     if no_backup is None:
         no_backup = False
 
-    if no_backup == False:
+    if no_backup is False:
         display_settings_backup_warning()
 
     if (start_address is not None) and (backup_address is None):
@@ -525,7 +524,7 @@ def pkg():
               type=BASED_INT_OR_NONE)
 @click.option('--hw-version',
               help='The hardware version.',
-              required=True,
+              required=False,
               type=BASED_INT)
 @click.option('--sd-req',
               help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs '
@@ -557,6 +556,7 @@ def pkg():
                    '\n|s140_nrf52_6.1.0|0xAE|'
                    '\n|s140_nrf52_6.1.1|0xB6|',
               type=click.STRING,
+              required=False,
               multiple=True)
 @click.option('--sd-id',
               help='The new SoftDevice ID to be used as --sd-req for the Application update in case the ZIP '
@@ -910,14 +910,14 @@ def update_progress(progress=0):
     if global_bar:
         global_bar.update(progress)
 
-@cli.group(short_help='Perform a Device Firmware Update over, BLE, Thread, or serial transport given a DFU package (zip file).')
+@cli.group(short_help='Perform a Device Firmware Update over serial, BLE, Thread, Zigbee or ANT transport given a DFU package (zip file).')
 def dfu():
     """
     This set of commands supports Device Firmware Upgrade procedures over both BLE and serial transports.
     """
     pass
 
-def do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, ping):
+def do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, ping):
 
     if flow_control is None:
         flow_control = DfuTransportSerial.DEFAULT_FLOW_CONTROL
@@ -927,6 +927,13 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
         baud_rate = DfuTransportSerial.DEFAULT_BAUD_RATE
     if ping is None:
         ping = False
+    if port is None:
+        device_lister = DeviceLister()
+        device = device_lister.get_device(serial_number=serial_number)
+        if device is None:
+            raise NordicSemiException("A device with serial number %s is not connected." % serial_number)
+        port = device.get_first_available_com_port()
+        logger.info("Resolved serial number {} to port {}".format(serial_number, port))
 
     logger.info("Using board at serial port: {}".format(port))
     serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate,
@@ -952,7 +959,7 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
 @click.option('-p', '--port',
               help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
-              required=True)
+              cls = OptionRequiredIf)
 @click.option('-cd', '--connect-delay',
               help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
               type=click.INT,
@@ -969,10 +976,13 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
               help='Set the baud rate',
               type=click.INT,
               required=False)
-def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate):
+@click.option('-snr', '--serial-number',
+              help='Serial number of the device. Ignored if --port is set.',
+              type=click.STRING,
+              required=False)
+def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number):
     """Perform a Device Firmware Update on a device with a bootloader that supports USB serial DFU."""
-
-    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, False)
+    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, False)
 
 
 @dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART.")
@@ -983,7 +993,7 @@ def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notifi
 @click.option('-p', '--port',
               help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
-              required=True)
+              cls = OptionRequiredIf)
 @click.option('-cd', '--connect-delay',
               help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
               type=click.INT,
@@ -1000,10 +1010,14 @@ def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notifi
               help='Set the baud rate',
               type=click.INT,
               required=False)
-def serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate):
+@click.option('-snr', '--serial-number',
+              help='Serial number of the device. Ignored if --port is set.',
+              type=click.STRING,
+              required=False)
+def serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number):
     """Perform a Device Firmware Update on a device with a bootloader that supports UART serial DFU."""
 
-    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, True)
+    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, True)
 
 
 def enumerate_ports():
@@ -1101,6 +1115,98 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
         dfu.dfu_send_images()
 
     click.echo("Device programmed.")
+
+
+@dfu.command(short_help="Update the firmware on a device over an ANT connection.")
+@click.option('-pkg', '--package',
+              help='Filename of the DFU package.',
+              type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
+              required=True)
+@click.option('-p', '--port',
+              help='ANT USB device to use for performing the update.',
+              type=click.INT,
+              required=False)
+@click.option('-cd', '--connect-delay',
+              help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
+              type=click.INT,
+              required=False)
+@click.option('-prn', '--packet-receipt-notification',
+              help='Set the packet receipt notification value.',
+              type=click.INT,
+              required=False)
+@click.option('--period',
+              help='Set the ANT Channel period.',
+              type=click.INT,
+              required=False)
+@click.option('--freq',
+              help='Set the ANT RF Frequency.',
+              type=click.INT,
+              required=False)
+@click.option('--net-key',
+              help='Set the ANT network key. Must be formated as hexadecimal numbers seperated by dashes ("-").',
+              type=click.STRING,
+              required=False)
+@click.option('--dev-type',
+              help='Set the ANT device type',
+              type=click.INT,
+              required=False)
+@click.option('-srn', '--serial',
+              help='Serial number of device to search for.',
+              type=click.INT,
+              required=False)
+@click.option('-d', '--debug/--no-debug',
+              help='Enable ANT debug logs.',
+              default=False,
+              required=False)
+def ant(package, port, connect_delay, packet_receipt_notification, period,
+        freq, net_key, dev_type, serial, debug):
+
+    from nordicsemi.dfu.dfu_transport_ant import platform_supported
+
+    if not platform_supported():
+        return
+
+    # This import needs to happen only if the platform is supported.
+    from nordicsemi.dfu.dfu_transport_ant import DfuTransportAnt, AntParams
+
+    ant_config = AntParams()
+    if port is None:
+        port = DfuTransportAnt.DEFAULT_PORT
+    if packet_receipt_notification is None:
+        packet_receipt_notification = DfuTransportAnt.DEFAULT_PRN
+    if period is not None:
+        ant_config.channel_period = period
+    if freq is not None:
+        ant_config.rf_freq = freq
+    if net_key is not None:
+        ant_config.network_key = [int(x, 16) for x in net_key.split('-')]
+    if dev_type is not None:
+        ant_config.device_type = dev_type
+    if serial is not None:
+        ant_config.device_num = serial & 0xFFFF
+        ant_config.trans_type = 0x01 | ((serial >> 12) & 0xF0)
+
+    ant_backend = DfuTransportAnt(port=port, prn=packet_receipt_notification,
+        ant_config=ant_config, debug=debug)
+    ant_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    dfu = Dfu(zip_file_path=package, dfu_transport=ant_backend, connect_delay=connect_delay)
+
+    try:
+        if logger.getEffectiveLevel() > logging.INFO:
+            with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
+                global global_bar
+                global_bar = bar
+                dfu.dfu_send_images()
+        else:
+            dfu.dfu_send_images()
+    except Exception:
+        if ant_backend.dfu_adapter and ant_backend.dfu_adapter.ant_dev:
+            # Make sure things get cleaned up if there is an error.
+            ant_backend.dfu_adapter.ant_dev.ant_close()
+        raise
+
+    click.echo("Device programmed.")
+
 
 def convert_version_string_to_int(s):
     """Convert from semver string "1.2.3", to integer 10203"""
