@@ -56,6 +56,7 @@ from nordicsemi.dfu.signing import Signing
 from nordicsemi.dfu.util import query_func
 from nordicsemi.zigbee.prod_config import ProductionConfig, ProductionConfigWrongException, ProductionConfigTooLargeException
 from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
+from nordicsemi.lister.device_lister import DeviceLister
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +193,16 @@ BOOT_VALIDATION_ARGS =\
     'VALIDATE_ECDSA_P256_SHA256',
 ]
 DEFAULT_BOOT_VALIDATION = 'VALIDATE_GENERATED_CRC'
+
+
+class OptionRequiredIf(click.Option):
+
+    def full_process_value(self, ctx, value):
+        value = super(OptionRequiredIf, self).full_process_value(ctx, value)
+        if ('serial_number' not in ctx.params or not ctx.params['serial_number']) and value is None:
+            msg = 'Required if "-snr" / "--serial-number" is not defined.'
+            raise click.MissingParameter(ctx=ctx, param=self, message=msg)
+        return value
 
 @click.group()
 @click.option('-v', '--verbose',
@@ -917,8 +928,7 @@ def dfu():
     """
     pass
 
-def do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, ping,
-              timeout, serial_timeout):
+def do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, ping):
 
     if flow_control is None:
         flow_control = DfuTransportSerial.DEFAULT_FLOW_CONTROL
@@ -928,6 +938,14 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
         baud_rate = DfuTransportSerial.DEFAULT_BAUD_RATE
     if ping is None:
         ping = False
+    if port is None:
+        device_lister = DeviceLister()
+        device = device_lister.get_device(serial_number=serial_number)
+        if device is None:
+            raise NordicSemiException("A device with serial number %s is not connected." % serial_number)
+        port = device.get_first_available_com_port()
+        logger.info("Resolved serial number {} to port {}".format(serial_number, port))
+
     if timeout is None:
         timeout = DfuTransportSerial.DEFAULT_TIMEOUT
     if serial_timeout is None:
@@ -935,8 +953,7 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
 
     logger.info("Using board at serial port: {}".format(port))
     serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate,
-                    flow_control=flow_control, prn=packet_receipt_notification, do_ping=ping,
-                    timeout=timeout, serial_timeout=serial_timeout)
+                    flow_control=flow_control, prn=packet_receipt_notification, do_ping=ping)
     serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend, connect_delay = connect_delay)
 
@@ -958,7 +975,7 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
 @click.option('-p', '--port',
               help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
-              required=True)
+              cls = OptionRequiredIf)
 @click.option('-cd', '--connect-delay',
               help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
               type=click.INT,
@@ -975,11 +992,13 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
               help='Set the baud rate',
               type=click.INT,
               required=False)
-def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate):
+@click.option('-snr', '--serial-number',
+              help='Serial number of the device. Ignored if --port is set.',
+              type=click.STRING,
+              required=False)
+def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number):
     """Perform a Device Firmware Update on a device with a bootloader that supports USB serial DFU."""
-
-    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, False,
-              None, None)
+    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, False)
 
 
 @dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART.")
@@ -990,7 +1009,7 @@ def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notifi
 @click.option('-p', '--port',
               help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
-              required=True)
+              cls = OptionRequiredIf)
 @click.option('-cd', '--connect-delay',
               help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
               type=click.INT,
@@ -1007,6 +1026,10 @@ def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notifi
               help='Set the baud rate',
               type=click.INT,
               required=False)
+@click.option('-snr', '--serial-number',
+              help='Serial number of the device. Ignored if --port is set.',
+              type=click.STRING,
+              required=False)
 @click.option('-t', '--timeout',
               help='Set the timeout in seconds for board to respond (default: 30 seconds)',
               type=click.INT,
@@ -1015,12 +1038,11 @@ def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notifi
               help='Set the timeout in seconds for the serial line (default: 1 second)',
               type=click.FLOAT,
               required=False)
-def serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate,
+def serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number,
            timeout, serial_timeout):
     """Perform a Device Firmware Update on a device with a bootloader that supports UART serial DFU."""
 
-    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, True,
-              timeout, serial_timeout)
+    do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, True)
 
 
 def enumerate_ports():

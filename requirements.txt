@@ -13,3 +13,4 @@ intelhex
 pyyaml
 crcmod
 antlib ; sys_platform == 'win32'
+libusb1
