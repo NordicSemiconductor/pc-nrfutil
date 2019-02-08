@@ -956,7 +956,9 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
 
     click.echo("Device programmed.")
 
-@dfu.command(short_help="Update the firmware on a device over a USB serial connection. The DFU target must be a chip with USB pins (i.e. nRF52840) and provide a USB ACM CDC serial interface.")
+@dfu.command(short_help='Update the firmware on a device over a USB serial connection. The DFU '
+                        'target must be a chip with USB pins (i.e. nRF52840) and provide a USB ACM '
+                        'CDC serial interface.')
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
