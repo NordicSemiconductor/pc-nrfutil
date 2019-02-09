@@ -301,26 +301,26 @@ Alternatively, the serial number of a connected device can be specified:
 nrfutil dfu serial -pkg app_dfu_package.zip -snr 00FEFEAB1234
 ```
 
-##### usb_serial
+##### usb-serial
 
 Perform a full DFU procedure over a CDC ACM USB connection (A.K.A. "USB virtual serial port"). The DFU target shall be a chip with USB pins (i.e. nRF52840), and shall be running a bootloader enabling a USB-CDC interface.
 
-In the case of the nRF52840 development kit board, the `usb_serial` DFU mode is used when communicating with the board through the female USB port marked "nRF USB", which is wired
+In the case of the nRF52840 development kit board, the `usb-serial` DFU mode is used when communicating with the board through the female USB port marked "nRF USB", which is wired
 to the USB pins in the nRF chip.
 
 ```
-nrfutil dfu usb_serial --help
+nrfutil dfu usb-serial --help
 ```
 
 Below is an example of the execution of a DFU procedure of the file generated above over COM3:
 
 ```
-nrfutil dfu usb_serial -pkg app_dfu_package.zip -p COM3
+nrfutil dfu usb-serial -pkg app_dfu_package.zip -p COM3
 ```
 
 Alternatively, the serial number of a connected device can be specified:
 ```
-nrfutil dfu usb_serial -pkg app_dfu_package.zip -snr 00FEFEAB1234
+nrfutil dfu usb-serial -pkg app_dfu_package.zip -snr 00FEFEAB1234
 ```
 
 #### keys
