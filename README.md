@@ -49,7 +49,7 @@ This will also retrieve and install all additional required packages.
 
 **Note**: When installing on macOS, you may need to add ` --ignore-installed six` when running pip. See [issue #79](https://github.com/NordicSemiconductor/pc-nrfutil/issues/79).
 
-**Note**: To use the `dfu ble`, `dfu thread` or `dfu zigbee` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
+**Note**: To use the `dfu ble`, `dfu thread`, `dfu zigbee` or `dfu ant` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
 
 ## Downloading precompiled Windows executable
 
@@ -67,7 +67,7 @@ To install nrfutil from source the following prerequisites must be satisfied:
 * [pip](https://pip.pypa.io/en/stable/installing.html)
 * setuptools (upgrade to latest version): `pip install -U setuptools`
 
-Additionally, if you want to generate a self-contained executable:  
+Additionally, if you want to generate a self-contained executable:
 
 * PyInstaller: `pip install pyinstaller`
 
@@ -90,12 +90,12 @@ python nordicsemi/__main__.py
 
 ### Installing from source
 
-To install the library to the local Python site-packages and script folder:  
+To install the library to the local Python site-packages and script folder:
 ```
 python setup.py install
 ```
 
-To generate a self-contained executable version of the utility:  
+To generate a self-contained executable version of the utility:
 ```
 pyinstaller nrfutil.spec
 
@@ -149,6 +149,8 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_2.0.0`    | 0x81
 `s130_nrf51_2.0.1`    | 0x87
 `s132_nrf52_2.0.1`    | 0x88
+`s212_nrf52_2.0.1`    | 0x8D
+`s332_nrf52_2.0.1`    | 0x8E
 `s132_nrf52_3.0.0`    | 0x8C
 `s132_nrf52_3.1.0`    | 0x91
 `s132_nrf52_4.0.0`    | 0x95
@@ -156,7 +158,11 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_4.0.3`    | 0x99
 `s132_nrf52_4.0.4`    | 0x9E
 `s132_nrf52_4.0.5`    | 0x9F
+`s212_nrf52_4.0.5`    | 0x93
+`s332_nrf52_4.0.5`    | 0x94
 `s132_nrf52_5.0.0`    | 0x9D
+`s212_nrf52_5.0.0`    | 0x9C
+`s332_nrf52_5.0.0`    | 0x9B
 `s132_nrf52_5.1.0`    | 0xA5
 `s132_nrf52_6.0.0`    | 0xA8
 `s132_nrf52_6.1.0`    | 0xAF
@@ -164,6 +170,10 @@ SoftDevice            | FWID (sd-req)
 `s140_nrf52_6.0.0`    | 0xA9
 `s140_nrf52_6.1.0`    | 0xAE
 `s140_nrf52_6.1.1`    | 0xB6
+`s212_nrf52_6.1.1`    | 0xBC
+`s332_nrf52_6.1.1`    | 0xBA
+`s340_nrf52_6.1.1`    | 0xB9
+
 
 **Note**: The Thread and Zigbee stacks don't use a SoftDevice but --sd-req option is required for compatibility reasons. You can provide any value for the option as it is ignored during DFU.
 
@@ -215,9 +225,19 @@ nrfutil pkg display package.zip
 ```
 
 #### dfu
-This set of commands allow you to perform an actual firmware update over a serial, BLE, Thread or Zigbee connection.
+This set of commands allow you to perform an actual firmware update over a serial, BLE, Thread, Zigbee or ANT connection.
 
 **Note**: When using Homebrew Python on macOS, you may encounter an error: `Fatal Python error: PyThreadState_Get: no current thread Abort trap: 6`. See [issue #46](https://github.com/NordicSemiconductor/pc-nrfutil/issues/46#issuecomment-383930818).
+
+##### ant
+Perform a full DFU procedure over an ANT connection. This command takes several options that you can list using:
+```
+nrfutil dfu ant --help
+```
+Below is an example of the execution of a DFU procedure of the file generated above over ANT using an nRF52 connectivity IC connected to COM3:
+```
+nrfutil dfu ant -pkg app_dfu_package.zip --port 0
+```
 
 ##### ble
 Perform a full DFU procedure over a BLE connection. This command takes several options that you can list using:
@@ -276,21 +296,31 @@ Below is an example of the execution of a DFU procedure of the file generated ab
 nrfutil dfu serial -pkg app_dfu_package.zip -p COM3
 ```
 
-##### usb_serial
+Alternatively, the serial number of a connected device can be specified:
+```
+nrfutil dfu serial -pkg app_dfu_package.zip -snr 00FEFEAB1234
+```
+
+##### usb-serial
 
 Perform a full DFU procedure over a CDC ACM USB connection (A.K.A. "USB virtual serial port"). The DFU target shall be a chip with USB pins (i.e. nRF52840), and shall be running a bootloader enabling a USB-CDC interface.
 
-In the case of the nRF52840 development kit board, the `usb_serial` DFU mode is used when communicating with the board through the female USB port marked "nRF USB", which is wired
+In the case of the nRF52840 development kit board, the `usb-serial` DFU mode is used when communicating with the board through the female USB port marked "nRF USB", which is wired
 to the USB pins in the nRF chip.
 
 ```
-nrfutil dfu usb_serial --help
+nrfutil dfu usb-serial --help
 ```
 
 Below is an example of the execution of a DFU procedure of the file generated above over COM3:
 
 ```
-nrfutil dfu usb_serial -pkg app_dfu_package.zip -p COM3
+nrfutil dfu usb-serial -pkg app_dfu_package.zip -p COM3
+```
+
+Alternatively, the serial number of a connected device can be specified:
+```
+nrfutil dfu usb-serial -pkg app_dfu_package.zip -snr 00FEFEAB1234
 ```
 
 #### keys
