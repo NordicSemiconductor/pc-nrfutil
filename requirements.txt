@@ -1,16 +1,16 @@
-six >= 1.9
-pyserial >= 2.7
-enum34 >= 1.0.4
+six ~= 1.9
+pyserial ~= 3.0
+enum34 ~= 1.0
 click ~= 7.0
-ecdsa >= 0.13
-behave
-protobuf >= 3.6
-pc_ble_driver_py >= 0.11.4
-tqdm
-piccata
+ecdsa ~= 0.13.0
+behave ~= 1.0
+protobuf ~= 3.6
+pc_ble_driver_py ~= 0.11.4
+tqdm ~= 4.25
+piccata ~= 1.0
 pyspinel == 1.0.0a3
-intelhex
-pyyaml
-crcmod
-antlib ; sys_platform == 'win32'
-libusb1
+intelhex ~= 2.2
+pyyaml ~= 3.13
+crcmod ~= 1.7
+antlib ~= 1.0 ; sys_platform == 'win32'
+libusb1 ~= 1.7
