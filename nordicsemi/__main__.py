@@ -44,6 +44,7 @@ import click
 import time
 import logging
 import subprocess
+import re
 sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
@@ -1080,6 +1081,14 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
     if name is None and address is None:
         name = 'DfuTarg'
         click.echo("No target selected. Default device name: {} is used.".format(name))
+
+    # Remove colons from address in case written in format XX:XX:XX:XX:XX:XX
+    if address:
+        address = address.replace(':', '')
+        if not re.match('^[0-9A-Fa-f]{12}$', address):
+            click.echo('Invalid address. Must be exactly 6 bytes HEX, '
+                       'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.')
+            return
 
     if port is None and jlink_snr is not None:
         port = get_port_by_snr(jlink_snr)
