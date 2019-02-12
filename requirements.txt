@@ -12,5 +12,5 @@ pyspinel == 1.0.0a3
 intelhex ~= 2.2
 pyyaml ~= 3.13
 crcmod ~= 1.7
-antlib ~= 1.0 ; sys_platform == 'win32'
+antlib ~= 1.0b ; sys_platform == 'win32'
 libusb1 ~= 1.7
