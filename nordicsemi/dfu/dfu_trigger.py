@@ -45,7 +45,6 @@ os.chdir(file_dir)
 if is_32_bit:
     os.chdir("../../libusb/x86")
 else:
-    raise NotImplementedError("DFU trigger: 64 bit Python is not supported.")
     os.chdir("../../libusb/x64")
 import usb1
 os.chdir(working_dir)
