@@ -21,6 +21,11 @@ if (sys.platform == "win32"):
     binaries.append((shlib_dir_ant, '.'))
 
 
+nrfutil_path = os.path.dirname(os.path.abspath(SPEC))
+binaries.append((nrfutil_path + "\\libusb\\x86", "\\libusb\\x86"))
+binaries.append((nrfutil_path + "\\libusb\\x64", "\\libusb\\x64"))
+
+
 a = Analysis(['nordicsemi/__main__.py'],
              binaries=binaries,
              datas=None,

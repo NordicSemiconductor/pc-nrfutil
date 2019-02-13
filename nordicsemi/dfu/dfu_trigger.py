@@ -39,16 +39,19 @@
 import os
 import ctypes
 is_32_bit = ctypes.sizeof(ctypes.c_voidp) == 4
-working_dir = os.getcwd()
-file_dir = os.path.dirname(__file__)
-os.chdir(file_dir)
+abs_file_dir = os.path.dirname(os.path.abspath(__file__))
+rel_import_dir = "."
+
 if is_32_bit:
-    os.chdir("../../libusb/x86")
+    abs_file_dir = abs_file_dir.replace("nordicsemi\\dfu", "libusb\\x86")
+    rel_import_dir += "\\libusb\\x86"
 else:
-    raise NotImplementedError("DFU trigger: 64 bit Python is not supported.")
-    os.chdir("../../libusb/x64")
+    abs_file_dir = abs_file_dir.replace("nordicsemi\\dfu", "libusb\\x64")
+    rel_import_dir += "\\libusb\\x64"
+
+os.environ['PATH'] = rel_import_dir + os.pathsep + abs_file_dir + os.pathsep + os.environ['PATH']
+
 import usb1
-os.chdir(working_dir)
 import logging
 
 from pc_ble_driver_py.exceptions import NordicSemiException
