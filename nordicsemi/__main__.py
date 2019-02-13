@@ -1079,9 +1079,12 @@ def get_port_by_snr(snr):
               help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
-@click.option('-mtu', '--att_mtu',
-              help='ATT MTU. Transmission speed used for ble transfers. Accepted values in range <23, 247>. Default is 247. The error: "Failed to ble_gattc_write. Error code: 3" can in some cases be solved by setting a lower mtu.',
-              type=click.INT,
+@click.option('-mtu', '--att-mtu',
+              help='ATT MTU. Maximum ATT packet size for BLE transfers. '
+                   'Accepted values in range [23, 247]. Default is 247. '
+                   'Note: Failing DFU transmissions can in some cases be solved by setting a '
+                   'lower mtu.',
+              type=click.IntRange(23, 247, clamp=True),
               default=247)
 def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flash_connectivity, att_mtu):
     """
@@ -1113,14 +1116,6 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
             click.echo("Connectivity firmware flashed.")
         flasher.reset()
         time.sleep(1)
-
-    #  ATT MTU clipped to range [23, 247]
-    if att_mtu > 247:
-        click.echo("MTU of {} is not supported. Setting mtu to max: 247.".format(att_mtu))
-        att_mtu = 247
-    if att_mtu < 23:
-        click.echo("MTU of {} is not supported. Setting mtu to min: 23.".format(att_mtu))
-        att_mtu = 23
 
     logger.info("Using connectivity board at serial port: {}".format(port))
     ble_backend = DfuTransportBle(serial_port=str(port),
