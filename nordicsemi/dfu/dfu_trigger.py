@@ -40,17 +40,19 @@ import os
 import ctypes
 is_32_bit = ctypes.sizeof(ctypes.c_voidp) == 4
 abs_file_dir = os.path.dirname(os.path.abspath(__file__))
-rel_import_dir = "."
+rel_import_dir = ""
 
+dfu_path = os.path.join("nordicsemi", "dfu")
 if is_32_bit:
-    abs_file_dir = abs_file_dir.replace("nordicsemi\\dfu", "libusb\\x86")
-    rel_import_dir += "\\libusb\\x86"
+    libusb_path = os.path.join("libusb", "x86")
+    abs_file_dir = abs_file_dir.replace(dfu_path, libusb_path)
+    rel_import_dir = os.path.join(".", libusb_path)
 else:
-    abs_file_dir = abs_file_dir.replace("nordicsemi\\dfu", "libusb\\x64")
-    rel_import_dir += "\\libusb\\x64"
+    libusb_path = os.path.join("libusb", "x64")
+    abs_file_dir = abs_file_dir.replace(dfu_path, libusb_path)
+    rel_import_dir = os.path.join(".", libusb_path)
 
 os.environ['PATH'] = rel_import_dir + os.pathsep + abs_file_dir + os.pathsep + os.environ['PATH']
-
 import usb1
 import logging
 
