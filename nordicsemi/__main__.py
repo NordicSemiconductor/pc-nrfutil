@@ -1079,7 +1079,11 @@ def get_port_by_snr(snr):
               help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
-def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flash_connectivity):
+@click.option('-mtu', '--att_mtu',
+              help='ATT MTU. Transmission speed used for ble transfers. Accepted values in range <23, 247>. Default is 247. The error: "Failed to ble_gattc_write. Error code: 3" can in some cases be solved by setting a lower mtu.',
+              type=click.INT,
+              default=247)
+def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flash_connectivity, att_mtu):
     """
     Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU.
     This requires a second nRF device, connected to this computer, with connectivity firmware
@@ -1110,8 +1114,17 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
         flasher.reset()
         time.sleep(1)
 
+    #  ATT MTU clipped to range [23, 247]
+    if att_mtu > 247:
+        click.echo("MTU of {} is not supported. Setting mtu to max: 247.".format(att_mtu))
+        att_mtu = 247
+    if att_mtu < 23:
+        click.echo("MTU of {} is not supported. Setting mtu to min: 23.".format(att_mtu))
+        att_mtu = 23
+
     logger.info("Using connectivity board at serial port: {}".format(port))
     ble_backend = DfuTransportBle(serial_port=str(port),
+                                  att_mtu=att_mtu,
                                   target_device_name=str(name),
                                   target_device_addr=str(address))
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
