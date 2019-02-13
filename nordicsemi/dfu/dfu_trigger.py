@@ -52,7 +52,11 @@ else:
     abs_file_dir = abs_file_dir.replace(dfu_path, libusb_path)
     rel_import_dir = os.path.join(".", libusb_path)
 
-os.environ['PATH'] = rel_import_dir + os.pathsep + abs_file_dir + os.pathsep + os.environ['PATH']
+for path in ['PATH', 'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH']:
+    if path not in os.environ:
+        os.environ[path] = ""
+    os.environ[path] = rel_import_dir + os.pathsep + abs_file_dir + os.pathsep + os.environ[path]
+
 import usb1
 import logging
 

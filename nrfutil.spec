@@ -11,24 +11,24 @@ mod_dir = os.path.dirname(module.__file__)
 shlib_dir = os.path.join(os.path.abspath(mod_dir), 'lib')
 hex_dir = os.path.join(os.path.abspath(mod_dir), 'hex')
 
-binaries = [(shlib_dir, 'lib'), (hex_dir, 'pc_ble_driver_py/hex')]
-
+datas = [(shlib_dir, 'lib'), (hex_dir, 'pc_ble_driver_py/hex')]
 # ant is relevant for windows only
 if (sys.platform == "win32"):
     module_ant = importlib.import_module('antlib')
     mod_dir_ant = os.path.dirname(module_ant.__file__)
     shlib_dir_ant = os.path.abspath(mod_dir_ant)
-    binaries.append((shlib_dir_ant, '.'))
-
+    datas.append((shlib_dir_ant, '.'))
 
 nrfutil_path = os.path.dirname(os.path.abspath(SPEC))
-binaries.append((os.path.join(nrfutil_path, "libusb", "x86"), os.path.join("libusb", "x86")))
-binaries.append((os.path.join(nrfutil_path, "libusb", "x64"), os.path.join("libusb", "x64")))
+datas.append((os.path.join(nrfutil_path, "libusb", "x86", "libusb-1.0.dylib"), os.path.join("libusb", "x86")))
+datas.append((os.path.join(nrfutil_path, "libusb", "x64", "libusb-1.0.dylib"), os.path.join("libusb", "x64")))
+datas.append((os.path.join(nrfutil_path, "libusb", "x86", "libusb-1.0.dll"), os.path.join("libusb", "x86")))
+datas.append((os.path.join(nrfutil_path, "libusb", "x64", "libusb-1.0.dll"), os.path.join("libusb", "x64")))
 
 
 a = Analysis(['nordicsemi/__main__.py'],
-             binaries=binaries,
-             datas=None,
+             binaries=None,
+             datas=datas,
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
