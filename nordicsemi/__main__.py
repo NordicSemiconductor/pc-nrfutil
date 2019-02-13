@@ -44,6 +44,7 @@ import click
 import time
 import logging
 import subprocess
+import re
 sys.path.append(os.getcwd())
 
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
@@ -125,21 +126,9 @@ def display_debug_warning():
 
 def display_settings_backup_warning():
     debug_warning = """
-|===============================================================|
-|##      ##    ###    ########  ##    ## #### ##    ##  ######  |
-|##  ##  ##   ## ##   ##     ## ###   ##  ##  ###   ## ##    ## |
-|##  ##  ##  ##   ##  ##     ## ####  ##  ##  ####  ## ##       |
-|##  ##  ## ##     ## ########  ## ## ##  ##  ## ## ## ##   ####|
-|##  ##  ## ######### ##   ##   ##  ####  ##  ##  #### ##    ## |
-|##  ##  ## ##     ## ##    ##  ##   ###  ##  ##   ### ##    ## |
-| ###  ###  ##     ## ##     ## ##    ## #### ##    ##  ######  |
-|===============================================================|
-|You are generating a DFU settings page with backup page        |
-|included. This is only required for bootloaders from nRF SDK   |
-|15.1 and newer. If you want to skip backup page genetation,    |
-|use --no-backup option.                                        |
-|===============================================================|
-"""
+Note: Generating a DFU settings page with backup page included.
+This is only required for bootloaders from nRF5 SDK 15.1 and newer.
+If you want to skip backup page generation, use --no-backup option."""
     click.echo("{}".format(debug_warning))
 
 def int_as_text_to_int(value):
@@ -357,7 +346,7 @@ def generate(hex_file,
     if no_backup is None:
         no_backup = False
 
-    if no_backup == False:
+    if no_backup is False:
         display_settings_backup_warning()
 
     if (start_address is not None) and (backup_address is None):
@@ -536,7 +525,7 @@ def pkg():
               type=BASED_INT_OR_NONE)
 @click.option('--hw-version',
               help='The hardware version.',
-              required=True,
+              required=False,
               type=BASED_INT)
 @click.option('--sd-req',
               help='The SoftDevice requirements. A comma-separated list of SoftDevice firmware IDs '
@@ -568,6 +557,7 @@ def pkg():
                    '\n|s140_nrf52_6.1.0|0xAE|'
                    '\n|s140_nrf52_6.1.1|0xB6|',
               type=click.STRING,
+              required=False,
               multiple=True)
 @click.option('--sd-id',
               help='The new SoftDevice ID to be used as --sd-req for the Application update in case the ZIP '
@@ -962,7 +952,9 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
 
     click.echo("Device programmed.")
 
-@dfu.command(short_help="Update the firmware on a device over a USB serial connection. The DFU target must be a chip with USB pins (i.e. nRF52840) and provide a USB ACM CDC serial interface.")
+@dfu.command(short_help='Update the firmware on a device over a USB serial connection. The DFU '
+                        'target must be a chip with USB pins (i.e. nRF52840) and provide a USB ACM '
+                        'CDC serial interface.')
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
@@ -1096,6 +1088,14 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
     if name is None and address is None:
         name = 'DfuTarg'
         click.echo("No target selected. Default device name: {} is used.".format(name))
+
+    # Remove colons from address in case written in format XX:XX:XX:XX:XX:XX
+    if address:
+        address = address.replace(':', '')
+        if not re.match('^[0-9A-Fa-f]{12}$', address):
+            click.echo('Invalid address. Must be exactly 6 bytes HEX, '
+                       'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.')
+            return
 
     if port is None and jlink_snr is not None:
         port = get_port_by_snr(jlink_snr)

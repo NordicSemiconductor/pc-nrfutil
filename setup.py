@@ -138,7 +138,9 @@ setup(
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
     package_data = {
-                '': ['../requirements.txt', 'thread/hex/ncp.hex', 'zigbee/hex/ota.hex', '../libusb/x86/libusb-1.0.dll', '../libusb/x86/libusb-1.0.dylib', '../libusb/LICENSE']
+                '': ['../requirements.txt', 'thread/hex/ncp.hex', 'zigbee/hex/ota.hex',
+                     '../libusb/x86/libusb-1.0.dll', '../libusb/x64/libusb-1.0.dll',
+                     '../libusb/x64/libusb-1.0.dylib', '../libusb/LICENSE']
     },
     install_requires=reqs,
     zipfile=None,
