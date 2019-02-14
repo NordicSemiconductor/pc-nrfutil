@@ -149,6 +149,7 @@ class DfuTransportSerial(DfuTransport):
 
     DEFAULT_BAUD_RATE = 115200
     DEFAULT_FLOW_CONTROL = True
+    DEFAULT_SERIAL_PORT_CONNECT_TIMEOUT = 15.0
     DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
     DEFAULT_PRN                 = 0
     DEFAULT_DO_PING = True
@@ -204,9 +205,10 @@ class DfuTransportSerial(DfuTransport):
         if self.do_ping:
             ping_success = False
             start = datetime.now()
-            while datetime.now() - start < timedelta(seconds=self.timeout):
+            while datetime.now() - start < timedelta(seconds=self.DEFAULT_SERIAL_PORT_CONNECT_TIMEOUT):
                 if self.__ping() == True:
                     ping_success = True
+                    break
                 time.sleep(1)
 
             if ping_success == False:
@@ -306,7 +308,15 @@ class DfuTransportSerial(DfuTransport):
 
     def __ensure_bootloader(self):
         lister = DeviceLister()
-        device = lister.get_device(com=self.com_port)
+        device = None
+
+        start = datetime.now()
+        while datetime.now() - start < timedelta(seconds=self.DEFAULT_SERIAL_PORT_CONNECT_TIMEOUT):
+            device = lister.get_device(com=self.com_port)
+            if device:
+                break
+            time.sleep(0.05)
+
         if device:
             device_serial_number = device.serial_number
 
