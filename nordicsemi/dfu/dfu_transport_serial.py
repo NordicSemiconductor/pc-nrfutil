@@ -149,6 +149,7 @@ class DfuTransportSerial(DfuTransport):
 
     DEFAULT_BAUD_RATE = 115200
     DEFAULT_FLOW_CONTROL = True
+    DEFAULT_TIMEOUT = 30.0  # Timeout time for board response
     DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
     DEFAULT_PRN                 = 0
     DEFAULT_DO_PING = True
@@ -170,7 +171,8 @@ class DfuTransportSerial(DfuTransport):
                  com_port,
                  baud_rate=DEFAULT_BAUD_RATE,
                  flow_control=DEFAULT_FLOW_CONTROL,
-                 timeout=DEFAULT_SERIAL_PORT_TIMEOUT,
+                 timeout=DEFAULT_TIMEOUT,
+                 serial_timeout=DEFAULT_SERIAL_PORT_TIMEOUT,
                  prn=DEFAULT_PRN,
                  do_ping=DEFAULT_DO_PING):
 
@@ -179,6 +181,7 @@ class DfuTransportSerial(DfuTransport):
         self.baud_rate = baud_rate
         self.flow_control = 1 if flow_control else 0
         self.timeout = timeout
+        self.serial_timeout = serial_timeout
         self.prn         = prn
         self.serial_port = None
         self.dfu_adapter = None
@@ -195,7 +198,7 @@ class DfuTransportSerial(DfuTransport):
         try:
             self.__ensure_bootloader()
             self.serial_port = Serial(port=self.com_port,
-                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.timeout)
+                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.serial_timeout)
             self.dfu_adapter = DFUAdapter(self.serial_port)
         except Exception as e:
             raise NordicSemiException("Serial port could not be opened on {0}"
@@ -204,10 +207,10 @@ class DfuTransportSerial(DfuTransport):
         if self.do_ping:
             ping_success = False
             start = datetime.now()
-            while datetime.now() - start < timedelta(seconds=self.timeout):
+            while (datetime.now() - start < timedelta(seconds=self.timeout)
+                    and ping_success == False):
                 if self.__ping() == True:
                     ping_success = True
-                time.sleep(1)
 
             if ping_success == False:
                 raise NordicSemiException("No ping response after opening COM port")

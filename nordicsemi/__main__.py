@@ -936,6 +936,11 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
         port = device.get_first_available_com_port()
         logger.info("Resolved serial number {} to port {}".format(serial_number, port))
 
+    if timeout is None:
+        timeout = DfuTransportSerial.DEFAULT_TIMEOUT
+    if serial_timeout is None:
+        serial_timeout = DfuTransportSerial.DEFAULT_SERIAL_PORT_TIMEOUT
+
     logger.info("Using board at serial port: {}".format(port))
     serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate,
                     flow_control=flow_control, prn=packet_receipt_notification, do_ping=ping)
@@ -1017,7 +1022,16 @@ def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notifi
               help='Serial number of the device. Ignored if --port is set.',
               type=click.STRING,
               required=False)
-def serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number):
+@click.option('-t', '--timeout',
+              help='Set the timeout in seconds for board to respond (default: 30 seconds)',
+              type=click.INT,
+              required=False)
+@click.option('-st', '--serial-timeout',
+              help='Set the timeout in seconds for the serial line (default: 1 second)',
+              type=click.FLOAT,
+              required=False)
+def serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number,
+           timeout, serial_timeout):
     """Perform a Device Firmware Update on a device with a bootloader that supports UART serial DFU."""
 
     do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, True)
