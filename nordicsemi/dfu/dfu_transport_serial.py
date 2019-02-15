@@ -309,7 +309,13 @@ class DfuTransportSerial(DfuTransport):
 
     def __ensure_bootloader(self):
         lister = DeviceLister()
-        device = lister.get_device(com=self.com_port)
+
+        device = None
+        start = datetime.now()
+        while not device and datetime.now() - start < timedelta(seconds=self.timeout):
+            time.sleep(0.5)
+            device = lister.get_device(com=self.com_port)
+
         if device:
             device_serial_number = device.serial_number
 
@@ -346,9 +352,9 @@ class DfuTransportSerial(DfuTransport):
             return False
 
         #  Return true if nrf bootloader or Jlink interface detected.
-        return (device.vendor_id.lower() == '1915' and device.product_id.lower() == '521f')  \
-        or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '0105')
-
+        return ((device.vendor_id.lower() == '1915' and device.product_id.lower() == '521f') # nRF52 SDFU USB
+             or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '0105') # JLink CDC UART Port
+             or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '1015'))# JLink CDC UART Port (MSD)
 
     def __set_prn(self):
         logger.debug("Serial: Set Packet Receipt Notification {}".format(self.prn))
