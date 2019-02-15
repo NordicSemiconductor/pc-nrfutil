@@ -423,13 +423,16 @@ class DfuTransportBle(DfuTransport):
 
     def __init__(self,
                  serial_port,
+                 att_mtu,
                  target_device_name=None,
                  target_device_addr=None,
                  baud_rate=115200,
                  prn=0):
         super(DfuTransportBle, self).__init__()
+        DFUAdapter.LOCAL_ATT_MTU = att_mtu
         self.baud_rate          = baud_rate
         self.serial_port        = serial_port
+        self.att_mtu            = att_mtu
         self.target_device_name = target_device_name
         self.target_device_addr = target_device_addr
         self.dfu_adapter        = None

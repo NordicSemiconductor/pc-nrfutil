@@ -1085,7 +1085,14 @@ def get_port_by_snr(snr):
               help='Flash connectivity firmware automatically. Default: disabled.',
               type=click.BOOL,
               is_flag=True)
-def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flash_connectivity):
+@click.option('-mtu', '--att-mtu',
+              help='ATT MTU. Maximum ATT packet size for BLE transfers. '
+                   'Accepted values in range [23, 247]. Default is 247. '
+                   'Note: Failing DFU transmissions can in some cases be solved by setting a '
+                   'lower mtu.',
+              type=click.IntRange(23, 247, clamp=True),
+              default=247)
+def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flash_connectivity, att_mtu):
     """
     Perform a Device Firmware Update on a device with a bootloader that supports BLE DFU.
     This requires a second nRF device, connected to this computer, with connectivity firmware
@@ -1126,6 +1133,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
 
     logger.info("Using connectivity board at serial port: {}".format(port))
     ble_backend = DfuTransportBle(serial_port=str(port),
+                                  att_mtu=att_mtu,
                                   target_device_name=str(name),
                                   target_device_addr=str(address))
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
