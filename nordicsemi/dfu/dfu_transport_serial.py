@@ -172,7 +172,6 @@ class DfuTransportSerial(DfuTransport):
                  baud_rate=DEFAULT_BAUD_RATE,
                  flow_control=DEFAULT_FLOW_CONTROL,
                  timeout=DEFAULT_TIMEOUT,
-                 serial_timeout=DEFAULT_SERIAL_PORT_TIMEOUT,
                  prn=DEFAULT_PRN,
                  do_ping=DEFAULT_DO_PING):
 
@@ -181,7 +180,6 @@ class DfuTransportSerial(DfuTransport):
         self.baud_rate = baud_rate
         self.flow_control = 1 if flow_control else 0
         self.timeout = timeout
-        self.serial_timeout = serial_timeout
         self.prn         = prn
         self.serial_port = None
         self.dfu_adapter = None
@@ -198,7 +196,7 @@ class DfuTransportSerial(DfuTransport):
         try:
             self.__ensure_bootloader()
             self.serial_port = Serial(port=self.com_port,
-                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.serial_timeout)
+                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.DEFAULT_SERIAL_PORT_TIMEOUT)
             self.dfu_adapter = DFUAdapter(self.serial_port)
         except Exception as e:
             raise NordicSemiException("Serial port could not be opened on {0}"
