@@ -39,6 +39,7 @@ import os
 import re
 import subprocess
 import time
+import uuid
 from intelhex import *
 from serial import Serial
 from pc_ble_driver_py.ble_driver import Flasher
@@ -111,6 +112,11 @@ class OTAFlasher(Flasher):
         self.program(self.__get_hex_path())
         # Remove the generated file
         os.remove(self.update_firmware_hex)
+
+    def randomize_eui64(self):
+        '''Randomize the EUI64 address used by the board'''
+        random_eui64 = uuid.uuid4().int >> 64 # Generate 128-bit UUID and take 64 upper bits
+        self.ser.write('zdo eui64 {0:016x}\r\n'.format(random_eui64))
 
     def setup_channel(self):
         '''Setup to the channel of the flashed board through the serial CLI; and start the internal stack'''
