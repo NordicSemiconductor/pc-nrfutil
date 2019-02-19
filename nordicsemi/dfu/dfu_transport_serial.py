@@ -172,7 +172,6 @@ class DfuTransportSerial(DfuTransport):
                  baud_rate=DEFAULT_BAUD_RATE,
                  flow_control=DEFAULT_FLOW_CONTROL,
                  timeout=DEFAULT_TIMEOUT,
-                 serial_timeout=DEFAULT_SERIAL_PORT_TIMEOUT,
                  prn=DEFAULT_PRN,
                  do_ping=DEFAULT_DO_PING):
 
@@ -181,7 +180,6 @@ class DfuTransportSerial(DfuTransport):
         self.baud_rate = baud_rate
         self.flow_control = 1 if flow_control else 0
         self.timeout = timeout
-        self.serial_timeout = serial_timeout
         self.prn         = prn
         self.serial_port = None
         self.dfu_adapter = None
@@ -198,7 +196,7 @@ class DfuTransportSerial(DfuTransport):
         try:
             self.__ensure_bootloader()
             self.serial_port = Serial(port=self.com_port,
-                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.serial_timeout)
+                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.DEFAULT_SERIAL_PORT_TIMEOUT)
             self.dfu_adapter = DFUAdapter(self.serial_port)
         except Exception as e:
             raise NordicSemiException("Serial port could not be opened on {0}"
@@ -309,7 +307,13 @@ class DfuTransportSerial(DfuTransport):
 
     def __ensure_bootloader(self):
         lister = DeviceLister()
-        device = lister.get_device(com=self.com_port)
+
+        device = None
+        start = datetime.now()
+        while not device and datetime.now() - start < timedelta(seconds=self.timeout):
+            time.sleep(0.5)
+            device = lister.get_device(com=self.com_port)
+
         if device:
             device_serial_number = device.serial_number
 
@@ -346,9 +350,9 @@ class DfuTransportSerial(DfuTransport):
             return False
 
         #  Return true if nrf bootloader or Jlink interface detected.
-        return (device.vendor_id.lower() == '1915' and device.product_id.lower() == '521f')  \
-        or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '0105')
-
+        return ((device.vendor_id.lower() == '1915' and device.product_id.lower() == '521f') # nRF52 SDFU USB
+             or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '0105') # JLink CDC UART Port
+             or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '1015'))# JLink CDC UART Port (MSD)
 
     def __set_prn(self):
         logger.debug("Serial: Set Packet Receipt Notification {}".format(self.prn))
