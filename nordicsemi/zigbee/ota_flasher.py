@@ -48,6 +48,7 @@ class OTAFlasher(Flasher):
     ERROR_CODE_VERIFY_ERROR = 55
     # Address in flash memory, where the Zigbee image will be placed. This value has to be synced with UPGRADE_IMAGE_OFFSET constant inside Zigbee OTA server source code.
     OTA_UPDATE_OFFSET = 0x80000
+    OTA_EUI64_PREFIX = '07A07A'
 
     def __init__(self, fw, channel = 16, serial_port = None, snr = None):
         '''
@@ -115,8 +116,8 @@ class OTAFlasher(Flasher):
 
     def randomize_eui64(self):
         '''Randomize the EUI64 address used by the board'''
-        random_eui64 = uuid.uuid4().int >> 64 # Generate 128-bit UUID and take 64 upper bits
-        self.ser.write('zdo eui64 {0:016x}\r\n'.format(random_eui64))
+        random_eui64 = uuid.uuid4().int >> 88 # Generate 128-bit UUID and take 40 upper bits
+        self.ser.write('zdo eui64 {0}{1:010x}\r\n'.format(OTAFlasher.OTA_EUI64_PREFIX, random_eui64))
 
     def setup_channel(self):
         '''Setup to the channel of the flashed board through the serial CLI; and start the internal stack'''
