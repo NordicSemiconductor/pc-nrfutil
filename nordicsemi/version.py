@@ -37,4 +37,4 @@
 
 """ Version definition for nrfutil. """
 
-NRFUTIL_VERSION = "5.0.0"
+NRFUTIL_VERSION = "5.1.0"
