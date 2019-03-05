@@ -60,8 +60,24 @@ def resolve_hex_path(filename):
         return os.path.join(connectivity_root, filename)
     elif filename == "connectivity_usb":
         hex_version = config.get_connectivity_hex_version()
-        filename = 'connectivity_{}_usb_with_s132_3.1.hex'.format(hex_version)
-        return os.path.join(connectivity_root, filename)
+        filename = 'connectivity_{}_usb_for_s132_3.hex'.format(hex_version)
+
+        runner = CliRunner()
+
+        # Creating connectivity dfu package with trigger interface
+        args = ["pkg", "generate",
+        "--application", os.path.join(connectivity_root, filename),
+        "--softdevice", os.path.join(connectivity_root, "s132_nrf52_3.1.0_softdevice.hex"),
+        "--sd-req", "0",
+        "--sd-id", "0x91",
+        "--hw-version", "52",
+        "--application-version", "0",
+        os.path.join(connectivity_root, filename.replace(".hex", ".zip"))]
+
+        result = runner.invoke(cli, args)
+        assert result.exit_code == 0, "Could not create DFU package for trigger interface test."
+        return os.path.join(connectivity_root, filename.replace(".hex", ".zip"))
+
     else:
         filename = os.path.join(*filename.split("\\"))
         assert "SDK_ROOT" in os.environ, \
@@ -190,6 +206,14 @@ def step_impl(context, package):
 def step_impl(context, args):
     context.args.extend(args.split(" "))
 
+@given(u'-snr {device}')
+def step_impl(context, device):
+    assert device in os.environ, \
+    "Environment variable '{}' must be exported with device serial number".format(device)
+
+    snr = str(os.environ[device])
+    context.args.extend(["-snr", snr])
+
 @given(u'nrfjprog {image} for {image_type} {board}')
 def step_impl(context, image, image_type, board):
 
@@ -227,3 +251,4 @@ def step_impl(context):
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
     assert result.exit_code == 0
+    time.sleep(ENUMERATE_WAIT_TIME) # Waiting some time to ensure enumeration before next test.
