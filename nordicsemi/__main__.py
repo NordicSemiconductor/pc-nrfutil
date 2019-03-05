@@ -1417,6 +1417,7 @@ def zigbee(file, jlink_snr, channel):
 
     of.reset()
     time.sleep(3.0) # A delay to init the OTA Server flashed on the devboard and the CLI inside of it
+    of.randomize_eui64()
     of.setup_channel()
 
 @cli.group()
