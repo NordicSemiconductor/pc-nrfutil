@@ -35,29 +35,11 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# Importing libusb1 library
+
 import os
+import sys
 import ctypes
-is_32_bit = ctypes.sizeof(ctypes.c_voidp) == 4
-abs_file_dir = os.path.dirname(os.path.abspath(__file__))
-rel_import_dir = ""
-
-dfu_path = os.path.join("nordicsemi", "dfu")
-if is_32_bit:
-    libusb_path = os.path.join("libusb", "x86")
-    abs_file_dir = abs_file_dir.replace(dfu_path, libusb_path)
-    rel_import_dir = os.path.join(".", libusb_path)
-else:
-    libusb_path = os.path.join("libusb", "x64")
-    abs_file_dir = abs_file_dir.replace(dfu_path, libusb_path)
-    rel_import_dir = os.path.join(".", libusb_path)
-
-for path in ['PATH', 'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH']:
-    if path not in os.environ:
-        os.environ[path] = ""
-    os.environ[path] = rel_import_dir + os.pathsep + abs_file_dir + os.pathsep + os.environ[path]
-
-import usb1
+from importlib import import_module
 import logging
 
 from pc_ble_driver_py.exceptions import NordicSemiException
@@ -82,13 +64,50 @@ DFU_DETACH_REQUEST = 0
 
 logger = logging.getLogger(__name__)
 
+is_32_bit = ctypes.sizeof(ctypes.c_voidp) == 4
+abs_file_dir = os.path.dirname(os.path.abspath(__file__))
+rel_import_dir = ""
+
+dfu_path = os.path.join("nordicsemi", "dfu")
+if is_32_bit:
+    libusb_path = os.path.join("libusb", "x86")
+    abs_file_dir = abs_file_dir.replace(dfu_path, libusb_path)
+    rel_import_dir = os.path.join(".", libusb_path)
+else:
+    libusb_path = os.path.join("libusb", "x64")
+    abs_file_dir = abs_file_dir.replace(dfu_path, libusb_path)
+    rel_import_dir = os.path.join(".", libusb_path)
+
+for path in ['PATH', 'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH']:
+    if path not in os.environ:
+        os.environ[path] = ""
+    os.environ[path] = rel_import_dir + os.pathsep + abs_file_dir + os.pathsep + os.environ[path]
 
 class DFUTrigger:
     def __init__(self):
-        self.context = usb1.USBContext()
+        self.context = None
+        try:
+            self.usb1 = import_module('usb1')
+            self.context = self.usb1.USBContext()
+        except OSError as err:
+            if "libusb" in str(err):
+                show_msg = "Libusb1 is not compatible with your operating system."
+                if sys.platform == 'win32' or sys.platform == 'darwin':
+                    show_msg = "Libusb1 binaries are bundled with nrfutil for Windows and MacOS. " \
+                               "Python is unable to locate or load the binaries. "
+                elif 'linux' in sys.platform:
+                    show_msg = "Libusb1 binaries are bundled with some linux distributions. " \
+                                    "If you see this message, they are probably not installed on your system. "\
+                                    "If you want to use DFU trigger, please install 'libusb1' using your package manager. "\
+                                    "E.g: 'sudo apt-get install libusb-dev'."
 
+                logger.warning("Could not load libusb1-0 library, which is a requirement to use DFU trigger. "\
+                            "This is not a problem unless you intend to use this functionality. "\
+                            "{}".format(show_msg))
     def clean(self):
-        self.context.close()
+        self.usb1 = None
+        if self.context:
+            self.context.close()
 
     def select_device(self, listed_device):
         all_devices = self.context.getDeviceList()
@@ -107,12 +126,12 @@ class DFUTrigger:
                 if (SNO.lower() == listed_device.serial_number.lower()):
                     return nordic_device
 
-            except usb1.USBErrorNotFound as err:
+            except self.usb1.USBErrorNotFound as err:
                 #  Devices with matching VID and PID as target, but without a trigger iface.
                 triggerless_devices += 1
-            except usb1.USBErrorAccess as err:
+            except self.usb1.USBErrorAccess as err:
                 access_error = True
-            except usb1.USBErrorNotSupported as err:
+            except self.usb1.USBErrorNotSupported as err:
                 pass #  Unsupported device. Moving on
 
         if triggerless_devices > 0:
@@ -135,6 +154,10 @@ class DFUTrigger:
         .format(device.serial_number, device.product_id, device.vendor_id))
 
     def enter_bootloader_mode(self, listed_device):
+        if self.context is None:
+            raise NordicSemiException("No Libusb1 context found, but is required to use DFU trigger. " \
+                                    "This likely happens because the libusb1-0 binaries are missing from your system, "\
+                                    "or Python is unable to locate them.")
         libusb_device = self.select_device(listed_device)
         if libusb_device is None:
             raise self.no_trigger_exception(listed_device)
