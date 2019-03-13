@@ -19,3 +19,12 @@ Feature: Perform DFU
     And nrfjprog examples\dfu\secure_bootloader\pca10056_ble_debug\hex\secure_bootloader_ble_s140_pca10056_debug.hex for ble PCA10056_0
     And nrfjprog connectivity for serial PCA10056_1
     Then perform dfu
+
+  # DFU trigger tests runs twice in case the device was already in bootloader before starting.
+  # The test will fail if the device is not in bootloader mode or is running an application without trigger interface.
+  Scenario: Enter bootloader and perform DFU using trigger interface
+    Given the user wants to perform dfu usb-serial
+    And using package connectivity_usb
+    And -snr PCA10059
+    Then perform dfu
+    Then perform dfu
