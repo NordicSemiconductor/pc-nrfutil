@@ -49,8 +49,6 @@ This will also retrieve and install all additional required packages.
 
 **Note**: When installing on macOS, you may need to add ` --ignore-installed six` when running pip. See [issue #79](https://github.com/NordicSemiconductor/pc-nrfutil/issues/79).
 
-**Note**: To use the `dfu ble`, `dfu thread`, `dfu zigbee` or `dfu ant` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
-
 ## Downloading precompiled Windows executable
 
 A Windows standalone executable (.exe) of nrfutil is available for download on the [Releases](https://github.com/NordicSemiconductor/pc-nrfutil/releases) page.
@@ -70,8 +68,6 @@ To install nrfutil from source the following prerequisites must be satisfied:
 Additionally, if you want to generate a self-contained executable:
 
 * PyInstaller: `pip install pyinstaller`
-
-**IMPORTANT NOTE**: py2exe is no longer supported and you must use PyInstaller instead to generate an executable
 
 ### Requirements
 
@@ -105,9 +101,7 @@ pyinstaller /full/path/to/nrfutil.spec
 
 **Note**: Some anti-virus programs will stop PyInstaller from executing correctly when it modifies the executable file.
 
-**Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
-
-**Note**: To use the `dfu ble`, `dfu thread` or `dfu zigbee` option you will need to set up your boards to be able to communicate with your computer.  You can find additional information here: [Hardware setup](https://github.com/NordicSemiconductor/pc-ble-driver/blob/master/Installation.md#hardware-setup).
+**Note**: PyInstaller on macOS may have issues with newer versions of Python 2.7.x., e.g. error message `Failed to execute script pyi_rth_pkgres` at runtime. Try rolling back to Python v2.7.10 if you experience such problems.
 
 ## Usage
 
