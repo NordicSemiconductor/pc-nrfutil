@@ -200,7 +200,7 @@ class DfuTransportSerial(DfuTransport):
             self.dfu_adapter = DFUAdapter(self.serial_port)
         except Exception as e:
             raise NordicSemiException("Serial port could not be opened on {0}"
-            + ". Reason: {1}".format(self.com_port, e.strerror))
+              ". Reason: {1}".format(self.com_port, e.strerror))
 
         if self.do_ping:
             ping_success = False
