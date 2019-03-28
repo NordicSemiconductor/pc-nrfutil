@@ -327,7 +327,6 @@ class DfuTransportSerial(DfuTransport):
                     logger.info("Serial: DFU bootloader was triggered")
                 except NordicSemiException as err:
                     logger.error(err)
-                    retry_count = 0
 
 
                 for checks in range(retry_count):
