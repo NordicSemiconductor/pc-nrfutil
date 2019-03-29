@@ -150,7 +150,7 @@ class DFUTrigger:
                 return setting.getNumber()
 
     def no_trigger_exception(self, device):
-        return NordicSemiException("No trigger interface found for device with serial number {}, product id 0x{} and vendor id 0x{}\n"
+        return NordicSemiException("No trigger interface found for device with serial number: {}, Product ID: 0x{} and Vendor ID: 0x{}\n"
         .format(device.serial_number, device.product_id, device.vendor_id))
 
     def enter_bootloader_mode(self, listed_device):
@@ -174,5 +174,7 @@ class DFUTrigger:
             except Exception as err:
                 if "LIBUSB_ERROR_PIPE" in str(err):
                     return
-        raise NordicSemiException("Device did not exit application mode after dfu was triggered. Serial number: {}, product id 0x{}, vendor id: 0x{}\n\n"
+        raise NordicSemiException("A diconnection event from libusb is expected when the usb device restarts after triggering bootloder. "\
+        "The event was not received. This can be an indication that the device was unable to leave application mode. "\
+        "Serial number: {}, Product ID: 0x{}, Vendor ID: 0x{}\n\n"
         .format(listed_device.serial_number, listed_device.product_id, listed_device.vendor_id))
