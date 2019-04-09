@@ -180,12 +180,9 @@ class NCPTransport():
         if (dest.addr.is_multicast):
             rloc16 = self._wpan.prop_get_value(SPINEL.PROP_THREAD_RLOC16)
 
-            # Workaround for rloc16 not being returned by pyspinel
-            if rloc16 is None:
-                src_addr = self._ml_eid
-            else:
-                # Create an IPv6 Thread RLOC address from mesh-local prefix and RLOC16 MAC address.
-                src_addr = ipaddress.ip_address(self._ml_prefix + '\x00\x00\x00\xff\xfe\x00' + struct.pack('>H', rloc16))
+            # Create an IPv6 Thread RLOC address from mesh-local prefix and RLOC16 MAC address.
+            src_addr = ipaddress.ip_address(self._ml_prefix + '\x00\x00\x00\xff\xfe\x00' + struct.pack('>H', rloc16))
+
         else:
             src_addr = self._ml_eid
 
