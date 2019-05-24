@@ -51,6 +51,9 @@ from setuptools.command.test import test as TestCommand
 
 from nordicsemi import version
 
+# Change directory to be able to run python setup.py develop from another directory
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
 install_package = True
 try:
     #    If the version that is being installed is older than the one currently installed, suggest to use a virtual environment.
