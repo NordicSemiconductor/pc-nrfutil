@@ -48,6 +48,10 @@ OTA_UPGRADE_FILE_HEADER_STACK_PRO     = 0x0002
 OTA_UPGRADE_SUBELEMENT_HEADER_SIZE    = 2 + 4  # Tag ID + Length Field
 OTA_UPGRADE_SUBELEMENT_TRIGGER_TYPE   = 0xCDEF
 OTA_UPGRADE_SUBELEMENT_TRIGGER_LENGTH = 1 + 4 + 4 + 4 + 4 # See background_dfu_trigger_t in the nRF5 SDK for explanation
+
+OTA_UPGRADE_FIELD_CONTROL_WITH_HW_VER = (1 << 2)
+OTA_UPGRADE_MIN_HW_VERSION_LENGTH     = 2
+OTA_UPGRADE_MAX_HW_VERSION_LENGTH     = 2
 '''
    background_dfu_trigger_t type defined in components/iot/background_dfu/background_dfu_state.h of nRF5 SDK:
 
@@ -74,25 +78,45 @@ class OTA_file(object):
                  firmware,
                  manufacturer_code = OTA_UPGRADE_MANUFACTURER_WILDCARD,
                  image_type = OTA_UPGRADE_IMAGE_TYPE_WILDCARD,
-                 comment = ''):
+                 comment = '',
+                 min_hw_version=None,
+                 max_hw_version=None):
         '''A constructor for the OTA file class, see Zigbee ZCL spec 11.4.2 (Zigbee Document 07-5123-06)
            see: http://www.zigbee.org/~zigbeeor/wp-content/uploads/2014/10/07-5123-06-zigbee-cluster-library-specification.pdf
            (access verified as of 2018-08-06)
         '''
+
         total_len = OTA_UPGRADE_FILE_HEADER_LENGTH + 3 * OTA_UPGRADE_SUBELEMENT_HEADER_SIZE + OTA_UPGRADE_SUBELEMENT_TRIGGER_LENGTH + init_cmd_len + firmware_len
+
         ota_header_pack_format = '<LHHHHHLHc31sL'
-        ota_header = struct.pack(ota_header_pack_format,
-                                 OTA_UPGRADE_FILE_HEADER_FILE_ID,
-                                 OTA_UPGRADE_FILE_HEADER_FILE_VERSION,
-                                 OTA_UPGRADE_FILE_HEADER_LENGTH,
-                                 OTA_UPGRADE_FIELD_CONTROL,
-                                 manufacturer_code,
-                                 image_type,
-                                 file_version,
-                                 OTA_UPGRADE_FILE_HEADER_STACK_PRO,
-                                 chr(len(comment)),
-                                 bytes(comment.encode('ascii')),
-                                 total_len)
+        ota_header_pack_args = [OTA_UPGRADE_FILE_HEADER_FILE_ID,
+                                OTA_UPGRADE_FILE_HEADER_FILE_VERSION,
+                                OTA_UPGRADE_FILE_HEADER_LENGTH,
+                                OTA_UPGRADE_FIELD_CONTROL,
+                                manufacturer_code,
+                                image_type,
+                                file_version,
+                                OTA_UPGRADE_FILE_HEADER_STACK_PRO,
+                                chr(len(comment)),
+                                bytes(comment.encode('ascii')),
+                                total_len]
+
+        if (type(min_hw_version) is int) and (type(max_hw_version) is int):
+            # Calculate additional length of minimum and maximum hardware version fields
+            ota_min_max_hw_length = OTA_UPGRADE_MIN_HW_VERSION_LENGTH + OTA_UPGRADE_MAX_HW_VERSION_LENGTH
+            # Add additional bytes to formating string
+            ota_header_pack_format += 'HH'
+            # Add min and max hardware version to ota header arguments
+            ota_header_pack_args.append(min_hw_version)
+            ota_header_pack_args.append(max_hw_version)
+            # Set bit "Hardware Versions Present" in OTA Header Field Control
+            ota_header_pack_args[3] += OTA_UPGRADE_FIELD_CONTROL_WITH_HW_VER
+            # Increase length of header in header fields
+            ota_header_pack_args[2] += ota_min_max_hw_length
+            ota_header_pack_args[10] += ota_min_max_hw_length
+
+        # Finally create the OTA header
+        ota_header = struct.pack(ota_header_pack_format, *ota_header_pack_args)
 
         subelement_header_pack_format = '<HL'
         subelement_trigger_pack_format = '>cLLLL'

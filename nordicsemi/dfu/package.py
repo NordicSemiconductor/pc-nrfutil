@@ -131,7 +131,9 @@ class Package(object):
                  zigbee_format=False,
                  manufacturer_id=0,
                  image_type=0,
-                 comment=''):
+                 comment='',
+                 zigbee_ota_min_hw_version=None,
+                 zigbee_ota_max_hw_version=None):
 
         """
         Constructor that requires values used for generating a Nordic DFU package.
@@ -146,6 +148,8 @@ class Package(object):
         :param str bootloader_fw: Path to bootloader firmware file
         :param str softdevice_fw: Path to softdevice firmware file
         :param str key_file: Path to Signing key file (PEM)
+        :param int zigbee_ota_min_hw_version: Minimal zigbee ota hardware version
+        :param int zigbee_ota_max_hw_version: Maximum zigbee ota hardware version
         :return: None
         """
 
@@ -206,6 +210,8 @@ class Package(object):
             self.image_type = image_type
             self.manufacturer_id = manufacturer_id
             self.comment = comment
+            self.zigbee_ota_min_hw_version = zigbee_ota_min_hw_version
+            self.zigbee_ota_max_hw_version = zigbee_ota_max_hw_version
         else:
             self.is_zigbee = False
             self.image_type = None
@@ -479,7 +485,9 @@ DFU Package: <{0}>:
                                                 bytes(open(file_name, 'rb').read()),
                                                 self.manufacturer_id,
                                                 self.image_type,
-                                                self.comment)
+                                                self.comment,
+                                                self.zigbee_ota_min_hw_version,
+                                                self.zigbee_ota_max_hw_version)
 
                 ota_file_handle = open(self.zigbee_ota_file.filename, 'wb')
                 ota_file_handle.write(self.zigbee_ota_file.binary)
