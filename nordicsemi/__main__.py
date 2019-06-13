@@ -610,11 +610,11 @@ def pkg():
               required=False,
               type=BASED_INT_OR_NONE)
 @click.option('--zigbee-ota-min-hw-version',
-              help='The zigbee OTA minimum hw version.',
+              help='The zigbee OTA minimum hw version of Zigbee OTA Client.',
               required=False,
               type=BASED_INT_OR_NONE)
 @click.option('--zigbee-ota-max-hw-version',
-              help='The zigbee OTA maximum hw version.',
+              help='The zigbee OTA maximum hw version of Zigbee OTA Client.',
               required=False,
               type=BASED_INT_OR_NONE)
 def generate(zipfile,
@@ -854,13 +854,29 @@ def generate(zipfile,
     if zigbee:
         inner_external_app = False
 
+    if zigbee_ota_min_hw_version > 0xFFFF:
+        click.echo('Warning: zigbee-ota-min-hw-version exceeds 2-byte long integer.')
+        return
+
+    if zigbee_ota_max_hw_version > 0xFFFF:
+        click.echo('Warning: zigbee-ota-max-hw-version exceeds 2-byte long integer.')
+        return
+
+    if zigbee and (hw_version > 0xFFFF):
+        click.echo('Warning: hw-version exceeds 2-byte long integer.')
+        return
+
     # Warn user if minimal/maximum zigbee ota hardware version are not correct:
     #   * only one of them is given
     #   * minimum version is higher than maximum version
-    if (type(zigbee_ota_min_hw_version) is not int) != (type(zigbee_ota_max_hw_version) is not int):
+    #   * hw_version is inside the range specified by minimum and maximum hardware version
+    if (type(zigbee_ota_min_hw_version) is int) != (type(zigbee_ota_max_hw_version) is int):
         click.echo('Warning: min/max zigbee ota hardware version is missing. Discarding min/max hardware version.')
-    elif (type(zigbee_ota_min_hw_version) is int) and (zigbee_ota_min_hw_version > zigbee_ota_max_hw_version):
-        click.echo('Warning: zigbee-ota-min-hw-version is higher than zigbee-ota-max-hw-version.')
+    elif type(zigbee_ota_min_hw_version) is int:
+        if zigbee_ota_min_hw_version > zigbee_ota_max_hw_version:
+            click.echo('Warning: zigbee-ota-min-hw-version is higher than zigbee-ota-max-hw-version.')
+        if (hw_version > zigbee_ota_max_hw_version) or (hw_version < zigbee_ota_min_hw_version):
+            click.echo('Warning: hw-version is outside the specified range specified by zigbee_ota_min_hw_version and zigbee_ota_max_hw_version.')
 
     # Generate a DFU package. If --zigbee is set this is the inner DFU package
     # which will be used as a binary input to the outter DFU package
