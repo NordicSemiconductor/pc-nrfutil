@@ -855,15 +855,15 @@ def generate(zipfile,
         inner_external_app = False
 
     if zigbee_ota_min_hw_version > 0xFFFF:
-        click.echo('Warning: zigbee-ota-min-hw-version exceeds 2-byte long integer.')
+        click.echo('Error: zigbee-ota-min-hw-version exceeds 2-byte long integer.')
         return
 
     if zigbee_ota_max_hw_version > 0xFFFF:
-        click.echo('Warning: zigbee-ota-max-hw-version exceeds 2-byte long integer.')
+        click.echo('Error: zigbee-ota-max-hw-version exceeds 2-byte long integer.')
         return
 
     if zigbee and (hw_version > 0xFFFF):
-        click.echo('Warning: hw-version exceeds 2-byte long integer.')
+        click.echo('Error: hw-version exceeds 2-byte long integer.')
         return
 
     # Warn user if minimal/maximum zigbee ota hardware version are not correct:
