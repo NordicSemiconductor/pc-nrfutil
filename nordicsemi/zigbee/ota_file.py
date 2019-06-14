@@ -48,6 +48,10 @@ OTA_UPGRADE_FILE_HEADER_STACK_PRO     = 0x0002
 OTA_UPGRADE_SUBELEMENT_HEADER_SIZE    = 2 + 4  # Tag ID + Length Field
 OTA_UPGRADE_SUBELEMENT_TRIGGER_TYPE   = 0xCDEF
 OTA_UPGRADE_SUBELEMENT_TRIGGER_LENGTH = 1 + 4 + 4 + 4 + 4 # See background_dfu_trigger_t in the nRF5 SDK for explanation
+
+OTA_UPGRADE_FIELD_CONTROL_BIT_MASK_HW_VER = (1 << 2)
+OTA_UPGRADE_MIN_HW_VERSION_LENGTH         = 2
+OTA_UPGRADE_MAX_HW_VERSION_LENGTH         = 2
 '''
    background_dfu_trigger_t type defined in components/iot/background_dfu/background_dfu_state.h of nRF5 SDK:
 
@@ -74,25 +78,28 @@ class OTA_file(object):
                  firmware,
                  manufacturer_code = OTA_UPGRADE_MANUFACTURER_WILDCARD,
                  image_type = OTA_UPGRADE_IMAGE_TYPE_WILDCARD,
-                 comment = ''):
+                 comment = '',
+                 min_hw_version=None,
+                 max_hw_version=None):
         '''A constructor for the OTA file class, see Zigbee ZCL spec 11.4.2 (Zigbee Document 07-5123-06)
            see: http://www.zigbee.org/~zigbeeor/wp-content/uploads/2014/10/07-5123-06-zigbee-cluster-library-specification.pdf
            (access verified as of 2018-08-06)
         '''
+
         total_len = OTA_UPGRADE_FILE_HEADER_LENGTH + 3 * OTA_UPGRADE_SUBELEMENT_HEADER_SIZE + OTA_UPGRADE_SUBELEMENT_TRIGGER_LENGTH + init_cmd_len + firmware_len
-        ota_header_pack_format = '<LHHHHHLHc31sL'
-        ota_header = struct.pack(ota_header_pack_format,
-                                 OTA_UPGRADE_FILE_HEADER_FILE_ID,
-                                 OTA_UPGRADE_FILE_HEADER_FILE_VERSION,
-                                 OTA_UPGRADE_FILE_HEADER_LENGTH,
-                                 OTA_UPGRADE_FIELD_CONTROL,
-                                 manufacturer_code,
-                                 image_type,
-                                 file_version,
-                                 OTA_UPGRADE_FILE_HEADER_STACK_PRO,
-                                 chr(len(comment)),
-                                 bytes(comment.encode('ascii')),
-                                 total_len)
+
+        ota_header = OTA_header(OTA_UPGRADE_FILE_HEADER_FILE_ID,
+                                OTA_UPGRADE_FILE_HEADER_FILE_VERSION,
+                                OTA_UPGRADE_FILE_HEADER_LENGTH,
+                                OTA_UPGRADE_FIELD_CONTROL,
+                                manufacturer_code,
+                                image_type,
+                                file_version,
+                                OTA_UPGRADE_FILE_HEADER_STACK_PRO,
+                                comment,
+                                total_len,
+                                min_hw_version,
+                                max_hw_version)
 
         subelement_header_pack_format = '<HL'
         subelement_trigger_pack_format = '>cLLLL'
@@ -110,8 +117,64 @@ class OTA_file(object):
         subelement_init_cmd = struct.pack(subelement_header_pack_format, 0x0000, init_cmd_len) # Subelement tags are not really needed in case of Init Cmd and Firmware subelements
         subelement_firmware = struct.pack(subelement_header_pack_format, 0x0000, firmware_len)
 
-        self.binary = ota_header + subelement_trigger + subelement_trigger_payload + subelement_init_cmd + init_cmd + subelement_firmware + firmware
+        self.binary = ota_header.header + subelement_trigger + subelement_trigger_payload + subelement_init_cmd + init_cmd + subelement_firmware + firmware
         self.filename = '-'.join(['{:04X}'.format(manufacturer_code),
                                   '{:04X}'.format(image_type),
                                   '{:08X}'.format(file_version),
                                   comment]) + '.zigbee'
+
+
+class OTA_header(object):
+    def __init__(self,
+                 file_id,
+                 header_version,
+                 header_length,
+                 header_field_control,
+                 manufacturer_code,
+                 image_type,
+                 file_version,
+                 zigbee_stack_version,
+                 header_string,
+                 total_image_size,
+                 min_hw_version=None,
+                 max_hw_version=None):
+
+        self.__pack_format = '<LHHHHHLHc31sL'
+        self.__header_length = header_length
+        self.__total_size = total_image_size
+        self.__field_control = header_field_control
+        self.__additional_fields = []
+
+        # If min and max hardware version are present add optional fields to the header
+        if (type(min_hw_version) is int) and (type(max_hw_version) is int):
+            self.__add_optional_fields((OTA_UPGRADE_MIN_HW_VERSION_LENGTH + OTA_UPGRADE_MAX_HW_VERSION_LENGTH),
+                                       OTA_UPGRADE_FIELD_CONTROL_BIT_MASK_HW_VER,
+                                       'HH',
+                                       [min_hw_version, max_hw_version])
+
+        self.__pack_args = [file_id,
+                            header_version,
+                            self.__header_length,
+                            self.__field_control,
+                            manufacturer_code,
+                            image_type,
+                            file_version,
+                            zigbee_stack_version,
+                            chr(len(header_string)),
+                            bytes(header_string.encode('ascii')),
+                            self.__total_size]
+        self.__pack_args.extend(self.__additional_fields)
+
+    @property
+    def header(self):
+        return struct.pack(self.__pack_format, *self.__pack_args)
+
+    def __add_optional_fields(self, fields_length, field_control_bit_mask, fields_formatting, fields_values):
+        self.__total_size    += fields_length
+        self.__header_length += fields_length
+        self.__field_control += field_control_bit_mask
+        self.__pack_format   += fields_formatting
+        if type(fields_values) in (tuple, list):
+            self.__additional_fields.extend(fields_values)
+        else:
+            self.__additional_fields.append(fields_values)
