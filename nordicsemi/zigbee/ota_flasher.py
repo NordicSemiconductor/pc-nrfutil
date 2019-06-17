@@ -36,6 +36,7 @@
 #
 
 import os
+import sys
 import re
 import subprocess
 import time
@@ -67,8 +68,21 @@ class OTAFlasher(Flasher):
                  constructor shall handle resolving the rest.
 
         '''
-        # Call the superclass constructor
-        Flasher.__init__(self, serial_port, snr)
+        # cross-plaftorm support: cast the params to string in case of unicode type coming from shell
+        if serial_port is not None:
+            serial_port = str(serial_port)
+        if snr is not None:
+            snr = str(snr)
+            # On linux, the segger number must be padded with 0 up to 12 chars
+            if sys.platform.startswith('linux'):
+                snr = snr.rjust(12, '0')
+
+        # Call the superclass constructor.
+        try:
+            Flasher.__init__(self, serial_port, snr)
+        except Exception as e:
+            raise type(e)("Failed to flash {}: {}".format(serial_port or snr, e))
+
         # Create a Intel Hex out of the Zigbee Update file
         ih = IntelHex()
         update = open(fw, 'rb').read()
