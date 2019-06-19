@@ -122,7 +122,7 @@ class ThreadDfuClient:
 Resource = namedtuple('Resource', ['path', 'data'])
 
 class ThreadDfuServer():
-    REALM_LOCAL_ADDR  = ip_address(u'FF03::1')
+    REALM_LOCAL_ADDR  = ip_address('FF03::1')
 
     SPBLK_SIZE        = 64      # number of CoAP blocks of BLOCK_SZX size each
     SPBLK_UPLOAD_RATE = 1       # in blocks / seconds
@@ -370,7 +370,7 @@ class ThreadDfuServer():
             ThreadDfuServer.BITMAP_URI : self._handle_bitmap_request,
         }
 
-        for uri, handler in handlers.items():
+        for uri, handler in list(handlers.items()):
             if '/'.join(request.opt.uri_path).startswith(uri):
                 return handler(request)
 

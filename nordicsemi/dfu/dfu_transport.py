@@ -54,7 +54,7 @@ class DfuEvent:
     PROGRESS_EVENT = 1
 
 
-class DfuTransport(object):
+class DfuTransport(object, metaclass=abc.ABCMeta):
     """
     This class as an abstract base class inherited from when implementing transports.
 
@@ -62,7 +62,6 @@ class DfuTransport(object):
     than this class describes. But the intent is that the implementer shall follow the semantic as
     best as she can.
     """
-    __metaclass__ = abc.ABCMeta
 
     OP_CODE = {
         'CreateObject'          : 0x01,
@@ -176,6 +175,6 @@ class DfuTransport(object):
         :param kwargs: Arguments to callback function
         :return:
         """
-        if event_type in self.callbacks.keys():
+        if event_type in list(self.callbacks.keys()):
             for callback in self.callbacks[event_type]:
                 callback(**kwargs)

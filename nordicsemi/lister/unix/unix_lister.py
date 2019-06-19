@@ -69,4 +69,4 @@ class UnixLister(AbstractLister):
             else:
                 device_identities[id] = EnumeratedDevice(vendor_id, product_id, serial_number, [com_port])
 
-        return [device for device in device_identities.values()]
+        return [device for device in list(device_identities.values())]

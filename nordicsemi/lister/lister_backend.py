@@ -37,9 +37,7 @@
 import abc
 
 
-class AbstractLister(object):
-    __metaclass__ = abc.ABCMeta
-
+class AbstractLister(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def enumerate(self):
         """

@@ -166,7 +166,7 @@ class BLDFUSettings(object):
         list = []
         if start_addr == None and end_addr == None:
             hex_dict = ih_object.todict()
-            for addr, byte in hex_dict.items():
+            for addr, byte in list(hex_dict.items()):
                 list.append(byte)
         else:
             for addr in range(start_addr, end_addr + 1):

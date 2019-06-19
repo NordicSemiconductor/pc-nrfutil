@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -169,7 +169,7 @@ class Signing(object):
         sk_hexlify = binascii.hexlify(self.sk.to_string())
 
         sk_hexlify_list = []
-        for i in xrange(len(sk_hexlify)-2, -2, -2):
+        for i in range(len(sk_hexlify)-2, -2, -2):
             sk_hexlify_list.append(sk_hexlify[i:i+2])
 
         sk_hexlify_list_str = ''.join(sk_hexlify_list)
@@ -189,10 +189,10 @@ class Signing(object):
         vk_hexlify = binascii.hexlify(vk.to_string())
 
         vk_hexlify_list = []
-        for i in xrange(len(vk_hexlify[0:64])-2, -2, -2):
+        for i in range(len(vk_hexlify[0:64])-2, -2, -2):
             vk_hexlify_list.append(vk_hexlify[i:i+2])
 
-        for i in xrange(len(vk_hexlify)-2, 62, -2):
+        for i in range(len(vk_hexlify)-2, 62, -2):
             vk_hexlify_list.append(vk_hexlify[i:i+2])
 
         vk_hexlify_list_str = ''.join(vk_hexlify_list)
@@ -240,12 +240,12 @@ class Signing(object):
 
         vk_x_separated = ""
         vk_x_str = vk_hex[0:64]
-        for i in xrange(0, len(vk_x_str), 2):
+        for i in range(0, len(vk_x_str), 2):
             vk_x_separated = "0x" + vk_x_str[i:i+2] + ", " + vk_x_separated
 
         vk_y_separated = ""
         vk_y_str = vk_hex[64:128]
-        for i in xrange(0, len(vk_y_str), 2):
+        for i in range(0, len(vk_y_str), 2):
             vk_y_separated = "0x" + vk_y_str[i:i+2] + ", " + vk_y_separated
         vk_y_separated = vk_y_separated[:-2]
         

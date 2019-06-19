@@ -41,7 +41,7 @@ class TestManifest(unittest.TestCase):
         address = 'AABBCC11223'
         result = self.runner.invoke(self.cli, argumentList + [address])
         self.assertTrue('Invalid address' in result.output)
-        print(result.exception)
+        print((result.exception))
         self.assertIsNone(result.exception)
 
         address = 'AABBCC1122334'

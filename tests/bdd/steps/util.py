@@ -79,7 +79,7 @@ def generate_options_table_for_cucumber():
     number_of_optional_option_permutations *= int(math.pow(3, number_of_3_option_options))
     number_of_optional_option_permutations *= int(math.pow(4, number_of_4_option_options))
 
-    for x in xrange(0, number_of_optional_option_permutations):
+    for x in range(0, number_of_optional_option_permutations):
         retval += "{0:<8}".format(" ")
         retval += "| {0:<12}| {1:<29}| {2:<29}|".format("blinky.bin", "not_set", "not_set")
 
@@ -144,7 +144,7 @@ def generate_options_table_for_cucumber():
         if option == 2:
             sd_reqs = []
 
-            for i in xrange(0, randint(1, 4)):
+            for i in range(0, randint(1, 4)):
                 sd_reqs.append("0x{0:04x}".format(randint(0, 65535)))
 
             retval += " {0:<28}|".format(",".join(sd_reqs))

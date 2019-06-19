@@ -116,7 +116,7 @@ class nRFHex(intelhex.IntelHex):
         if self.address_has_magic_number(potential_magic_number_address):
             return "s1x0"
 
-        for i in xrange(4):
+        for i in range(4):
             potential_magic_number_address += nRFHex.info_struct_address_offset
 
             if self.address_has_magic_number(potential_magic_number_address):

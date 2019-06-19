@@ -40,7 +40,7 @@ import os
 import sys
 import time
 import wrapt
-import Queue
+import queue
 import struct
 import logging
 import binascii
@@ -95,8 +95,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.adapter            = adapter
         self.bonded             = bonded
         self.keyset             = keyset
-        self.notifications_q    = Queue.Queue()
-        self.indication_q       = Queue.Queue()
+        self.notifications_q    = queue.Queue()
+        self.indication_q       = queue.Queue()
         self.att_mtu            = ATT_MTU_DEFAULT
         self.packet_size        = self.att_mtu - 3
         self.adapter.observer_register(self)
@@ -560,7 +560,7 @@ class DfuTransportBle(DfuTransport):
 
     def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + map(ord, struct.pack('<H', self.prn)))
+        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(map(ord, struct.pack('<H', self.prn))))
         self.__get_response(DfuTransportBle.OP_CODE['SetPRN'])
 
     def __create_command(self, size):
@@ -571,7 +571,7 @@ class DfuTransportBle(DfuTransport):
 
     def __create_object(self, object_type, size):
         self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
-                                            + map(ord, struct.pack('<L', size)))
+                                            + list(map(ord, struct.pack('<L', size))))
         self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
 
     def __calculate_checksum(self):
@@ -619,7 +619,7 @@ class DfuTransportBle(DfuTransport):
         current_pnr = 0
         for i in range(0, len(data), self.dfu_adapter.packet_size):
             to_transmit     = data[i:i + self.dfu_adapter.packet_size]
-            self.dfu_adapter.write_data_point(map(ord, to_transmit))
+            self.dfu_adapter.write_data_point(list(map(ord, to_transmit)))
             crc     = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
             current_pnr    += 1
@@ -635,11 +635,11 @@ class DfuTransportBle(DfuTransport):
 
     def __get_response(self, operation):
         def get_dict_key(dictionary, value):
-            return next((key for key, val in dictionary.items() if val == value), None)
+            return next((key for key, val in list(dictionary.items()) if val == value), None)
 
         try:
             resp = self.dfu_adapter.notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
-        except Queue.Empty:
+        except queue.Empty:
             raise NordicSemiException('Timeout: operation - {}'.format(get_dict_key(DfuTransportBle.OP_CODE,
                                                                                     operation)))
 

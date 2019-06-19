@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.

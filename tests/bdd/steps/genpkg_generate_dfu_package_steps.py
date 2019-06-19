@@ -48,25 +48,25 @@ from common_steps import get_resources_path
 logger = logging.getLogger(__file__)
 
 
-@given(u'the user wants to generate a DFU package with application {application}, bootloader {bootloader} and SoftDevice {softdevice} with name {package}')
+@given('the user wants to generate a DFU package with application {application}, bootloader {bootloader} and SoftDevice {softdevice} with name {package}')
 def step_impl(context, application, bootloader, softdevice, package):
     runner = CliRunner()
     context.runner = runner
     args = ['dfu', 'genpkg']
 
-    if application != u'not_set':
+    if application != 'not_set':
         args.extend(['--application', os.path.join(get_resources_path(), application)])
         context.application = application
     else:
         context.application = None
 
-    if bootloader != u'not_set':
+    if bootloader != 'not_set':
         args.extend(['--bootloader', os.path.join(get_resources_path(), bootloader)])
         context.bootloader = bootloader
     else:
         context.bootloader = None
 
-    if softdevice != u'not_set':
+    if softdevice != 'not_set':
         args.extend(['--softdevice', os.path.join(get_resources_path(), softdevice)])
         context.softdevice = softdevice
     else:
@@ -77,52 +77,52 @@ def step_impl(context, application, bootloader, softdevice, package):
     context.args = args
 
 
-@given(u'with option --application-version {app_ver}')
+@given('with option --application-version {app_ver}')
 def step_impl(context, app_ver):
     context.application_version = None
 
-    if app_ver == u'not_set':
+    if app_ver == 'not_set':
         context.application_version = 0xFFFFFFFF
-    elif app_ver == u'none':
+    elif app_ver == 'none':
         context.args.extend(['--application-version', 'None'])
     else:
         context.args.extend(['--application-version', app_ver])
         context.application_version = int_as_text_to_int(app_ver)
 
 
-@given(u'with option --dev-revision {dev_rev}')
+@given('with option --dev-revision {dev_rev}')
 def step_impl(context, dev_rev):
     context.dev_revision = None
 
-    if dev_rev == u'not_set':
+    if dev_rev == 'not_set':
         context.dev_revision = 0xFFFF
-    elif dev_rev == u'none':
+    elif dev_rev == 'none':
         context.args.extend(['--dev-revision', 'None'])
     else:
         context.args.extend(['--dev-revision', dev_rev])
         context.dev_revision = int_as_text_to_int(dev_rev)
 
 
-@given(u'with option --dev-type {dev_type}')
+@given('with option --dev-type {dev_type}')
 def step_impl(context, dev_type):
     context.dev_type = None
 
-    if dev_type == u'not_set':
+    if dev_type == 'not_set':
         context.dev_type = 0xFFFF
-    elif dev_type == u'none':
+    elif dev_type == 'none':
         context.args.extend(['--dev-type', 'None'])
     else:
         context.args.extend(['--dev-type', dev_type])
         context.dev_type = int_as_text_to_int(dev_type)
 
 
-@given(u'with option --dfu-ver {dfu_ver}')
+@given('with option --dfu-ver {dfu_ver}')
 def step_impl(context, dfu_ver):
     context.firmware_hash = None
     context.ext_packet_id = None
     context.init_packet_ecds = None
 
-    if dfu_ver == u'not_set':
+    if dfu_ver == 'not_set':
         context.dfu_ver = 0.5
         context.ext_packet_id = 0
     else:
@@ -142,13 +142,13 @@ def step_impl(context, dfu_ver):
         context.dfu_ver = float(dfu_ver)
 
 
-@given(u'with option --sd-req {sd_reqs}')
+@given('with option --sd-req {sd_reqs}')
 def step_impl(context, sd_reqs):
     context.sd_req = None
 
-    if sd_reqs == u'not_set':
+    if sd_reqs == 'not_set':
         context.sd_req = [0xFFFE]
-    elif sd_reqs == u'none':
+    elif sd_reqs == 'none':
         context.args.extend(['--sd-req', 'None'])
     else:
         context.args.extend(['--sd-req', sd_reqs])
@@ -162,19 +162,19 @@ def step_impl(context, sd_reqs):
         context.sd_req = sd_reqs_value
 
 
-@given(u'with option --key-file {pem_file}')
+@given('with option --key-file {pem_file}')
 def step_impl(context, pem_file):
-    if pem_file != u'not_set':
+    if pem_file != 'not_set':
         context.args.extend(['--key-file', os.path.join(get_resources_path(), pem_file)])
         context.dfu_ver = 0.8
 
 
-@when(u'user press enter')
+@when('user press enter')
 def step_impl(context):
     pass
 
 
-@then(u'the generated DFU package {package} contains correct data')
+@then('the generated DFU package {package} contains correct data')
 def step_impl(context, package):
     with context.runner.isolated_filesystem():
         pkg_full_name = os.path.join(os.getcwd(), package)
