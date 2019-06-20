@@ -46,8 +46,8 @@ import binascii
 from enum import Enum
 
 # Nordic libraries
-from nordicsemi.dfu import intelhex
-from nordicsemi.dfu.intelhex import IntelHexError
+import intelhex
+from intelhex import IntelHexError
 from nordicsemi.dfu.nrfhex import *
 from nordicsemi.dfu.package import Package
 from pc_ble_driver_py.exceptions import NordicSemiException
