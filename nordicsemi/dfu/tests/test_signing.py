@@ -44,7 +44,7 @@ import unittest
 from nordicsemi.dfu.signing import Signing
 
 
-class TestSinging(unittest.TestCase):
+class TestSigning(unittest.TestCase):
     def setUp(self):
         script_abspath = os.path.abspath(__file__)
         script_dirname = os.path.dirname(script_abspath)
