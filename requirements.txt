@@ -10,6 +10,6 @@ tqdm ~= 4.25
 piccata ~= 1.0
 pyspinel == 1.0.0a3
 intelhex ~= 2.2
-pyyaml ~= 4.2b1
+pyyaml ~= 5.1
 crcmod ~= 1.7
 libusb1 ~= 1.7
