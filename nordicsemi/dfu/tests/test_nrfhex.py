@@ -39,7 +39,7 @@ import os
 
 import unittest
 import nordicsemi.dfu.nrfhex as nrfhex
-import nordicsemi.dfu.intelhex as intelhex
+import intelhex
 
 
 class TestnRFHex(unittest.TestCase):
