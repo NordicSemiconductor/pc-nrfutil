@@ -75,7 +75,7 @@ class Signing(object):
         """
         self.sk = SigningKey.generate(curve=NIST256p)
 
-        with open(filename, "w") as sk_file:
+        with open(filename, "wb") as sk_file:
             sk_file.write(self.sk.to_pem())
 
     def load_key(self, filename):
@@ -88,8 +88,6 @@ class Signing(object):
             sk_pem = sk_file.read()
 
         self.sk = SigningKey.from_pem(sk_pem)
-
-        sk_hex = "".join(c.encode('hex') for c in self.sk.to_string())
         return default_sk.to_string() == self.sk.to_string()
 
     def sign(self, init_packet_data):
