@@ -178,7 +178,8 @@ class DfuTransportSerial(DfuTransport):
                  flow_control=DEFAULT_FLOW_CONTROL,
                  timeout=DEFAULT_TIMEOUT,
                  prn=DEFAULT_PRN,
-                 do_ping=DEFAULT_DO_PING):
+                 do_ping=DEFAULT_DO_PING,
+                 debug=DEFAULT_DO_DEBUG):
 
         super(DfuTransportSerial, self).__init__()
         self.com_port = com_port

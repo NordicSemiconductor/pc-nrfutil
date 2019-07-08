@@ -1066,7 +1066,7 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
               type=click.INT,
               required=False)
 @click.option('-d', '--debug/--no-debug',
-              help='Enable ANT debug logs.',
+              help='Enable Serial debug logs.',
               default=False,
               required=False)
 def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number,
