@@ -157,6 +157,7 @@ class DfuTransportSerial(DfuTransport):
     DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
     DEFAULT_PRN = 0
     DEFAULT_DO_PING = True
+    DEFAULT_DO_DEBUG = False
 
     OP_CODE = {
         'CreateObject': 0x01,
@@ -189,8 +190,12 @@ class DfuTransportSerial(DfuTransport):
         self.dfu_adapter = None
         self.ping_id = 0
         self.do_ping = do_ping
+        self.debug = debug
 
         self.mtu = 0
+
+        if self.debug:
+            logger.setLevel(logging.DEBUG)
 
         """:type: serial.Serial """
 

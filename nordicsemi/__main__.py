@@ -34,6 +34,18 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import spinel.util as util
+from nordicsemi.lister.device_lister import DeviceLister
+from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
+from nordicsemi.zigbee.prod_config import ProductionConfig, ProductionConfigWrongException, ProductionConfigTooLargeException
+from nordicsemi.dfu.util import query_func
+from nordicsemi.dfu.signing import Signing
+from nordicsemi import version as nrfutil_version
+from nordicsemi.dfu.package import Package
+from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
+from nordicsemi.dfu.dfu_transport import DfuEvent, TRANSPORT_LOGGING_LEVEL
+from nordicsemi.dfu.dfu import Dfu
+from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 import ipaddress
 import signal
 
@@ -47,28 +59,17 @@ import subprocess
 import re
 sys.path.append(os.getcwd())
 
-from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
-from nordicsemi.dfu.dfu import Dfu
-from nordicsemi.dfu.dfu_transport import DfuEvent, TRANSPORT_LOGGING_LEVEL
-from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
-from nordicsemi.dfu.package import Package
-from nordicsemi import version as nrfutil_version
-from nordicsemi.dfu.signing import Signing
-from nordicsemi.dfu.util import query_func
-from nordicsemi.zigbee.prod_config import ProductionConfig, ProductionConfigWrongException, ProductionConfigTooLargeException
-from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
-from nordicsemi.lister.device_lister import DeviceLister
-import spinel.util as util
-
 
 logger = logging.getLogger(__name__)
+
 
 def ble_driver_init(conn_ic_id):
     global BLEDriver, Flasher, DfuTransportBle
     from pc_ble_driver_py import config
     config.__conn_ic_id__ = conn_ic_id
-    from pc_ble_driver_py.ble_driver    import BLEDriver, Flasher
+    from pc_ble_driver_py.ble_driver import BLEDriver, Flasher
     from nordicsemi.dfu.dfu_transport_ble import DfuTransportBle
+
 
 def display_sec_warning():
     default_key_warning = """
@@ -89,6 +90,7 @@ def display_sec_warning():
 """
     click.echo("{}".format(default_key_warning))
 
+
 def display_nokey_warning():
     default_nokey_warning = """
 |===============================================================|
@@ -108,6 +110,7 @@ def display_nokey_warning():
 """
     click.echo("{}".format(default_nokey_warning))
 
+
 def display_debug_warning():
     debug_warning = """
 |===============================================================|
@@ -126,12 +129,14 @@ def display_debug_warning():
 """
     click.echo("{}".format(debug_warning))
 
+
 def display_settings_backup_warning():
     debug_warning = """
 Note: Generating a DFU settings page with backup page included.
 This is only required for bootloaders from nRF5 SDK 15.1 and newer.
 If you want to skip backup page generation, use --no-backup option."""
     click.echo("{}".format(debug_warning))
+
 
 def int_as_text_to_int(value):
     try:
@@ -143,12 +148,14 @@ def int_as_text_to_int(value):
     except ValueError:
         raise NordicSemiException('%s is not a valid integer' % value)
 
+
 def pause():
     while True:
         try:
             input()
         except (KeyboardInterrupt, EOFError):
             break
+
 
 class BasedIntOrNoneParamType(click.ParamType):
     name = 'Integer'
@@ -161,12 +168,16 @@ class BasedIntOrNoneParamType(click.ParamType):
         except NordicSemiException:
             self.fail('%s is not a valid integer' % value, param, ctx)
 
+
 BASED_INT_OR_NONE = BasedIntOrNoneParamType()
+
 
 class BasedIntParamType(BasedIntOrNoneParamType):
     name = 'Integer'
 
-BASED_INT= BasedIntParamType()
+
+BASED_INT = BasedIntParamType()
+
 
 class TextOrNoneParamType(click.ParamType):
     name = 'Text'
@@ -174,15 +185,16 @@ class TextOrNoneParamType(click.ParamType):
     def convert(self, value, param, ctx):
         return value
 
+
 TEXT_OR_NONE = TextOrNoneParamType()
 
 BOOT_VALIDATION_ARGS =\
-[
-    'NO_VALIDATION',
-    'VALIDATE_GENERATED_CRC',
-    'VALIDATE_GENERATED_SHA256',
-    'VALIDATE_ECDSA_P256_SHA256',
-]
+    [
+        'NO_VALIDATION',
+        'VALIDATE_GENERATED_CRC',
+        'VALIDATE_GENERATED_SHA256',
+        'VALIDATE_ECDSA_P256_SHA256',
+    ]
 DEFAULT_BOOT_VALIDATION = 'VALIDATE_GENERATED_CRC'
 
 
@@ -194,6 +206,7 @@ class OptionRequiredIf(click.Option):
             msg = 'Required if "-snr" / "--serial-number" is not defined.'
             raise click.MissingParameter(ctx=ctx, param=self, message=msg)
         return value
+
 
 @click.group()
 @click.option('-v', '--verbose',
@@ -225,12 +238,14 @@ def cli(verbose, output):
         fh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
         root.addHandler(fh)
 
+
 @cli.command()
 def version():
     """Display nrfutil version."""
     click.echo("nrfutil version {}".format(nrfutil_version.NRFUTIL_VERSION))
     logger.info("PyPi URL: https://pypi.python.org/pypi/nrfutil")
     logger.debug("GitHub URL: https://github.com/NordicSemiconductor/pc-nrfutil")
+
 
 @cli.group(short_help='Generate and display Bootloader DFU settings.')
 def settings():
@@ -239,6 +254,7 @@ def settings():
     """
     pass
 
+
 @settings.command(short_help='Generate a .hex file with Bootloader DFU settings.')
 @click.argument('hex_file', required=True, type=click.Path())
 @click.option('--family',
@@ -246,8 +262,8 @@ def settings():
               type=click.Choice(['NRF51', 'NRF52', 'NRF52QFAB', 'NRF52810', 'NRF52840']))
 @click.option('--application',
               help='The application firmware file. This can be omitted if'
-                    'the target IC does not contain an application in flash.'
-                    'Requires --application-version or --application-version-string.',
+              'the target IC does not contain an application in flash.'
+              'Requires --application-version or --application-version-string.',
               type=click.STRING)
 @click.option('--application-version',
               help='The application version.',
@@ -282,11 +298,13 @@ def settings():
                    '(<DFU_settings_addrsss> - 0x1000).',
               type=BASED_INT_OR_NONE)
 @click.option('--app-boot-validation',
-              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for application. Choose from:\n%s' % (
+                  '\n'.join(BOOT_VALIDATION_ARGS),),
               required=False,
               type=click.STRING)
 @click.option('--sd-boot-validation',
-              help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for Softdevice. Choose from:\n%s' % (
+                  '\n'.join(BOOT_VALIDATION_ARGS),),
               required=False,
               type=click.STRING)
 @click.option('--softdevice',
@@ -355,11 +373,13 @@ def generate(hex_file,
         click.echo("WARNING: Using default offset in order to calculate bootloader settings backup page")
 
     if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" %
+                   ("\n".join(BOOT_VALIDATION_ARGS)))
         return
 
     if app_boot_validation and (app_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" %
+                   ("\n".join(BOOT_VALIDATION_ARGS)))
         return
 
     if bl_settings_version == 1 and (app_boot_validation or sd_boot_validation):
@@ -367,7 +387,7 @@ def generate(hex_file,
         return
 
     if (app_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None) or \
-        (sd_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
+            (sd_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
         click.echo("Error: Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
         return
 
@@ -396,9 +416,9 @@ def generate(hex_file,
 
     click.echo("{0}".format(str(sett)))
 
+
 @settings.command(short_help='Display the contents of a .hex file with Bootloader DFU settings.')
 @click.argument('hex_file', required=True, type=click.Path())
-
 def display(hex_file):
 
     sett = BLDFUSettings()
@@ -420,9 +440,9 @@ def keys():
     """
     pass
 
+
 @keys.command(short_help='Generate a private key and store it in a file in PEM format.')
 @click.argument('key_file', required=True, type=click.Path())
-
 def generate(key_file):
     signer = Signing()
 
@@ -433,6 +453,7 @@ def generate(key_file):
 
     signer.gen_key(key_file)
     click.echo("Generated private key and stored it in: %s" % key_file)
+
 
 @keys.command(short_help='Display the private key that is stored in a file in PEM format or a public key derived from it.')
 @click.argument('key_file', required=True, type=click.Path())
@@ -445,7 +466,6 @@ def generate(key_file):
 @click.option('--out_file',
               help='If provided, save the output in file out_file.',
               type=click.STRING)
-
 def display(key_file, key, format, out_file):
     signer = Signing()
 
@@ -570,11 +590,13 @@ def pkg():
               help='The SoftDevice firmware file.',
               type=click.STRING)
 @click.option('--sd-boot-validation',
-              help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for Softdevice. Choose from:\n%s' % (
+                  '\n'.join(BOOT_VALIDATION_ARGS),),
               required=False,
               type=click.STRING)
 @click.option('--app-boot-validation',
-              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for application. Choose from:\n%s' % (
+                  '\n'.join(BOOT_VALIDATION_ARGS),),
               required=False,
               type=click.STRING)
 @click.option('--key-file',
@@ -618,28 +640,28 @@ def pkg():
               required=False,
               type=BASED_INT_OR_NONE)
 def generate(zipfile,
-           debug_mode,
-           application,
-           application_version,
-           application_version_string,
-           bootloader,
-           bootloader_version,
-           hw_version,
-           sd_req,
-           sd_id,
-           softdevice,
-           sd_boot_validation,
-           app_boot_validation,
-           key_file,
-           external_app,
-           zigbee,
-           zigbee_manufacturer_id,
-           zigbee_image_type,
-           zigbee_comment,
-           zigbee_ota_hw_version,
-           zigbee_ota_fw_version,
-           zigbee_ota_min_hw_version,
-           zigbee_ota_max_hw_version):
+             debug_mode,
+             application,
+             application_version,
+             application_version_string,
+             bootloader,
+             bootloader_version,
+             hw_version,
+             sd_req,
+             sd_id,
+             softdevice,
+             sd_boot_validation,
+             app_boot_validation,
+             key_file,
+             external_app,
+             zigbee,
+             zigbee_manufacturer_id,
+             zigbee_image_type,
+             zigbee_comment,
+             zigbee_ota_hw_version,
+             zigbee_ota_fw_version,
+             zigbee_ota_min_hw_version,
+             zigbee_ota_max_hw_version):
     """
     Generate a zip package for distribution to apps that support Nordic DFU OTA.
     The application, bootloader, and SoftDevice files are converted to .bin if supplied as .hex files.
@@ -700,7 +722,8 @@ def generate(zipfile,
 
     # Convert multiple value into a single instance
     if len(sd_req) > 1:
-        click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
+        click.echo(
+            "Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
         return
     elif len(sd_req) == 0:
         sd_req = None
@@ -710,7 +733,8 @@ def generate(zipfile,
             sd_req = None
 
     if len(sd_id) > 1:
-        click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-id 0xXXXX,0xYYYY,...")
+        click.echo(
+            "Please specify SoftDevice requirements as a comma-separated list: --sd-id 0xXXXX,0xYYYY,...")
         return
     elif len(sd_id) == 0:
         sd_id = None
@@ -732,14 +756,14 @@ def generate(zipfile,
         display_debug_warning()
         # Default to no version checking
         if application_version_internal is None:
-            application_version_internal=Package.DEFAULT_APP_VERSION
+            application_version_internal = Package.DEFAULT_APP_VERSION
         if bootloader_version is None:
-            bootloader_version=Package.DEFAULT_BL_VERSION
+            bootloader_version = Package.DEFAULT_BL_VERSION
         if hw_version is None:
-            hw_version=Package.DEFAULT_HW_VERSION
+            hw_version = Package.DEFAULT_HW_VERSION
         if sd_req is None:
             # Use string as this will be mapped into an int below
-            sd_req=str(Package.DEFAULT_SD_REQ[0])
+            sd_req = str(Package.DEFAULT_SD_REQ[0])
 
     # Version checks
     if hw_version is None:
@@ -827,16 +851,18 @@ def generate(zipfile,
             display_sec_warning()
 
     if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" %
+                   ("\n".join(BOOT_VALIDATION_ARGS)))
         return
 
     if app_boot_validation and (app_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
+        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" %
+                   ("\n".join(BOOT_VALIDATION_ARGS)))
         return
 
     if zigbee_comment is None:
         zigbee_comment = ''
-    elif any(ord(char) > 127 for char in zigbee_comment): # Check if all the characters belong to the ASCII range
+    elif any(ord(char) > 127 for char in zigbee_comment):  # Check if all the characters belong to the ASCII range
         click.echo('Warning: Non-ASCII characters in the comment are not allowed. Discarding comment.')
         zigbee_comment = ''
     elif len(zigbee_comment) > 30:
@@ -871,12 +897,14 @@ def generate(zipfile,
     #   * minimum version is higher than maximum version
     #   * hw_version is inside the range specified by minimum and maximum hardware version
     if (type(zigbee_ota_min_hw_version) is int) != (type(zigbee_ota_max_hw_version) is int):
-        click.echo('Warning: min/max zigbee ota hardware version is missing. Discarding min/max hardware version.')
+        click.echo(
+            'Warning: min/max zigbee ota hardware version is missing. Discarding min/max hardware version.')
     elif type(zigbee_ota_min_hw_version) is int:
         if zigbee_ota_min_hw_version > zigbee_ota_max_hw_version:
             click.echo('Warning: zigbee-ota-min-hw-version is higher than zigbee-ota-max-hw-version.')
         if (hw_version > zigbee_ota_max_hw_version) or (hw_version < zigbee_ota_min_hw_version):
-            click.echo('Warning: hw-version is outside the specified range specified by zigbee_ota_min_hw_version and zigbee_ota_max_hw_version.')
+            click.echo(
+                'Warning: hw-version is outside the specified range specified by zigbee_ota_min_hw_version and zigbee_ota_max_hw_version.')
 
     # Generate a DFU package. If --zigbee is set this is the inner DFU package
     # which will be used as a binary input to the outter DFU package
@@ -934,9 +962,9 @@ def generate(zipfile,
     log_message = "Zip created at {0}".format(zipfile_path)
     click.echo(log_message)
 
+
 @pkg.command(short_help='Display the contents of a .zip package file.')
 @click.argument('zip_file', required=True, type=click.Path())
-
 def display(zip_file):
 
     package = Package()
@@ -944,10 +972,14 @@ def display(zip_file):
 
     click.echo("{0}".format(str(package)))
 
+
 global_bar = None
+
+
 def update_progress(progress=0):
     if global_bar:
         global_bar.update(progress)
+
 
 @cli.group(short_help='Perform a Device Firmware Update over serial, BLE, Thread, Zigbee or ANT transport given a DFU package (zip file).')
 def dfu():
@@ -956,8 +988,9 @@ def dfu():
     """
     pass
 
+
 def do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, ping,
-              timeout):
+              timeout, debug):
 
     if flow_control is None:
         flow_control = DfuTransportSerial.DEFAULT_FLOW_CONTROL
@@ -971,7 +1004,8 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
         device_lister = DeviceLister()
         device = device_lister.get_device(serial_number=serial_number)
         if device is None:
-            raise NordicSemiException("A device with serial number %s is not connected." % serial_number)
+            raise NordicSemiException(
+                "A device with serial number %s is not connected." % serial_number)
         port = device.get_first_available_com_port()
         logger.info("Resolved serial number {} to port {}".format(serial_number, port))
 
@@ -981,9 +1015,9 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
     logger.info("Using board at serial port: {}".format(port))
     serial_backend = DfuTransportSerial(com_port=str(port), baud_rate=baud_rate,
                                         flow_control=flow_control, prn=packet_receipt_notification, do_ping=ping,
-                                        timeout=timeout)
+                                        timeout=timeout, debug=debug)
     serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu = Dfu(zip_file_path = package, dfu_transport = serial_backend, connect_delay = connect_delay)
+    dfu = Dfu(zip_file_path=package, dfu_transport=serial_backend, connect_delay=connect_delay)
 
     if logger.getEffectiveLevel() > logging.INFO:
         with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
@@ -995,6 +1029,7 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
 
     click.echo("Device programmed.")
 
+
 @dfu.command(short_help='Update the firmware on a device over a USB serial connection. The DFU '
                         'target must be a chip with USB pins (i.e. nRF52840) and provide a USB ACM '
                         'CDC serial interface.')
@@ -1005,7 +1040,7 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
 @click.option('-p', '--port',
               help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
-              cls = OptionRequiredIf)
+              cls=OptionRequiredIf)
 @click.option('-cd', '--connect-delay',
               help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
               type=click.INT,
@@ -1030,11 +1065,15 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
               help='Set the timeout in seconds for board to respond (default: 30 seconds)',
               type=click.INT,
               required=False)
+@click.option('-d', '--debug/--no-debug',
+              help='Enable ANT debug logs.',
+              default=False,
+              required=False)
 def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number,
-               timeout):
+               timeout, debug):
     """Perform a Device Firmware Update on a device with a bootloader that supports USB serial DFU."""
     do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, False,
-              timeout)
+              timeout, debug)
 
 
 @dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART.")
@@ -1045,7 +1084,7 @@ def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notifi
 @click.option('-p', '--port',
               help='Serial port address to which the device is connected. (e.g. COM1 in windows systems, /dev/ttyACM0 in linux/mac)',
               type=click.STRING,
-              cls = OptionRequiredIf)
+              cls=OptionRequiredIf)
 @click.option('-cd', '--connect-delay',
               help='Delay in seconds before each connection to the target device during DFU. Default is 3.',
               type=click.INT,
@@ -1070,16 +1109,20 @@ def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notifi
               help='Set the timeout in seconds for board to respond (default: 30 seconds)',
               type=click.INT,
               required=False)
+@click.option('-d', '--debug/--no-debug',
+              help='Enable ANT debug logs.',
+              default=False,
+              required=False)
 def serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number,
-           timeout):
+           timeout, debug):
     """Perform a Device Firmware Update on a device with a bootloader that supports UART serial DFU."""
 
     do_serial(package, port, connect_delay, flow_control, packet_receipt_notification, baud_rate, serial_number, True,
-              timeout)
+              timeout, debug)
 
 
 def enumerate_ports():
-    descs   = BLEDriver.enum_serial_ports()
+    descs = BLEDriver.enum_serial_ports()
     if len(descs) == 0:
         return None
     click.echo('Please select connectivity serial port:')
@@ -1089,6 +1132,7 @@ def enumerate_ports():
     index = click.prompt('Enter your choice: ', type=click.IntRange(0, len(descs)))
     return descs[index].port
 
+
 def get_port_by_snr(snr):
     serial_ports = BLEDriver.enum_serial_ports()
     try:
@@ -1096,6 +1140,7 @@ def get_port_by_snr(snr):
     except IndexError:
         raise NordicSemiException('board not found')
     return serial_port
+
 
 @dfu.command(short_help="Update the firmware on a device over a BLE connection.")
 @click.option('-pkg', '--package',
@@ -1162,7 +1207,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
             return
 
     if flash_connectivity:
-        flasher = Flasher(serial_port=port, snr = jlink_snr)
+        flasher = Flasher(serial_port=port, snr=jlink_snr)
         if flasher.fw_check():
             click.echo("Board already flashed with connectivity firmware.")
         else:
@@ -1178,7 +1223,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
                                   target_device_name=str(name),
                                   target_device_addr=str(address))
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend, connect_delay = connect_delay)
+    dfu = Dfu(zip_file_path=package, dfu_transport=ble_backend, connect_delay=connect_delay)
 
     if logger.getEffectiveLevel() > logging.INFO:
         with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
@@ -1261,7 +1306,7 @@ def ant(package, port, connect_delay, packet_receipt_notification, period,
         ant_config.trans_type = 0x01 | ((serial >> 12) & 0xF0)
 
     ant_backend = DfuTransportAnt(port=port, prn=packet_receipt_notification,
-        ant_config=ant_config, debug=debug)
+                                  ant_config=ant_config, debug=debug)
     ant_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
     dfu = Dfu(zip_file_path=package, dfu_transport=ant_backend, connect_delay=connect_delay)
 
@@ -1287,6 +1332,7 @@ def convert_version_string_to_int(s):
     numbers = s.split(".")
     js = [10000, 100, 1]
     return sum([js[i] * int(numbers[i]) for i in range(3)])
+
 
 @dfu.command(short_help="Update the firmware on a device over a Thread connection.")
 @click.option('-pkg', '--package',
@@ -1328,12 +1374,11 @@ def convert_version_string_to_int(s):
 @click.option('-rs', '--reset_suppress',
               help='Suppress device reset after finishing DFU for a given number of milliseconds. ' +
                    'If -1 is given then suppress indefinatelly.',
-              type = click.INT,
-              metavar = '<delay_in_ms>')
+              type=click.INT,
+              metavar='<delay_in_ms>')
 @click.option('-m', '--masterkey',
               help='Masterkey. If not specified then 00112233445566778899aabbccddeeff is used',
               type=click.STRING)
-
 def thread(package, port, address, server_port, panid, channel, jlink_snr, flash_connectivity,
            sim, rate, reset_suppress, masterkey):
     """
@@ -1379,7 +1424,7 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
         click.echo("Using ot-ncp binary: {}".format(stream_descriptor))
 
     if flash_connectivity:
-        flasher = NCPFlasher(serial_port=port, snr = jlink_snr)
+        flasher = NCPFlasher(serial_port=port, snr=jlink_snr)
         if flasher.fw_check():
             click.echo("Board already flashed with connectivity firmware.")
         else:
@@ -1411,7 +1456,7 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
     dfu = create_dfu_server(transport, package, opts)
 
     try:
-        sighandler = lambda signum, frame : transport.close()
+        def sighandler(signum, frame): return transport.close()
         signal.signal(signal.SIGINT, sighandler)
         signal.signal(signal.SIGTERM, sighandler)
 
@@ -1429,6 +1474,7 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
     finally:
         transport.close()
 
+
 @dfu.command(short_help="Update the firmware on a device over a Zigbee connection.")
 @click.option('-f', '--file',
               help='Filename of the Zigbee OTA Upgrade file.',
@@ -1440,7 +1486,6 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
 @click.option('-chan', '--channel',
               help='802.15.4 Channel that the OTA server will use',
               type=click.INT)
-
 def zigbee(file, jlink_snr, channel):
     """
     Perform a Device Firmware Update on a device that implements a  Zigbee OTA Client cluster.
@@ -1449,7 +1494,7 @@ def zigbee(file, jlink_snr, channel):
     """
     ble_driver_init('NRF52')
     from nordicsemi.zigbee.ota_flasher import OTAFlasher
-    of = OTAFlasher(fw = file, channel = channel, snr = jlink_snr)
+    of = OTAFlasher(fw=file, channel=channel, snr=jlink_snr)
 
     if of.fw_check():
         click.echo("Board already flashed with connectivity firmware.")
@@ -1459,9 +1504,10 @@ def zigbee(file, jlink_snr, channel):
         click.echo("Connectivity firmware flashed.")
 
     of.reset()
-    time.sleep(3.0) # A delay to init the OTA Server flashed on the devboard and the CLI inside of it
+    time.sleep(3.0)  # A delay to init the OTA Server flashed on the devboard and the CLI inside of it
     of.randomize_eui64()
     of.setup_channel()
+
 
 @cli.group()
 def zigbee():
@@ -1469,6 +1515,7 @@ def zigbee():
     Zigbee-related commands and utilities.
     """
     pass
+
 
 @zigbee.command(short_help='Generate the Zigbee Production Config hex file.', name='production_config')
 @click.argument('input', required=True, type=click.Path())
@@ -1483,7 +1530,8 @@ def production_config(input, output, offset):
     try:
         pc = ProductionConfig(input)
     except ProductionConfigWrongException:
-        click.echo("Error: Input YAML file format wrong. Please see the example YAML file in the documentation.")
+        click.echo(
+            "Error: Input YAML file format wrong. Please see the example YAML file in the documentation.")
         return
 
     try:
@@ -1495,6 +1543,7 @@ def production_config(input, output, offset):
     except ProductionConfigTooLargeException as e:
         click.echo("Error: Production Config too large: " + str(e.length) + " bytes")
         return
+
 
 if __name__ == '__main__':
     cli()
