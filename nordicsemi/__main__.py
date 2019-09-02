@@ -60,7 +60,7 @@ from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedExcep
 from nordicsemi.lister.device_lister import DeviceLister
 import spinel.util as util
 
-# Python 2 compatebility provided by package future
+# Python 2 compatibility provided by package future
 from builtins import input
 
 logger = logging.getLogger(__name__)
