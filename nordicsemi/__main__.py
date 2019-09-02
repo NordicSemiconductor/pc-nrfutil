@@ -60,6 +60,8 @@ from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedExcep
 from nordicsemi.lister.device_lister import DeviceLister
 import spinel.util as util
 
+# Python 2 compatebility provided by package six
+from builtins import input
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +148,7 @@ def int_as_text_to_int(value):
 def pause():
     while True:
         try:
-            raw_input()
+            input()
         except (KeyboardInterrupt, EOFError):
             break
 
