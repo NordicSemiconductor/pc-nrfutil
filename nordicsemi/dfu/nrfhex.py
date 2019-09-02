@@ -35,7 +35,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from nordicsemi.dfu import intelhex
+import intelhex
 from struct import unpack
 from enum import Enum
 
