@@ -178,8 +178,7 @@ class DfuTransportSerial(DfuTransport):
                  flow_control=DEFAULT_FLOW_CONTROL,
                  timeout=DEFAULT_TIMEOUT,
                  prn=DEFAULT_PRN,
-                 do_ping=DEFAULT_DO_PING,
-                 debug=DEFAULT_DO_DEBUG):
+                 do_ping=DEFAULT_DO_PING):
 
         super(DfuTransportSerial, self).__init__()
         self.com_port = com_port
@@ -191,12 +190,8 @@ class DfuTransportSerial(DfuTransport):
         self.dfu_adapter = None
         self.ping_id = 0
         self.do_ping = do_ping
-        self.debug = debug
 
         self.mtu = 0
-
-        if self.debug:
-            logger.setLevel(logging.DEBUG)
 
         """:type: serial.Serial """
 
