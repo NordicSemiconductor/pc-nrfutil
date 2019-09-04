@@ -5,7 +5,7 @@ click ~= 7.0
 ecdsa ~= 0.13.2
 behave ~= 1.0
 protobuf ~= 3.8
-pc_ble_driver_py ~= 0.11.4
+pc_ble_driver_py ~= 0.12
 tqdm ~= 4.25
 piccata ~= 1.0
 pyspinel == 1.0.0a3
