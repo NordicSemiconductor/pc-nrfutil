@@ -212,12 +212,13 @@ class BLDFUSettings(object):
                 self.app_boot_validation_bytes = struct.pack('<I', self.app_crc)
             elif app_boot_validation_type == 'VALIDATE_GENERATED_SHA256':
                 self.app_boot_validation_type = 2 & 0xffffffff
-                sha256 = Package.calculate_sha256_hash(self.app_bin)
-                self.app_boot_validation_bytes = bytes([int(binascii.hexlify(i), 16) for i in list(sha256)][31::-1])
+                # Package.calculate_sha256_hash gives a reversed
+                # digest. It need to be reversed back to a normal
+                # sha256 digest.
+                self.app_boot_validation_bytes = Package.calculate_sha256_hash(self.app_bin)[::-1]
             elif app_boot_validation_type == 'VALIDATE_ECDSA_P256_SHA256':
                 self.app_boot_validation_type = 3 & 0xffffffff
-                ecdsa = Package.sign_firmware(key_file, self.app_bin)
-                self.app_boot_validation_bytes = bytes([int(binascii.hexlify(i), 16) for i in list(ecdsa)])
+                self.app_boot_validation_bytes = Package.sign_firmware(key_file, self.app_bin)
             else:  # This also covers 'NO_VALIDATION' case
                 self.app_boot_validation_type = 0 & 0xffffffff
                 self.app_boot_validation_bytes = bytes(0)
@@ -251,12 +252,13 @@ class BLDFUSettings(object):
                 self.sd_boot_validation_bytes = struct.pack('<I', sd_crc)
             elif sd_boot_validation_type == 'VALIDATE_GENERATED_SHA256':
                 self.sd_boot_validation_type = 2 & 0xffffffff
-                sha256 = Package.calculate_sha256_hash(self.sd_bin)
-                self.sd_boot_validation_bytes = bytes([int(binascii.hexlify(i), 16) for i in list(sha256)][31::-1])
+                # Package.calculate_sha256_hash gives a reversed
+                # digest. It need to be reversed back to a normal
+                # sha256 digest.
+                self.sd_boot_validation_bytes = Package.calculate_sha256_hash(self.sd_bin)[::-1]
             elif sd_boot_validation_type == 'VALIDATE_ECDSA_P256_SHA256':
                 self.sd_boot_validation_type = 3 & 0xffffffff
-                ecdsa = Package.sign_firmware(key_file, self.sd_bin)
-                self.sd_boot_validation_bytes = bytes([int(binascii.hexlify(i), 16) for i in list(ecdsa)])
+                self.sd_boot_validation_bytes = Package.sign_firmware(key_file, self.sd_bin)
             else:  # This also covers 'NO_VALIDATION_CASE'
                 self.sd_boot_validation_type = 0 & 0xffffffff
                 self.sd_boot_validation_bytes = bytes(0)
