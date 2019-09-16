@@ -103,7 +103,7 @@ class TestDfuTransportSerial(unittest.TestCase):
         self.transport.register_events_callback(DfuEvent.PROGRESS_EVENT, progress_callback)
         self.transport.register_events_callback(DfuEvent.ERROR_EVENT, error_callback())
 
-        firmware = ''
+        firmware = b''
         test_firmware_path = os.path.join("firmwares", "pca10028_nrf51422_xxac_blinky.bin")
 
         with open(test_firmware_path, 'rb') as f:
