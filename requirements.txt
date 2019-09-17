@@ -1,6 +1,7 @@
-six ~= 1.9
+pywin32; sys_platform == 'win32'
+antlib; sys_platform == 'win32'
+pyinstaller
 pyserial ~= 3.0
-enum34 ~= 1.0
 click ~= 7.0
 ecdsa ~= 0.13.2
 behave ~= 1.0
