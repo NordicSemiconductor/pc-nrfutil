@@ -1101,7 +1101,7 @@ def enumerate_ports():
 def get_port_by_snr(snr):
     serial_ports = BLEDriver.enum_serial_ports()
     try:
-        serial_port = [d.port for d in serial_ports if d.serial_number.lstrip('0') == snr][0]
+        serial_port = [d.port for d in serial_ports if d.serial_number.lstrip('0') == snr.lstrip('0')][0]
     except IndexError:
         raise NordicSemiException('board not found')
     return serial_port
