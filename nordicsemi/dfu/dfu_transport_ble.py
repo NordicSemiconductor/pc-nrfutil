@@ -559,7 +559,7 @@ class DfuTransportBle(DfuTransport):
 
     def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(map(ord, struct.pack('<H', self.prn))))
+        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(struct.pack('<H', self.prn)))
         self.__get_response(DfuTransportBle.OP_CODE['SetPRN'])
 
     def __create_command(self, size):
@@ -570,7 +570,7 @@ class DfuTransportBle(DfuTransport):
 
     def __create_object(self, object_type, size):
         self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
-                                            + list(map(ord, struct.pack('<L', size))))
+                                            + list(struct.pack('<L', size)))
         self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
 
     def __calculate_checksum(self):
@@ -618,7 +618,7 @@ class DfuTransportBle(DfuTransport):
         current_pnr = 0
         for i in range(0, len(data), self.dfu_adapter.packet_size):
             to_transmit     = data[i:i + self.dfu_adapter.packet_size]
-            self.dfu_adapter.write_data_point(list(map(ord, to_transmit)))
+            self.dfu_adapter.write_data_point(list(to_transmit))
             crc     = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
             current_pnr    += 1

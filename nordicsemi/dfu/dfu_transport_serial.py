@@ -356,7 +356,7 @@ class DfuTransportSerial(DfuTransport):
     def __set_prn(self):
         logger.debug("Serial: Set Packet Receipt Notification {}".format(self.prn))
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['SetPRN']]
-            + list(map(ord, struct.pack('<H', self.prn))))
+            + list(struct.pack('<H', self.prn)))
         self.__get_response(DfuTransportSerial.OP_CODE['SetPRN'])
 
     def __get_mtu(self):
@@ -401,7 +401,7 @@ class DfuTransportSerial(DfuTransport):
 
     def __create_object(self, object_type, size):
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['CreateObject'], object_type]\
-                                            + list(map(ord, struct.pack('<L', size))))
+                                            + list(struct.pack('<L', size)))
         self.__get_response(DfuTransportSerial.OP_CODE['CreateObject'])
 
     def __calculate_checksum(self):
@@ -456,14 +456,14 @@ class DfuTransportSerial(DfuTransport):
 
         current_pnr     = 0
 
-        for i in range(0, len(data), (self.mtu-1)/2 - 1):
+        for i in range(0, len(data), (self.mtu-1)//2 - 1):
             # append the write data opcode to the front
             # here the maximum data size is self.mtu/2,
             # due to the slip encoding which at maximum doubles the size
-            to_transmit = data[i:i + (self.mtu-1)/2 - 1 ]
+            to_transmit = data[i:i + (self.mtu-1)//2 - 1 ]
             to_transmit = struct.pack('B',DfuTransportSerial.OP_CODE['WriteObject']) + to_transmit
 
-            self.dfu_adapter.send_message(list(map(ord, to_transmit)))
+            self.dfu_adapter.send_message(list(to_transmit))
             crc     = binascii.crc32(to_transmit[1:], crc) & 0xFFFFFFFF
             offset += len(to_transmit) - 1
             current_pnr    += 1
