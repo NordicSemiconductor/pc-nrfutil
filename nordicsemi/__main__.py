@@ -483,7 +483,7 @@ def display(key_file, key, format, out_file):
     if key == "pk":
         kstr = signer.get_vk(format, dbg)
     elif key == "sk":
-        kstr = "\nWARNING: Security risk! Do not share the private key.\n\n"
+        kstr = b"\nWARNING: Security risk! Do not share the private key.\n\n"
         kstr = kstr + signer.get_sk(format, dbg)
 
     if not out_file:
