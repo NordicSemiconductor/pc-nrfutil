@@ -1079,7 +1079,7 @@ def serial(package, port, connect_delay, flow_control, packet_receipt_notificati
 
 
 def enumerate_ports():
-    descs   = BLEDriver.enum_serial_ports()
+    descs   = list(BLEDriver.enum_serial_ports())
     if len(descs) == 0:
         return None
     click.echo('Please select connectivity serial port:')
