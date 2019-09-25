@@ -101,8 +101,6 @@ pyinstaller /full/path/to/nrfutil.spec
 
 **Note**: Some anti-virus programs will stop PyInstaller from executing correctly when it modifies the executable file.
 
-**Note**: PyInstaller on macOS may have issues with newer versions of Python 2.7.x., e.g. error message `Failed to execute script pyi_rth_pkgres` at runtime. Try rolling back to Python v2.7.10 if you experience such problems.
-
 ## Usage
 
 To get info on usage of nrfutil:
