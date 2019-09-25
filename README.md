@@ -81,7 +81,7 @@ pip install -r requirements.txt
 
 You can run the program directly without installing it by executing:
 ```
-python nordicsemi/__main__.py
+python ./nordicsemi
 ```
 
 ### Installing from source
