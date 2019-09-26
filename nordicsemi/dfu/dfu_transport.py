@@ -1,5 +1,4 @@
-#
-# Copyright (c) 2016 Nordic Semiconductor ASA
+# Copyright (c) 2016 - 2019 Nordic Semiconductor ASA
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -33,11 +32,10 @@
 # ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
 
-# Python specific imports
-import abc
 import logging
+
+from abc import ABC, abstractmethod
 
 # Nordic Semiconductor imports
 
@@ -54,7 +52,7 @@ class DfuEvent:
     PROGRESS_EVENT = 1
 
 
-class DfuTransport(object, metaclass=abc.ABCMeta):
+class DfuTransport(ABC):
     """
     This class as an abstract base class inherited from when implementing transports.
 
@@ -104,12 +102,12 @@ class DfuTransport(object, metaclass=abc.ABCMeta):
         "The requested firmware to update was already present on the system.",
     ]
 
-    @abc.abstractmethod
+    @abstractmethod
     def __init__(self):
         self.callbacks = {}
 
 
-    @abc.abstractmethod
+    @abstractmethod
     def open(self):
         """
         Open a port if appropriate for the transport.
@@ -118,7 +116,7 @@ class DfuTransport(object, metaclass=abc.ABCMeta):
         pass
 
 
-    @abc.abstractmethod
+    @abstractmethod
     def close(self):
         """
         Close a port if appropriate for the transport.
@@ -126,7 +124,7 @@ class DfuTransport(object, metaclass=abc.ABCMeta):
         """
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     def send_init_packet(self, init_packet):
         """
         Send init_packet to device.
@@ -139,7 +137,7 @@ class DfuTransport(object, metaclass=abc.ABCMeta):
         pass
 
 
-    @abc.abstractmethod
+    @abstractmethod
     def send_firmware(self, firmware):
         """
         Start sending firmware to device.
