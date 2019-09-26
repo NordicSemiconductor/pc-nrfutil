@@ -30,7 +30,7 @@ There are 2 different and incompatible DFU package formats:
 The DFU package format transitioned from legacy to modern in SDK 12.0. Depending on the SDK version
 that you are using you will need to select a release of this tool compatible with it:
 
-* Version 0.5.2 generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
+* Version 0.5.x generates legacy firmware packages compatible with **nRF SDK 11.0 and older**
 * Versions 1.5.0 and later generate modern firmware packages compatible with **nRF SDK 12.0 and newer**
 * Versions 4.0.0 and later generate modern firmware packages compatible with **nRF SDK 15.1 and newer**
 * Versions 5.0.0 and later generate modern firmware packages compatible with **nRF SDK 15.3 and newer**
@@ -136,6 +136,10 @@ SoftDevice            | FWID (sd-req)
 `s112_nrf52_6.0.0`    | 0xA7
 `s112_nrf52_6.1.0`    | 0xB0
 `s112_nrf52_6.1.1`    | 0xB8
+`s112_nrf52_7.0.0`    | 0xC4
+`s112_nrf52_7.0.1`    | 0xCD
+`s113_nrf52_7.0.0`    | 0xC3
+`s113_nrf52_7.0.1`    | 0xCC
 `s130_nrf51_1.0.0`    | 0x67
 `s130_nrf51_2.0.0`    | 0x80
 `s132_nrf52_2.0.0`    | 0x81
@@ -159,9 +163,13 @@ SoftDevice            | FWID (sd-req)
 `s132_nrf52_6.0.0`    | 0xA8
 `s132_nrf52_6.1.0`    | 0xAF
 `s132_nrf52_6.1.1`    | 0xB7
+`s132_nrf52_7.0.0`    | 0xC2
+`s132_nrf52_7.0.1`    | 0xCB
 `s140_nrf52_6.0.0`    | 0xA9
 `s140_nrf52_6.1.0`    | 0xAE
 `s140_nrf52_6.1.1`    | 0xB6
+`s140_nrf52_7.0.0`    | 0xC1
+`s140_nrf52_7.0.1`    | 0xCA
 `s212_nrf52_6.1.1`    | 0xBC
 `s332_nrf52_6.1.1`    | 0xBA
 `s340_nrf52_6.1.1`    | 0xB9
@@ -206,8 +214,12 @@ Update packages of external applications, e.g. updates that are intended for a t
 
 The boolean option `--zigbee` enables the generation of Zigbee update file in addition to the zip package. The following example demonstrates the generation of such update file:
 ```
-nrfutil pkg generate --hw-version 52 --sd-req 0 --application-version 0x01020101 --application nrf52840_xxaa.hex --key-file ../priv.pem app_dfu_package.zip --zigbee True --manufacturer-id 0xCAFE --image-type 0x1234 --comment good_image
+nrfutil pkg generate --hw-version 52 --sd-req 0 --application-version 0x01020101 --application nrf52840_xxaa.hex --key-file ../priv.pem --app-boot-validation VALIDATE_ECDSA_P256_SHA256 app_dfu_package.zip --zigbee True --zigbee-manufacturer-id 0xCAFE --zigbee-image-type 0x1234 --zigbee-comment good_image --zigbee-ota-hw-version 52 --zigbee-ota-fw-version 0x01020101 --zigbee-ota-min-hw-version 52 --zigbee-ota-max-hw-version 52
 ```
+The options `--zigbee-ota-hw-version` and `--zigbee-ota-fw-version`refer to the image which is generated to be distributed to the Zigbee OTA Server to be disseminated later into the network. `--zigbee-ota-hw-version` states the hardware version of the Zigbee OTA Server and `--zigbee-ota-fw-version` states the firmware version of this OTA Server accordingly. Everytime the Zigbee OTA Server receives the image for the dissemination its firmware version is updated. This is done to protect from a malicious attack, where the attacker could wear down the Server flash memory by sending the full Zigbee image to be distributed over and over again (thus wearing down the memory). Thus, in order for the OTA Server to accept the image for dissemination, the value passed as a `--zigbee-ota-fw-version` has to be incremented with every transfer of the image.
+
+The options `--zigbee-ota-min-hw-version` and `--zigbee-ota-max-hw-version` refer to the fields in Zigbee OTA header, which determine the range of OTA Client's hardware version for which the image is suitable. Both `--zigbee-ota-min-hw-version` and `--zigbee-ota-max-hw-version` are optional and if used, both must be given.
+
 **Note 4:** The generated Zigbee update file is named according to the recommendation of the Zigbee Specification ([Zigbee Cluster Library Specification 11.5 - Zigbee Document 07-5123-06](http://www.zigbee.org/~zigbeeor/wp-content/uploads/2014/10/07-5123-06-zigbee-cluster-library-specification.pdf)), so the user doesn't provide the name of the Update file.
 
 ##### display
@@ -266,6 +278,7 @@ Below is an example of the execution of a DFU procedure using a file generated a
 ```
 nrfutil dfu zigbee -f CAFE-1234-good_image.zigbee -snr 683604699 -chan 20
 ```
+**Note**: OTA Server stays on the network after disseminating the OTA DFU image. However, if power-cycled/reset, the node shall not automatically reconnect, and another issuing of command is needed.
 
 ##### Serial
 

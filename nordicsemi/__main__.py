@@ -60,6 +60,8 @@ from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedExcep
 from nordicsemi.lister.device_lister import DeviceLister
 import spinel.util as util
 
+# Python 2 compatibility provided by package future
+from builtins import input
 
 logger = logging.getLogger(__name__)
 
@@ -538,6 +540,10 @@ def pkg():
                    '\n|s112_nrf52_6.0.0|0xA7|'
                    '\n|s112_nrf52_6.1.0|0xB0|'
                    '\n|s112_nrf52_6.1.1|0xB8|'
+                   '\n|s112_nrf52_7.0.0|0xC4|'
+                   '\n|s112_nrf52_7.0.1|0xCD|'
+                   '\n|s113_nrf52_7.0.0|0xC3|'
+                   '\n|s113_nrf52_7.0.1|0xCC|'
                    '\n|s130_nrf51_1.0.0|0x67|'
                    '\n|s130_nrf51_2.0.0|0x80|'
                    '\n|s132_nrf52_2.0.0|0x81|'
@@ -555,9 +561,16 @@ def pkg():
                    '\n|s132_nrf52_6.0.0|0xA8|'
                    '\n|s132_nrf52_6.1.0|0xAF|'
                    '\n|s132_nrf52_6.1.1|0xB7|'
+                   '\n|s132_nrf52_7.0.0|0xC2|'
+                   '\n|s132_nrf52_7.0.1|0xCB|'
                    '\n|s140_nrf52_6.0.0|0xA9|'
                    '\n|s140_nrf52_6.1.0|0xAE|'
-                   '\n|s140_nrf52_6.1.1|0xB6|',
+                   '\n|s140_nrf52_6.1.1|0xB6|'
+                   '\n|s140_nrf52_7.0.0|0xC1|'
+                   '\n|s140_nrf52_7.0.1|0xCA|'
+                   '\n|s212_nrf52_6.1.1|0xBC|'
+                   '\n|s332_nrf52_6.1.1|0xBA|'
+                   '\n|s340_nrf52_6.1.1|0xB9|',
               type=click.STRING,
               required=False,
               multiple=True)
