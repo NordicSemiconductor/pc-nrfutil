@@ -61,7 +61,7 @@ You will need to clone the present repository first to run or install nrfutil fr
 
 To install nrfutil from source the following prerequisites must be satisfied:
 
-* [Python 2.7 (2.7.10 or newer, not Python 3)](https://www.python.org/downloads/)
+* [Python 3.7](https://www.python.org/downloads/)
 * [pip](https://pip.pypa.io/en/stable/installing.html)
 * setuptools (upgrade to latest version): `pip install -U setuptools`
 
@@ -81,7 +81,7 @@ pip install -r requirements.txt
 
 You can run the program directly without installing it by executing:
 ```
-python nordicsemi/__main__.py
+python ./nordicsemi
 ```
 
 ### Installing from source
@@ -100,8 +100,6 @@ pyinstaller /full/path/to/nrfutil.spec
 ```
 
 **Note**: Some anti-virus programs will stop PyInstaller from executing correctly when it modifies the executable file.
-
-**Note**: PyInstaller on macOS may have issues with newer versions of Python 2.7.x., e.g. error message `Failed to execute script pyi_rth_pkgres` at runtime. Try rolling back to Python v2.7.10 if you experience such problems.
 
 ## Usage
 

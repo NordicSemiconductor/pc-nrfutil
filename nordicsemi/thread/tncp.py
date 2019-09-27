@@ -78,7 +78,7 @@ class NCPTransport():
 
     @staticmethod
     def _propid_to_str(propid):
-        for name, value in SPINEL.__dict__.iteritems():
+        for name, value in SPINEL.__dict__.items():
             if (name.startswith('PROP_') and value == propid):
                 return name
 
@@ -160,7 +160,7 @@ class NCPTransport():
         flags = 0
         prefix_len = 64
 
-        prefix = ipaddress.IPv6Interface(unicode(ipaddr))
+        prefix = ipaddress.IPv6Interface(str(ipaddr))
         arr = prefix.ip.packed
         arr += self._wpan.encode_fields('CLLC',
                                            prefix_len,
@@ -174,7 +174,7 @@ class NCPTransport():
     def print_addresses(self):
         logger.info("NCP Thread IPv6 addresses:")
         for addr in self._wpan.get_ipaddrs():
-            logger.info(unicode(addr))
+            logger.info(str(addr))
 
     def send(self, payload, dest):
         if (dest.addr.is_multicast):

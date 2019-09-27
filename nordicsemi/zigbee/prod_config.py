@@ -63,7 +63,7 @@ class ProductionConfig(object):
             # Open the YAML file
             with open(path, 'r') as f:
                 self._yaml = yaml.load(f)
-        
+
         except yaml.YAMLError as e:
             raise ProductionConfigWrongException
 
@@ -82,24 +82,24 @@ class ProductionConfig(object):
 
             # Handle the Install code
             if "install_code" not in self._yaml:
-                self._parsed_values["install_code"] = str(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+                self._parsed_values["install_code"] = bytes(16)
                 self._ic_crc = 0
             else:
-                self._parsed_values["install_code"] = self._yaml["install_code"].decode('hex')
+                self._parsed_values["install_code"] = bytes.fromhex(self._yaml["install_code"])
                 self._ic_crc = self._crc16(self._parsed_values["install_code"])
-            
+
             # Handle the Transmission Power
             if "tx_power" not in self._yaml:
-                self._parsed_values["tx_power"] = str(bytearray(16))
+                self._parsed_values["tx_power"] = bytes(16)
             else:
-                self._parsed_values["tx_power"] = str(bytearray([self._yaml["tx_power"]] * 16))
+                self._parsed_values["tx_power"] = bytes([self._yaml["tx_power"]] * 16)
 
             # Handle Application Data (optional)
             if "app_data" not in self._yaml:
-                self._parsed_values["app_data"] = ''
+                self._parsed_values["app_data"] = b''
                 self._ad_len = 0
             else:
-                self._parsed_values["app_data"] = self._yaml["app_data"].decode('hex')
+                self._parsed_values["app_data"] = bytes.fromhex(self._yaml["app_data"])
                 self._ad_len = len(self._parsed_values["app_data"])
 
         except (TypeError, ValueError) as e:
@@ -112,7 +112,6 @@ class ProductionConfig(object):
         ZB_CRC32_POLY = 0x04C11DB7
         crc = 0
         for d in data:
-            d = ord(d)
             c  = ((( crc ^ d ) & 0xff) << 24);
             for j in range(8):
                 if c & 0x80000000:

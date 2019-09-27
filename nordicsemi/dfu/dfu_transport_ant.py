@@ -39,7 +39,7 @@
 import binascii
 from datetime import datetime, timedelta
 import logging
-import Queue
+import queue
 import struct
 import sys
 
@@ -132,7 +132,7 @@ class DfuAdapter(object):
         self.tx_seq = None
         self.rx_seq = None
         self.rx_data = None
-        self.resp_queue = Queue.Queue()
+        self.resp_queue = queue.Queue()
 
     def open(self):
         # TODO: use constant from antlib when it exists.
@@ -187,7 +187,7 @@ class DfuAdapter(object):
         logger.log(TRANSPORT_LOGGING_LEVEL, "ANT: --> {}".format(req))
 
         self.tx_seq = (self.tx_seq + 1) & 0xFF
-        data = map(ord, struct.pack('<HB', len(req) + 3, self.tx_seq)) + req
+        data = list(struct.pack('<HB', len(req) + 3, self.tx_seq)) + req
 
         self.tx_result = None
 
@@ -461,7 +461,7 @@ class DfuTransportAnt(DfuTransport):
     def __set_prn(self):
         logger.debug("ANT: Set Packet Receipt Notification {}".format(self.prn))
         self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['SetPRN']]
-            + map(ord, struct.pack('<H', self.prn)))
+            + list(struct.pack('<H', self.prn)))
         self.__get_response(DfuTransportAnt.OP_CODE['SetPRN'])
 
     def __get_mtu(self):
@@ -506,7 +506,7 @@ class DfuTransportAnt(DfuTransport):
 
     def __create_object(self, object_type, size):
         self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['CreateObject'], object_type]\
-                                            + map(ord, struct.pack('<L', size)))
+                                            + list(struct.pack('<L', size)))
         self.__get_response(DfuTransportAnt.OP_CODE['CreateObject'])
 
     def __calculate_checksum(self):
@@ -563,7 +563,7 @@ class DfuTransportAnt(DfuTransport):
             to_transmit = data[i:i + self.mtu - 4 ]
             to_transmit = struct.pack('B',DfuTransportAnt.OP_CODE['WriteObject']) + to_transmit
 
-            self.dfu_adapter.send_message(map(ord, to_transmit))
+            self.dfu_adapter.send_message(list(to_transmit))
             crc     = binascii.crc32(to_transmit[1:], crc) & 0xFFFFFFFF
             offset += len(to_transmit) - 1
             current_pnr    += 1
@@ -577,7 +577,7 @@ class DfuTransportAnt(DfuTransport):
 
     def __get_response(self, operation):
         def get_dict_key(dictionary, value):
-            return next((key for key, val in dictionary.items() if val == value), None)
+            return next((key for key, val in list(dictionary.items()) if val == value), None)
 
         resp = self.dfu_adapter.get_message()
 

@@ -20,7 +20,7 @@ class TestStringMethods(unittest.TestCase):
         empty buffer
         """
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "app_size is not set. It must be set when type is APPLICATION",
             InitPacketPB,

@@ -116,7 +116,7 @@ class nRFHex(intelhex.IntelHex):
         if self.address_has_magic_number(potential_magic_number_address):
             return "s1x0"
 
-        for i in xrange(4):
+        for i in range(4):
             potential_magic_number_address += nRFHex.info_struct_address_offset
 
             if self.address_has_magic_number(potential_magic_number_address):
@@ -153,7 +153,7 @@ class nRFHex(intelhex.IntelHex):
 
         # Round up to nearest word
         word_size = 4
-        number_of_words = (size + (word_size - 1)) / word_size
+        number_of_words = (size + (word_size - 1)) // word_size
         size = number_of_words * word_size
 
         return size

@@ -1,5 +1,4 @@
-#
-# Copyright (c) 2016 Nordic Semiconductor ASA
+# Copyright (c) 2016 - 2019 Nordic Semiconductor ASA
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -33,26 +32,25 @@
 # ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class Slip(object):
-    def __init__(self):
-        self.SLIP_END = '\xc0'
-        self.SLIP_ESC = '\xdb'
-        self.SLIP_ESC_END = '\xdc'
-        self.SLIP_ESC_ESC = '\xdd'
+class Slip:
+    SLIP_END = 0xc0
+    SLIP_ESC = 0xdb
+    SLIP_ESC_END = 0xdc
+    SLIP_ESC_ESC = 0xdd
 
+    def __init__(self):
         self.started = False
         self.escaped = False
-        self.stream = ''
-        self.packet = ''
+        self.stream = bytearray()
+        self.packet = bytearray()
 
-    def append(self, data):
+    def append(self, data: bytes):
         """
         Append a new
         :param data: Append a new block of data to do decoding on when calling decode.
@@ -66,7 +64,7 @@ class Slip(object):
         Decodes a package according to http://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol
         :return Slip: A list of decoded slip packets
         """
-        packet_list = list()
+        packet_list = []
 
         for char in self.stream:
             if char == self.SLIP_END:
@@ -74,51 +72,51 @@ class Slip(object):
                     if len(self.packet) > 0:
                         self.started = False
                         packet_list.append(self.packet)
-                        self.packet = ''
+                        self.packet = bytearray()
                 else:
                     self.started = True
-                    self.packet = ''
+                    self.packet = bytearray()
             elif char == self.SLIP_ESC:
                 self.escaped = True
             elif char == self.SLIP_ESC_END:
                 if self.escaped:
-                    self.packet += self.SLIP_END
+                    self.packet.append(self.SLIP_END)
                     self.escaped = False
                 else:
                     self.packet += char
             elif char == self.SLIP_ESC_ESC:
                 if self.escaped:
-                    self.packet += self.SLIP_ESC
+                    self.packet.append(self.SLIP_ESC)
                     self.escaped = False
                 else:
-                    self.packet += char
+                    self.packet.append(char)
             else:
                 if self.escaped:
                     logging.error("Error in SLIP packet, ignoring error.")
-                    self.packet = ''
+                    self.packet = bytearray()
                     self.escaped = False
                 else:
-                    self.packet += char
+                    self.packet.append(char)
 
-        self.stream = ''
+        self.stream.clear()
 
         return packet_list
 
-    def encode(self, packet):
+    def encode(self, packet: bytes):
         """
         Encode a packet according to SLIP.
         :param packet: A str array that represents the package
         :return: str array with an encoded SLIP packet
         """
-        encoded = self.SLIP_END
+        encoded = bytearray([self.SLIP_END])
 
         for char in packet:
             if char == self.SLIP_END:
-                encoded += self.SLIP_ESC + self.SLIP_ESC_END
+                encoded.extend([self.SLIP_ESC, self.SLIP_ESC_END])
             elif char == self.SLIP_ESC:
-                encoded += self.SLIP_ESC + self.SLIP_ESC_ESC
+                encoded.extend([self.SLIP_ESC, self.SLIP_ESC_ESC])
             else:
-                encoded += char
-        encoded += self.SLIP_END
+                encoded.append(char)
+        encoded.append(self.SLIP_END)
 
         return encoded

@@ -485,7 +485,7 @@ def display(key_file, key, format, out_file):
     if key == "pk":
         kstr = signer.get_vk(format, dbg)
     elif key == "sk":
-        kstr = "\nWARNING: Security risk! Do not share the private key.\n\n"
+        kstr = b"\nWARNING: Security risk! Do not share the private key.\n\n"
         kstr = kstr + signer.get_sk(format, dbg)
 
     if not out_file:
@@ -806,7 +806,7 @@ def generate(zipfile,
         try:
             # This will parse any string starting with 0x as base 16.
             sd_req_list = sd_req.split(',')
-            sd_req_list = map(int_as_text_to_int, sd_req_list)
+            sd_req_list = list(map(int_as_text_to_int, sd_req_list))
         except ValueError:
             raise NordicSemiException("Could not parse value for --sd-req. "
                                       "Hex values should be prefixed with 0x.")
@@ -816,7 +816,7 @@ def generate(zipfile,
         try:
             # This will parse any string starting with 0x as base 16.
             sd_id_list = sd_id.split(',')
-            sd_id_list = map(int_as_text_to_int, sd_id_list)
+            sd_id_list = list(map(int_as_text_to_int, sd_id_list))
 
             # Copy all IDs from sd_id_list to sd_req_list, without duplicates.
             # This ensures that the softdevice update can be repeated in case
@@ -867,11 +867,11 @@ def generate(zipfile,
     if zigbee:
         inner_external_app = False
 
-    if zigbee_ota_min_hw_version > 0xFFFF:
+    if zigbee_ota_min_hw_version is not None and zigbee_ota_min_hw_version > 0xFFFF:
         click.echo('Error: zigbee-ota-min-hw-version exceeds 2-byte long integer.')
         return
 
-    if zigbee_ota_max_hw_version > 0xFFFF:
+    if zigbee_ota_max_hw_version is not None and zigbee_ota_max_hw_version > 0xFFFF:
         click.echo('Error: zigbee-ota-max-hw-version exceeds 2-byte long integer.')
         return
 
@@ -1092,7 +1092,7 @@ def serial(package, port, connect_delay, flow_control, packet_receipt_notificati
 
 
 def enumerate_ports():
-    descs   = BLEDriver.enum_serial_ports()
+    descs   = list(BLEDriver.enum_serial_ports())
     if len(descs) == 0:
         return None
     click.echo('Please select connectivity serial port:')
@@ -1364,7 +1364,7 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
     mcast_dfu = False
 
     if address is None:
-        address = ipaddress.ip_address(u"ff03::1")
+        address = ipaddress.ip_address("ff03::1")
         click.echo("Address not specified. Using ff03::1 (all Thread nodes)")
     else:
         try:

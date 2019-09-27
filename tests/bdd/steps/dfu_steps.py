@@ -35,7 +35,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from Queue import Empty
+from queue import Empty
 import logging
 import os
 import time
@@ -188,7 +188,7 @@ logger = logging.getLogger(__file__)
 
 STDOUT_TEXT_WAIT_TIME = 50  # Number of seconds to wait for expected output from stdout
 
-@given(u'the user wants to perform dfu {dfu_type}')
+@given('the user wants to perform dfu {dfu_type}')
 def step_impl(context, dfu_type):
     runner = CliRunner()
     context.runner = runner
@@ -196,17 +196,17 @@ def step_impl(context, dfu_type):
 
     context.args = args
 
-@given(u'using package {package}')
+@given('using package {package}')
 def step_impl(context, package):
     full_package_path = resolve_hex_path(package)
     context.args.extend(['-pkg', full_package_path])
     context.pkg = full_package_path
 
-@given(u'option {args}')
+@given('option {args}')
 def step_impl(context, args):
     context.args.extend(args.split(" "))
 
-@given(u'-snr {device}')
+@given('-snr {device}')
 def step_impl(context, device):
     assert device in os.environ, \
     "Environment variable '{}' must be exported with device serial number".format(device)
@@ -214,7 +214,7 @@ def step_impl(context, device):
     snr = str(os.environ[device])
     context.args.extend(["-snr", snr])
 
-@given(u'nrfjprog {image} for {image_type} {board}')
+@given('nrfjprog {image} for {image_type} {board}')
 def step_impl(context, image, image_type, board):
 
     full_image_path = resolve_hex_path(image)
@@ -246,7 +246,7 @@ def step_impl(context, image, image_type, board):
 
 
 
-@then(u'perform dfu')
+@then('perform dfu')
 def step_impl(context):
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)

@@ -23,7 +23,7 @@ SOFTWARE.
 """
 
 import enum
-from structures import DevicePropertyKey
+from .structures import DevicePropertyKey
 
 
 # noinspection SpellCheckingInspection

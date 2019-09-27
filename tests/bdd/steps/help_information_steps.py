@@ -35,7 +35,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from Queue import Empty
+from queue import Empty
 import logging
 import os
 import time
@@ -52,7 +52,7 @@ logger = logging.getLogger(__file__)
 STDOUT_TEXT_WAIT_TIME = 50  # Number of seconds to wait for expected output from stdout
 
 
-@given(u'user types \'{command}\'')
+@given('user types \'{command}\'')
 def step_impl(context, command):
     args = command.split(' ')
     assert args[0] == 'nrfutil'
@@ -64,7 +64,7 @@ def step_impl(context, command):
     context.args = exec_args
 
 
-@then(u'output contains \'{stdout_text}\' and exit code is {exit_code}')
+@then('output contains \'{stdout_text}\' and exit code is {exit_code}')
 def step_impl(context, stdout_text, exit_code):
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
@@ -72,7 +72,7 @@ def step_impl(context, stdout_text, exit_code):
     assert result.output != None
     assert result.output.find(stdout_text) >= 0
 
-@then(u'output version is correct')
+@then('output version is correct')
 def step_impl(context):
     assert "nrfutil_version" in os.environ, \
     "Environment variable 'nrfutil_version' must be exported"

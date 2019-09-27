@@ -47,7 +47,6 @@ from enum import Enum
 
 # 3rd party libraries
 import intelhex
-from intelhex import IntelHexError
 
 # Nordic libraries
 from nordicsemi.dfu.nrfhex import *
@@ -112,8 +111,7 @@ class BLDFUSettings(object):
     bl_sett_52840_addr    = 0x000FF000
     bl_sett_backup_offset = 0x1000
 
-
-    def __init__(self, ):
+    def __init__(self):
         """
         """
         # instantiate a hex object
@@ -168,7 +166,7 @@ class BLDFUSettings(object):
         list = []
         if start_addr == None and end_addr == None:
             hex_dict = ih_object.todict()
-            for addr, byte in hex_dict.items():
+            for addr, byte in list(hex_dict.items()):
                 list.append(byte)
         else:
             for addr in range(start_addr, end_addr + 1):
@@ -215,21 +213,22 @@ class BLDFUSettings(object):
                 self.app_boot_validation_bytes = struct.pack('<I', self.app_crc)
             elif app_boot_validation_type == 'VALIDATE_GENERATED_SHA256':
                 self.app_boot_validation_type = 2 & 0xffffffff
-                sha256 = Package.calculate_sha256_hash(self.app_bin)
-                self.app_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(sha256)][31::-1])
+                # Package.calculate_sha256_hash gives a reversed
+                # digest. It need to be reversed back to a normal
+                # sha256 digest.
+                self.app_boot_validation_bytes = Package.calculate_sha256_hash(self.app_bin)[::-1]
             elif app_boot_validation_type == 'VALIDATE_ECDSA_P256_SHA256':
                 self.app_boot_validation_type = 3 & 0xffffffff
-                ecdsa = Package.sign_firmware(key_file, self.app_bin)
-                self.app_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(ecdsa)])
+                self.app_boot_validation_bytes = Package.sign_firmware(key_file, self.app_bin)
             else:  # This also covers 'NO_VALIDATION' case
                 self.app_boot_validation_type = 0 & 0xffffffff
-                self.app_boot_validation_bytes = bytearray(0)
+                self.app_boot_validation_bytes = bytes(0)
         else:
             self.app_sz = 0x0 & 0xffffffff
             self.app_crc = 0x0 & 0xffffffff
             self.bank0_bank_code = 0x0 & 0xffffffff
             self.app_boot_validation_type = 0x0 & 0xffffffff
-            self.app_boot_validation_bytes = bytearray(0)
+            self.app_boot_validation_bytes = bytes(0)
 
         if sd_file is not None:
             # Load SD to calculate CRC
@@ -254,19 +253,20 @@ class BLDFUSettings(object):
                 self.sd_boot_validation_bytes = struct.pack('<I', sd_crc)
             elif sd_boot_validation_type == 'VALIDATE_GENERATED_SHA256':
                 self.sd_boot_validation_type = 2 & 0xffffffff
-                sha256 = Package.calculate_sha256_hash(self.sd_bin)
-                self.sd_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(sha256)][31::-1])
+                # Package.calculate_sha256_hash gives a reversed
+                # digest. It need to be reversed back to a normal
+                # sha256 digest.
+                self.sd_boot_validation_bytes = Package.calculate_sha256_hash(self.sd_bin)[::-1]
             elif sd_boot_validation_type == 'VALIDATE_ECDSA_P256_SHA256':
                 self.sd_boot_validation_type = 3 & 0xffffffff
-                ecdsa = Package.sign_firmware(key_file, self.sd_bin)
-                self.sd_boot_validation_bytes = bytearray([int(binascii.hexlify(i), 16) for i in list(ecdsa)])
+                self.sd_boot_validation_bytes = Package.sign_firmware(key_file, self.sd_bin)
             else:  # This also covers 'NO_VALIDATION_CASE'
                 self.sd_boot_validation_type = 0 & 0xffffffff
-                self.sd_boot_validation_bytes = bytearray(0)
+                self.sd_boot_validation_bytes = bytes(0)
         else:
             self.sd_sz = 0x0 & 0xffffffff
             self.sd_boot_validation_type = 0 & 0xffffffff
-            self.sd_boot_validation_bytes = bytearray(0)
+            self.sd_boot_validation_bytes = bytes(0)
 
         # additional harcoded values
         self.bank_layout = 0x0 & 0xffffffff

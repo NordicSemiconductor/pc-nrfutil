@@ -1,15 +1,14 @@
-six ~= 1.9
-pyserial ~= 3.0
-enum34 ~= 1.0
+antlib == 1.1b0.post0; sys_platform == 'win32'
 click ~= 7.0
-ecdsa ~= 0.13.0
-behave ~= 1.0
-protobuf ~= 3.6
-pc_ble_driver_py ~= 0.11.4
-tqdm ~= 4.25
-piccata ~= 1.0
-pyspinel == 1.0.0a3
-intelhex ~= 2.2
-pyyaml >= 4.2b1
 crcmod ~= 1.7
+ecdsa ~= 0.13.2
+intelhex ~= 2.2
 libusb1 ~= 1.7
+pc_ble_driver_py == 0.12.0
+piccata # FIXME: Specify version constraint when piccata with py3 support becomes available.
+protobuf ~= 3.8
+pyserial ~= 3.0
+pyspinel == 1.0.0a3
+pywin32 == 225; sys_platform == 'win32'
+pyyaml ~= 5.1
+tqdm ~= 4.36

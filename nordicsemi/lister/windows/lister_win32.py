@@ -40,8 +40,8 @@ from nordicsemi.lister.lister_backend import AbstractLister
 from nordicsemi.lister.enumerated_device import EnumeratedDevice
 
 if sys.platform == 'win32':
-    from constants import DIGCF_PRESENT, DEVPKEY, DIGCF_DEVICEINTERFACE
-    from structures import GUID, DeviceInfoData, ctypesInternalGUID
+    from .constants import DIGCF_PRESENT, DEVPKEY, DIGCF_DEVICEINTERFACE
+    from .structures import GUID, DeviceInfoData, ctypesInternalGUID
 
     import ctypes
     from ctypes.wintypes import *
