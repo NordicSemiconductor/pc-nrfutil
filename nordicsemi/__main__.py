@@ -197,6 +197,20 @@ class OptionRequiredIf(click.Option):
             raise click.MissingParameter(ctx=ctx, param=self, message=msg)
         return value
 
+class ShowHelpOnMissingOption(click.Command):
+    def __call__(self, *args, **kwargs):
+        try:
+            return super(ShowHelpOnMissingOption, self).__call__(*args, standalone_mode=False, **kwargs)
+        except click.MissingParameter as e:
+            e.ctx = e.cmd = None
+            e.show(file=sys.stdout)
+            click.echo()
+            try:
+                super(ShowHelpOnMissingOption, self).__call__(['--help'])
+            except SystemExit:
+                sys.exit(e.exit_code)
+
+
 @click.group()
 @click.option('-v', '--verbose',
               help='Increase verbosity of output. Can be specified more than once (up to -v -v -v -v).',
@@ -1010,7 +1024,8 @@ def do_serial(package, port, connect_delay, flow_control, packet_receipt_notific
 
 @dfu.command(short_help='Update the firmware on a device over a USB serial connection. The DFU '
                         'target must be a chip with USB pins (i.e. nRF52840) and provide a USB ACM '
-                        'CDC serial interface.')
+                        'CDC serial interface.',
+             cls=ShowHelpOnMissingOption)
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
@@ -1050,7 +1065,8 @@ def usb_serial(package, port, connect_delay, flow_control, packet_receipt_notifi
               timeout)
 
 
-@dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART.")
+@dfu.command(short_help="Update the firmware on a device over a UART serial connection. The DFU target must be a chip using digital I/O pins as an UART.",
+             cls=ShowHelpOnMissingOption)
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
@@ -1110,7 +1126,8 @@ def get_port_by_snr(snr):
         raise NordicSemiException('board not found')
     return serial_port
 
-@dfu.command(short_help="Update the firmware on a device over a BLE connection.")
+@dfu.command(short_help="Update the firmware on a device over a BLE connection.",
+             cls=ShowHelpOnMissingOption)
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
@@ -1204,7 +1221,8 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
     click.echo("Device programmed.")
 
 
-@dfu.command(short_help="Update the firmware on a device over an ANT connection.")
+@dfu.command(short_help="Update the firmware on a device over an ANT connection.",
+             cls=ShowHelpOnMissingOption)
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
@@ -1301,7 +1319,8 @@ def convert_version_string_to_int(s):
     js = [10000, 100, 1]
     return sum([js[i] * int(numbers[i]) for i in range(3)])
 
-@dfu.command(short_help="Update the firmware on a device over a Thread connection.")
+@dfu.command(short_help="Update the firmware on a device over a Thread connection.",
+             cls=ShowHelpOnMissingOption)
 @click.option('-pkg', '--package',
               help='Filename of the DFU package.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
@@ -1442,7 +1461,8 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
     finally:
         transport.close()
 
-@dfu.command(short_help="Update the firmware on a device over a Zigbee connection.")
+@dfu.command(short_help="Update the firmware on a device over a Zigbee connection.",
+             cls=ShowHelpOnMissingOption)
 @click.option('-f', '--file',
               help='Filename of the Zigbee OTA Upgrade file.',
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False),
