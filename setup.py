@@ -167,7 +167,7 @@ setup(
 
         'License :: Other/Proprietary License',
 
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.7',
     ],
     keywords = 'nordic nrf51 nrf52 ble bluetooth dfu ota softdevice serialization nrfutil pc-nrfutil',
     cmdclass={

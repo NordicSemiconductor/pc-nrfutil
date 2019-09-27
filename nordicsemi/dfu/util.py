@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -44,7 +44,7 @@ from enum import Enum
 class NordicEnum(Enum):
   @classmethod
   def tostring(cls, val):
-    for k,v in vars(cls).iteritems():
+    for k,v in vars(cls).items():
         if v==val:
             return k
 
@@ -66,7 +66,7 @@ def query_func(question, default=False):
 
     while True:
         print("%s %s" % (question, prompt))
-        choice = raw_input().lower()
+        choice = input().lower()
         if choice == '':
             return default
         elif choice in valid:

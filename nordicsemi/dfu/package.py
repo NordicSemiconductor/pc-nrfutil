@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -241,11 +241,11 @@ class Package(object):
         self.zip_file = filename
         self.zip_dir  = os.path.join(self.work_dir, 'unpacked_zip')
         self.manifest = Package.unpack_package(filename, self.zip_dir)
-        
+
         self.rm_work_dir(preserve_work_dir)
 
     def image_str(self, index, hex_type, img):
-        type_strs = {HexType.SD_BL : "sd_bl", 
+        type_strs = {HexType.SD_BL : "sd_bl",
                     HexType.SOFTDEVICE : "softdevice",
                     HexType.BOOTLOADER : "bootloader",
                     HexType.APPLICATION : "application",
@@ -329,7 +329,7 @@ class Package(object):
         return s
 
     def __str__(self):
-        
+
         imgs = ""
         i = 0
         if self.manifest.softdevice_bootloader:
@@ -406,7 +406,7 @@ DFU Package: <{0}>:
             sd_bin_path = os.path.join(self.work_dir, sd_bin)
             sd_bin_created = True
 
-        for key, firmware_data in self.firmwares_data.iteritems():
+        for key, firmware_data in self.firmwares_data.items():
 
             # Normalize the firmware file and store it in the work directory
             firmware_data[FirmwareKeys.BIN_FILENAME] = \
@@ -439,7 +439,7 @@ DFU Package: <{0}>:
                     else:
                         boot_validation_bytes_array.append(Package.sign_firmware(self.key_file, bin_file_path))
                 else:
-                    boot_validation_bytes_array.append('')
+                    boot_validation_bytes_array.append(b'')
 
 
             init_packet = InitPacketPB(
@@ -599,7 +599,7 @@ DFU Package: <{0}>:
         if firmware_type == HexType.SD_BL:
             self.firmwares_data[firmware_type][FirmwareKeys.SD_SIZE] = sd_size
             self.firmwares_data[firmware_type][FirmwareKeys.BL_SIZE] = bl_size
-        
+
         if firmware_version is not None:
             self.firmwares_data[firmware_type][FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION] = firmware_version
 

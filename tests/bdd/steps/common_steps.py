@@ -35,7 +35,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from Queue import Queue
+from queue import Queue
 import logging
 import os
 import subprocess

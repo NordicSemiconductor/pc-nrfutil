@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -75,7 +75,7 @@ class Signing(object):
         """
         self.sk = SigningKey.generate(curve=NIST256p)
 
-        with open(filename, "w") as sk_file:
+        with open(filename, "wb") as sk_file:
             sk_file.write(self.sk.to_pem())
 
     def load_key(self, filename):
@@ -88,8 +88,6 @@ class Signing(object):
             sk_pem = sk_file.read()
 
         self.sk = SigningKey.from_pem(sk_pem)
-
-        sk_hex = "".join(c.encode('hex') for c in self.sk.to_string())
         return default_sk.to_string() == self.sk.to_string()
 
     def sign(self, init_packet_data):
@@ -166,17 +164,13 @@ class Signing(object):
         if self.sk is None:
             raise IllegalStateException("Can't get key. No key created/loaded")
 
-        sk_hexlify = binascii.hexlify(self.sk.to_string())
+        # Reverse the key for display. This emulates a memory
+        # dump of the key interpreted a 256bit litte endian
+        # integer.
+        key = self.sk.to_string()
+        displayed_key = key[::-1].hex()
 
-        sk_hexlify_list = []
-        for i in xrange(len(sk_hexlify)-2, -2, -2):
-            sk_hexlify_list.append(sk_hexlify[i:i+2])
-
-        sk_hexlify_list_str = ''.join(sk_hexlify_list)
-
-        vk_hex = "Private (signing) key sk:\n{0}".format(sk_hexlify_list_str)
-
-        return vk_hex
+        return f"Private (signing) key sk:\n{displayed_key}"
 
     def get_vk_hex(self):
         """
@@ -185,21 +179,13 @@ class Signing(object):
         if self.sk is None:
             raise IllegalStateException("Can't get key. No key created/loaded")
 
-        vk = self.sk.get_verifying_key()
-        vk_hexlify = binascii.hexlify(vk.to_string())
+        # Reverse the two halves of key for display. This
+        # emulates a memory dump of the key interpreted as two
+        # 256bit litte endian integers.
+        key = self.sk.get_verifying_key().to_string()
+        displayed_key = (key[:32][::-1] + key[32:][::-1]).hex()
 
-        vk_hexlify_list = []
-        for i in xrange(len(vk_hexlify[0:64])-2, -2, -2):
-            vk_hexlify_list.append(vk_hexlify[i:i+2])
-
-        for i in xrange(len(vk_hexlify)-2, 62, -2):
-            vk_hexlify_list.append(vk_hexlify[i:i+2])
-
-        vk_hexlify_list_str = ''.join(vk_hexlify_list)
-
-        vk_hex = "Public (verification) key pk:\n{0}".format(vk_hexlify_list_str)
-
-        return vk_hex
+        return f"Public (verification) key pk:\n{displayed_key}"
 
     def wrap_code(self, key_code, dbg):
 
@@ -214,7 +200,7 @@ class Signing(object):
 /* This file was generated with a throwaway private key, that is only inteded for a debug version of the DFU project.
   Please see https://github.com/NordicSemiconductor/pc-nrfutil/blob/master/README.md to generate a valid public key. */
 
-#ifdef NRF_DFU_DEBUG_VERSION 
+#ifdef NRF_DFU_DEBUG_VERSION
 """
         dbg_footer="""
 #else
@@ -235,20 +221,12 @@ class Signing(object):
         if self.sk is None:
             raise IllegalStateException("Can't get key. No key created/loaded")
 
-        vk = self.sk.get_verifying_key()
-        vk_hex = binascii.hexlify(vk.to_string())
+        to_two_digit_hex_with_0x = '0x{0:02x}'.format
 
-        vk_x_separated = ""
-        vk_x_str = vk_hex[0:64]
-        for i in xrange(0, len(vk_x_str), 2):
-            vk_x_separated = "0x" + vk_x_str[i:i+2] + ", " + vk_x_separated
+        key = self.sk.get_verifying_key().to_string()
+        vk_x_separated = ', '.join(map(to_two_digit_hex_with_0x, key[:64]))
+        vk_y_separated = ', '.join(map(to_two_digit_hex_with_0x, key[64:]))
 
-        vk_y_separated = ""
-        vk_y_str = vk_hex[64:128]
-        for i in xrange(0, len(vk_y_str), 2):
-            vk_y_separated = "0x" + vk_y_str[i:i+2] + ", " + vk_y_separated
-        vk_y_separated = vk_y_separated[:-2]
-        
         key_code ="""
 /** @brief Public key used to verify DFU images */
 __ALIGN(4) const uint8_t pk[64] =

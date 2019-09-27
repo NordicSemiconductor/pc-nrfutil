@@ -169,7 +169,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           sd_file=None,
                           key_file=None)
 
-        self.assertEqual(len(settings.ihex.todict().keys()), len(settings_raw.ihex.todict().keys()) * 2)
+        self.assertEqual(len(list(settings.ihex.todict().keys())), len(list(settings_raw.ihex.todict().keys())) * 2)
 
     def test_generate_with_backup_page_check_values(self):
         settings = BLDFUSettings()
@@ -186,8 +186,8 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           sd_file=None,
                           key_file=None)
 
-        backup_dict = {(k + settings.bl_sett_backup_offset): v for k, v in settings.ihex.todict().items() if k < settings.bl_sett_addr}
-        settings_dict = {k: v for k, v in settings.ihex.todict().items() if k >= settings.bl_sett_addr}
+        backup_dict = {(k + settings.bl_sett_backup_offset): v for k, v in list(settings.ihex.todict().items()) if k < settings.bl_sett_addr}
+        settings_dict = {k: v for k, v in list(settings.ihex.todict().items()) if k >= settings.bl_sett_addr}
         self.assertEqual(backup_dict, settings_dict)
 
     def test_generate_with_backup_page_custom_address(self):
@@ -206,7 +206,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           key_file=None)
 
         self.assertEqual(settings.backup_address, 0x0006F000)
-        self.assertTrue(0x0006F000 in settings.ihex.todict().keys())
+        self.assertTrue(0x0006F000 in list(settings.ihex.todict().keys()))
 
     def test_generate_with_backup_page_default_address(self):
         settings = BLDFUSettings()
@@ -224,7 +224,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           key_file=None)
 
         self.assertEqual(settings.backup_address, (0x0006F000 - settings.bl_sett_backup_offset))
-        self.assertTrue((0x0006F000 - settings.bl_sett_backup_offset) in settings.ihex.todict().keys())
+        self.assertTrue((0x0006F000 - settings.bl_sett_backup_offset) in list(settings.ihex.todict().keys()))
 
 class TestBLDFUSettingsV2(unittest.TestCase):
     def setUp(self):
@@ -369,7 +369,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           sd_file=None,
                           key_file=None)
 
-        self.assertEqual(len(settings.ihex.todict().keys()), len(settings_raw.ihex.todict().keys()) * 2)
+        self.assertEqual(len(list(settings.ihex.todict().keys())), len(list(settings_raw.ihex.todict().keys())) * 2)
 
     def test_generate_with_backup_page_check_values(self):
         settings = BLDFUSettings()
@@ -386,8 +386,8 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           sd_file=None,
                           key_file=None)
 
-        backup_dict = {(k + settings.bl_sett_backup_offset): v for k, v in settings.ihex.todict().items() if k < settings.bl_sett_addr}
-        settings_dict = {k: v for k, v in settings.ihex.todict().items() if k >= settings.bl_sett_addr}
+        backup_dict = {(k + settings.bl_sett_backup_offset): v for k, v in list(settings.ihex.todict().items()) if k < settings.bl_sett_addr}
+        settings_dict = {k: v for k, v in list(settings.ihex.todict().items()) if k >= settings.bl_sett_addr}
         self.assertEqual(backup_dict, settings_dict)
 
     def test_generate_with_backup_page_custom_address(self):
@@ -406,7 +406,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           key_file=None)
 
         self.assertEqual(settings.backup_address, 0x0006F000)
-        self.assertTrue(0x0006F000 in settings.ihex.todict().keys())
+        self.assertTrue(0x0006F000 in list(settings.ihex.todict().keys()))
 
     def test_generate_with_backup_page_default_address(self):
         settings = BLDFUSettings()
@@ -424,7 +424,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           key_file=None)
 
         self.assertEqual(settings.backup_address, (0x0006F000 - settings.bl_sett_backup_offset))
-        self.assertTrue((0x0006F000 - settings.bl_sett_backup_offset) in settings.ihex.todict().keys())
+        self.assertTrue((0x0006F000 - settings.bl_sett_backup_offset) in list(settings.ihex.todict().keys()))
 
     def test_generate_with_app_boot_validation_crc(self):
         settings = BLDFUSettings()
@@ -464,8 +464,8 @@ class TestBLDFUSettingsV2(unittest.TestCase):
         self.assertEqual(0x1316CFD0, settings.crc)
         self.assertEqual(0xF78E451E, settings.boot_validation_crc)
         self.assertEqual(0x02, settings.app_boot_validation_type)
-        self.assertEqual('036F52C9EBB53819D6E2B6FB57803823E864783B04D7331B46C0B5897CA9F1C7',
-                         binascii.hexlify(settings.app_boot_validation_bytes).upper())
+        self.assertEqual(bytes.fromhex('036F52C9EBB53819D6E2B6FB57803823E864783B04D7331B46C0B5897CA9F1C7'),
+                         settings.app_boot_validation_bytes)
 
     def test_generate_with_app_boot_validation_ecdsa(self):
         settings = BLDFUSettings()
@@ -525,8 +525,8 @@ class TestBLDFUSettingsV2(unittest.TestCase):
         self.assertEqual(0x4637019F, settings.crc)
         self.assertEqual(0x9C761426, settings.boot_validation_crc)
         self.assertEqual(0x02, settings.sd_boot_validation_type)
-        self.assertEqual('036F52C9EBB53819D6E2B6FB57803823E864783B04D7331B46C0B5897CA9F1C7',
-                         binascii.hexlify(settings.sd_boot_validation_bytes).upper())
+        self.assertEqual(bytes.fromhex('036F52C9EBB53819D6E2B6FB57803823E864783B04D7331B46C0B5897CA9F1C7'),
+                         settings.sd_boot_validation_bytes)
 
     def test_generate_with_sd_boot_validation_ecdsa(self):
         settings = BLDFUSettings()
