@@ -82,7 +82,7 @@ class ProductionConfig(object):
 
             # Handle the Install code
             if "install_code" not in self._yaml:
-                self._parsed_values["install_code"] = str(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+                self._parsed_values["install_code"] = bytes(16)
                 self._ic_crc = 0
             else:
                 self._parsed_values["install_code"] = bytes.fromhex(self._yaml["install_code"])
