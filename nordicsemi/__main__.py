@@ -338,7 +338,8 @@ def generate(hex_file,
         if not os.path.isfile(application):
             raise click.FileError(application, hint="Application file not found")
         if application_version_internal is None:
-            raise click.UsageError("Missing application version.")
+            raise click.UsageError('--application-version or --application-version-string'
+                   ' required with application image.')
 
     if (no_backup is not None) and (backup_address is not None):
         raise click.UsageError("Bootloader DFU settings backup page cannot be specified if backup is disabled.")
@@ -555,13 +556,13 @@ def pkg():
               help='The SoftDevice firmware file.',
               type=click.STRING)
 @click.option('--sd-boot-validation',
-              help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for Softdevice.',
               required=False,
-              type=click.STRING)
+              type=click.Choice(BOOT_VALIDATION_ARGS))
 @click.option('--app-boot-validation',
-              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for application.',
               required=False,
-              type=click.STRING)
+              type=click.Choice(BOOT_VALIDATION_ARGS))
 @click.option('--key-file',
               help='The private (signing) key in PEM fomat.',
               required=False,
@@ -651,8 +652,7 @@ def generate(zipfile,
 
     # Check combinations
     if bootloader is not None and application is not None and softdevice is None:
-        click.echo("Error: Invalid combination: use two .zip packages instead.")
-        return
+        raise click.UsageError("Invalid combination: use two .zip packages instead.")
 
     if debug_mode is None:
         debug_mode = False
@@ -706,12 +706,10 @@ def generate(zipfile,
 
     # Initial consistency checks
     if application_version_internal is not None and application is None:
-        click.echo("Error: Application version with no image.")
-        return
+        raise click.UsageError("Application version with no image.")
 
     if bootloader_version is not None and bootloader is None:
-        click.echo("Error: Bootloader version with no image.")
-        return
+        raise click.UsageError("Bootloader version with no image.")
 
     if debug_mode:
         display_debug_warning()
@@ -728,21 +726,17 @@ def generate(zipfile,
 
     # Version checks
     if hw_version is None:
-        click.echo("Error: --hw-version required.")
-        return
+        raise click.UsageError("--hw-version required.")
 
     if sd_req is None and external_app is False:
-        click.echo("Error: --sd-req required.")
-        return
+        raise click.UsageError("--sd-req required.")
 
     if application is not None and application_version_internal is None:
-        click.echo('Error: --application-version or --application-version-string'
+        raise click.UsageError('--application-version or --application-version-string'
                    ' required with application image.')
-        return
 
     if bootloader is not None and bootloader_version is None:
-        click.echo("Error: --bootloader-version required with bootloader image.")
-        return
+        raise click.UsageError("--bootloader-version required with bootloader image.")
 
     # Zigbee only allows App, SoftDevice (minor), bootloader or Softdevice+bootloader
     if zigbee:
@@ -751,24 +745,19 @@ def generate(zipfile,
                        ' for Zigbee package generation (not a combination).')
 
     if application is not None and softdevice is not None and sd_id is None:
-        click.echo("Error: --sd-id required with softdevice and application images.")
-        return
+        raise click.UsageError("--sd-id required with softdevice and application images.")
 
     if application is None and external_app is True:
-        click.echo("Error: --external-app requires an application.")
-        return
+        raise click.UsageError("--external-app requires an application.")
 
     if application is not None and softdevice is not None and external_app is True:
-        click.echo("Error: --external-app is only possible for application only DFU packages.")
-        return
+        raise click.UsageError("--external-app is only possible for application only DFU packages.")
 
     if application is not None and bootloader is not None and external_app is True:
-        click.echo("Error: --external-app is only possible for application only DFU packages.")
-        return
+        raise click.UsageError("--external-app is only possible for application only DFU packages.")
 
     if zigbee and zigbee_ota_hw_version is None:
-        click.echo("Error: --zigbee-ota-hw-version is required.")
-        return
+        raise click.UsageError("--zigbee-ota-hw-version is required.")
 
     if zigbee and zigbee_ota_fw_version is None:
         zigbee_ota_fw_version = 0
@@ -810,14 +799,6 @@ def generate(zipfile,
         default_key = signer.load_key(key_file)
         if default_key:
             display_sec_warning()
-
-    if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
-
-    if app_boot_validation and (app_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
 
     if zigbee_comment is None:
         zigbee_comment = ''
