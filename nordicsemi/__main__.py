@@ -392,8 +392,7 @@ def display(hex_file):
     try:
         sett.fromhexfile(hex_file)
     except NordicSemiException as err:
-        click.echo(err)
-        return
+        raise click.UsageError(err)
 
     click.echo("{0}".format(str(sett)))
 
@@ -415,8 +414,7 @@ def generate(key_file):
 
     if os.path.exists(key_file):
         if not query_func("File found at %s. Do you want to overwrite the file?" % key_file):
-            click.echo('Key generation aborted.')
-            return
+            raise click.UsageError('Key generation aborted.')
 
     signer.gen_key(key_file)
     click.echo("Generated private key and stored it in: %s" % key_file)
@@ -452,8 +450,7 @@ def display(key_file, key, format, out_file):
         dbg = False
 
     if format == "code" and key == "sk":
-        click.echo("Displaying the private key as code is not available.")
-        return
+        raise click.UsageError("Displaying the private key as code is not available.")
 
     if key == "pk":
         kstr = signer.get_vk(format, dbg)
@@ -685,8 +682,7 @@ def generate(zipfile,
 
     # Convert multiple value into a single instance
     if len(sd_req) > 1:
-        click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
-        return
+        raise click.UsageError("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
     elif len(sd_req) == 0:
         sd_req = None
     else:
@@ -695,8 +691,7 @@ def generate(zipfile,
             sd_req = None
 
     if len(sd_id) > 1:
-        click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-id 0xXXXX,0xYYYY,...")
-        return
+        raise click.UsageError("Please specify SoftDevice requirements as a comma-separated list: --sd-id 0xXXXX,0xYYYY,...")
     elif len(sd_id) == 0:
         sd_id = None
     else:
@@ -821,16 +816,13 @@ def generate(zipfile,
         inner_external_app = False
 
     if zigbee_ota_min_hw_version is not None and zigbee_ota_min_hw_version > 0xFFFF:
-        click.echo('Error: zigbee-ota-min-hw-version exceeds 2-byte long integer.')
-        return
+        raise click.UsageError('zigbee-ota-min-hw-version exceeds 2-byte long integer.')
 
     if zigbee_ota_max_hw_version is not None and zigbee_ota_max_hw_version > 0xFFFF:
-        click.echo('Error: zigbee-ota-max-hw-version exceeds 2-byte long integer.')
-        return
+        raise click.UsageError('zigbee-ota-max-hw-version exceeds 2-byte long integer.')
 
     if zigbee and (hw_version > 0xFFFF):
-        click.echo('Error: hw-version exceeds 2-byte long integer.')
-        return
+        raise click.UsageError('hw-version exceeds 2-byte long integer.')
 
     # Warn user if minimal/maximum zigbee ota hardware version are not correct:
     #   * only one of them is given
@@ -1114,9 +1106,8 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
     if address:
         address = address.replace(':', '')
         if not re.match('^[0-9A-Fa-f]{12}$', address):
-            click.echo('Invalid address. Must be exactly 6 bytes HEX, '
+            raise click.UsageError('Invalid address. Must be exactly 6 bytes HEX, '
                        'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.')
-            return
 
     if port is None and jlink_snr is not None:
         port = get_port_by_snr(jlink_snr)
@@ -1124,8 +1115,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
     elif port is None:
         port = enumerate_ports()
         if port is None:
-            click.echo("\nNo Segger USB CDC ports found, please connect your board.")
-            return
+            raise click.UsageError("\nNo Segger USB CDC ports found, please connect your board.")
 
     if flash_connectivity:
         flasher = Flasher(serial_port=port, snr = jlink_snr)
@@ -1449,8 +1439,7 @@ def production_config(input, output, offset):
     try:
         pc = ProductionConfig(input)
     except ProductionConfigWrongException:
-        click.echo("Error: Input YAML file format wrong. Please see the example YAML file in the documentation.")
-        return
+        raise click.UsageError("Input YAML file format wrong. Please see the example YAML file in the documentation.")
 
     try:
         if offset is None:
@@ -1459,8 +1448,7 @@ def production_config(input, output, offset):
             pc.generate(output, offset=offset)
         click.echo("Production Config hexfile generated.")
     except ProductionConfigTooLargeException as e:
-        click.echo("Error: Production Config too large: " + str(e.length) + " bytes")
-        return
+        raise click.UsageError("Production Config too large: " + str(e.length) + " bytes")
 
 if __name__ == '__main__':
     cli()
