@@ -245,7 +245,8 @@ def settings():
 @click.argument('hex_file', required=True, type=click.Path())
 @click.option('--family',
               help='nRF IC family: NRF51 or NRF52 or NRF52QFAB or NRF52810 or NRF52840',
-              type=click.Choice(['NRF51', 'NRF52', 'NRF52QFAB', 'NRF52810', 'NRF52840']))
+              type=click.Choice(['NRF51', 'NRF52', 'NRF52QFAB', 'NRF52810', 'NRF52840']),
+              required=True)
 @click.option('--application',
               help='The application firmware file. This can be omitted if'
                     'the target IC does not contain an application in flash.'
@@ -259,13 +260,15 @@ def settings():
               type=click.STRING)
 @click.option('--bootloader-version',
               help='The bootloader version.',
-              type=BASED_INT_OR_NONE)
+              type=BASED_INT_OR_NONE,
+              required=True)
 @click.option('--bl-settings-version',
               help='The Bootloader settings version.'
               'Defined in nrf_dfu_types.h, the following apply to released SDKs:'
               '\n|SDK12.0.0 - SDK15.2.0|1|'
               '\n|SDK15.3.0 -          |2|',
-              type=BASED_INT_OR_NONE)
+              type=BASED_INT_OR_NONE,
+              required=True)
 @click.option('--start-address',
               help='Custom start address for the settings page. If not specified, '
                    'then the last page of the flash is used.',
@@ -314,11 +317,6 @@ def generate(hex_file,
              softdevice,
              key_file):
 
-    # Initial consistency checks
-    if family is None:
-        click.echo("Error: IC Family required.")
-        return
-
     # The user can specify the application version with two different
     # formats. As an integer, e.g. 102130, or as a string
     # "10.21.30". Internally we convert to integer.
@@ -334,14 +332,6 @@ def generate(hex_file,
         if application_version_internal is None:
             click.echo("Error: Application version required.")
             return
-
-    if bootloader_version is None:
-        click.echo("Error: Bootloader version required.")
-        return
-
-    if bl_settings_version is None:
-        click.echo("Error: Bootloader DFU settings version required.")
-        return
 
     if (no_backup is not None) and (backup_address is not None):
         click.echo("Error: Bootloader DFU settings backup page cannot be specified if backup is disabled.")
