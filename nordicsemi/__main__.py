@@ -187,6 +187,15 @@ BOOT_VALIDATION_ARGS =\
 ]
 DEFAULT_BOOT_VALIDATION = 'VALIDATE_GENERATED_CRC'
 
+KEY_CHOICE = ['pk', 'sk']
+KEY_FORMAT =\
+[ 
+    'hex',
+    'code',
+    'pem',
+    'dbgcode'
+]
+
 
 class OptionRequiredIf(click.Option):
 
@@ -284,16 +293,16 @@ def settings():
               help='Address of the DFU settings backup page inside flash. '
                    'By default, the backup page address is placed one page below DFU settings. '
                    'The value is precalculated based on configured settings address '
-                   '(<DFU_settings_addrsss> - 0x1000).',
+                   '(<DFU_settings_address> - 0x1000).',
               type=BASED_INT_OR_NONE)
 @click.option('--app-boot-validation',
-              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for application.',
               required=False,
-              type=click.STRING)
+              type=click.Choice(BOOT_VALIDATION_ARGS))
 @click.option('--sd-boot-validation',
-              help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for SoftDevice.',
               required=False,
-              type=click.STRING)
+              type=click.Choice(BOOT_VALIDATION_ARGS))
 @click.option('--softdevice',
               help='The SoftDevice firmware file. Must be given if SD Boot Validation is used.',
               required=False,
@@ -327,15 +336,12 @@ def generate(hex_file,
 
     if application is not None:
         if not os.path.isfile(application):
-            click.echo("Error: Application file not found.")
-            return
+            raise click.FileError(application, hint="Application file not found")
         if application_version_internal is None:
-            click.echo("Error: Application version required.")
-            return
+            raise click.UsageError("Missing application version.")
 
     if (no_backup is not None) and (backup_address is not None):
-        click.echo("Error: Bootloader DFU settings backup page cannot be specified if backup is disabled.")
-        return
+        raise click.UsageError("Bootloader DFU settings backup page cannot be specified if backup is disabled.")
 
     if no_backup is None:
         no_backup = False
@@ -346,30 +352,18 @@ def generate(hex_file,
     if (start_address is not None) and (backup_address is None):
         click.echo("WARNING: Using default offset in order to calculate bootloader settings backup page")
 
-    if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
-
-    if app_boot_validation and (app_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
-
     if bl_settings_version == 1 and (app_boot_validation or sd_boot_validation):
-        click.echo("Error: Bootloader settings version 1 does not support boot validation.")
-        return
+        raise click.UsageError("Bootloader settings version 1 does not support boot validation.")
 
     if (app_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None) or \
         (sd_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
-        click.echo("Error: Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
-        return
+        raise click.UsageError("Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
 
     if app_boot_validation and not application:
-        click.echo("Error: --application hex file must be set when using --app_boot_validation")
-        return
+        raise click.UsageError("--application hex file must be set when using --app_boot_validation")
 
     if sd_boot_validation and not softdevice:
-        click.echo("Error: --softdevice hex file must be set when using --sd_boot_validation")
-        return
+        raise click.UsageError("--softdevice hex file must be set when using --sd_boot_validation")
 
     # Default boot validation cases
     if app_boot_validation is None and application is not None and bl_settings_version == 2:
@@ -430,10 +424,12 @@ def generate(key_file):
 @click.argument('key_file', required=True, type=click.Path())
 @click.option('--key',
               help='(pk|sk) Display the public key (pk) or the private key (sk).',
-              type=click.STRING)
+              type=click.Choice(KEY_CHOICE),
+              required=True)
 @click.option('--format',
               help='(hex|code|pem) Display the key in hexadecimal format (hex), C code (code), or PEM (pem) format.',
-              type=click.STRING)
+              type=click.Choice(KEY_FORMAT),
+              required=True)
 @click.option('--out_file',
               help='If provided, save the output in file out_file.',
               type=click.STRING)
@@ -447,20 +443,6 @@ def display(key_file, key, format, out_file):
     default_key = signer.load_key(key_file)
     if default_key:
         display_sec_warning()
-
-    if not key:
-        click.echo("You must specify a key with --key (pk|sk).")
-        return
-    if key != "pk" and key != "sk":
-        click.echo("Invalid key type. Valid types are (pk|sk).")
-        return
-
-    if not format:
-        click.echo("You must specify a format with --format (hex|code|pem).")
-        return
-    if format != "hex" and format != "code" and format != "pem" and format != "dbgcode":
-        click.echo("Invalid format. Valid formats are (hex|code|pem).")
-        return
 
     if format == "dbgcode":
         format = "code"
