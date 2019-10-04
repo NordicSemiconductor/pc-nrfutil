@@ -342,7 +342,7 @@ def generate(hex_file,
                    ' required with application image.')
 
     if (no_backup is not None) and (backup_address is not None):
-        raise click.UsageError("Bootloader DFU settings backup page cannot be specified if backup is disabled.")
+        raise click.BadParameter("Bootloader DFU settings backup page cannot be specified if backup is disabled.", param_hint='backup_address')
 
     if no_backup is None:
         no_backup = False
@@ -354,7 +354,7 @@ def generate(hex_file,
         click.echo("WARNING: Using default offset in order to calculate bootloader settings backup page")
 
     if bl_settings_version == 1 and (app_boot_validation or sd_boot_validation):
-        raise click.UsageError("Bootloader settings version 1 does not support boot validation.")
+        raise click.BadParameter("Bootloader settings version 1 does not support boot validation.", param_hint='bl_settings_version')
 
     if (app_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None) or \
         (sd_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
@@ -414,7 +414,8 @@ def generate(key_file):
 
     if os.path.exists(key_file):
         if not query_func("File found at %s. Do you want to overwrite the file?" % key_file):
-            raise click.UsageError('Key generation aborted.')
+            click.echo('Key generation aborted.')
+            return
 
     signer.gen_key(key_file)
     click.echo("Generated private key and stored it in: %s" % key_file)
@@ -682,7 +683,7 @@ def generate(zipfile,
 
     # Convert multiple value into a single instance
     if len(sd_req) > 1:
-        raise click.UsageError("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
+        raise click.BadParameter("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...", param_hint='sd_req')
     elif len(sd_req) == 0:
         sd_req = None
     else:
@@ -691,7 +692,7 @@ def generate(zipfile,
             sd_req = None
 
     if len(sd_id) > 1:
-        raise click.UsageError("Please specify SoftDevice requirements as a comma-separated list: --sd-id 0xXXXX,0xYYYY,...")
+        raise click.BadParameter("Please specify SoftDevice requirements as a comma-separated list: --sd-id 0xXXXX,0xYYYY,...", param_hint='sd_req')
     elif len(sd_id) == 0:
         sd_id = None
     else:
@@ -816,13 +817,13 @@ def generate(zipfile,
         inner_external_app = False
 
     if zigbee_ota_min_hw_version is not None and zigbee_ota_min_hw_version > 0xFFFF:
-        raise click.UsageError('zigbee-ota-min-hw-version exceeds 2-byte long integer.')
+        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='zigbee-ota-min-hw-version ')
 
     if zigbee_ota_max_hw_version is not None and zigbee_ota_max_hw_version > 0xFFFF:
-        raise click.UsageError('zigbee-ota-max-hw-version exceeds 2-byte long integer.')
+        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='zigbee-ota-max-hw-version ')
 
     if zigbee and (hw_version > 0xFFFF):
-        raise click.UsageError('hw-version exceeds 2-byte long integer.')
+        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='hw-version')
 
     # Warn user if minimal/maximum zigbee ota hardware version are not correct:
     #   * only one of them is given
@@ -1106,8 +1107,8 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
     if address:
         address = address.replace(':', '')
         if not re.match('^[0-9A-Fa-f]{12}$', address):
-            raise click.UsageError('Invalid address. Must be exactly 6 bytes HEX, '
-                       'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.')
+            raise click.BadParameter('Must be exactly 6 bytes HEX, '
+                       'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.', param_hint='address')
 
     if port is None and jlink_snr is not None:
         port = get_port_by_snr(jlink_snr)
