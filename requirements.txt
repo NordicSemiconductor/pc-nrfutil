@@ -5,7 +5,7 @@ ecdsa ~= 0.13.2
 intelhex ~= 2.2
 libusb1 ~= 1.7
 pc_ble_driver_py == 0.12.0
-piccata # FIXME: Specify version constraint when piccata with py3 support becomes available.
+piccata ~= 2.0
 protobuf ~= 3.8
 pyserial ~= 3.0
 pyspinel == 1.0.0a3
