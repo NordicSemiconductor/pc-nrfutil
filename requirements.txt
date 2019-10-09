@@ -1,14 +1,13 @@
-antlib == 1.1b0.post0; sys_platform == 'win32'
-click ~= 7.0
-crcmod ~= 1.7
-ecdsa ~= 0.13.2
-intelhex ~= 2.2
-libusb1 ~= 1.7
-pc_ble_driver_py == 0.12.0
-piccata ~= 2.0
-protobuf ~= 3.8
-pyserial ~= 3.0
-pyspinel == 1.0.0a3
-pywin32 == 225; sys_platform == 'win32'
-pyyaml ~= 5.1
-tqdm ~= 4.36
+antlib >= 1.1b0.post0; sys_platform == 'win32'
+click
+crcmod
+ecdsa
+intelhex
+libusb1
+pc_ble_driver_py >= 0.13
+piccata
+protobuf
+pyserial
+pyspinel >= 1.0.0a3
+pyyaml
+tqdm
