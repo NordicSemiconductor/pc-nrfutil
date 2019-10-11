@@ -168,7 +168,7 @@ BASED_INT_OR_NONE = BasedIntOrNoneParamType()
 class BasedIntParamType(BasedIntOrNoneParamType):
     name = 'Integer'
 
-BASED_INT= BasedIntParamType()
+BASED_INT = BasedIntParamType()
 
 class TextOrNoneParamType(click.ParamType):
     name = 'Text'
@@ -178,14 +178,21 @@ class TextOrNoneParamType(click.ParamType):
 
 TEXT_OR_NONE = TextOrNoneParamType()
 
-BOOT_VALIDATION_ARGS =\
-[
+BOOT_VALIDATION_ARGS = [
     'NO_VALIDATION',
     'VALIDATE_GENERATED_CRC',
     'VALIDATE_GENERATED_SHA256',
     'VALIDATE_ECDSA_P256_SHA256',
 ]
 DEFAULT_BOOT_VALIDATION = 'VALIDATE_GENERATED_CRC'
+
+KEY_CHOICE = ['pk', 'sk']
+KEY_FORMAT = [
+    'hex',
+    'code',
+    'pem',
+    'dbgcode',
+]
 
 
 class OptionRequiredIf(click.Option):
@@ -245,7 +252,8 @@ def settings():
 @click.argument('hex_file', required=True, type=click.Path())
 @click.option('--family',
               help='nRF IC family: NRF51 or NRF52 or NRF52QFAB or NRF52810 or NRF52840',
-              type=click.Choice(['NRF51', 'NRF52', 'NRF52QFAB', 'NRF52810', 'NRF52840']))
+              type=click.Choice(['NRF51', 'NRF52', 'NRF52QFAB', 'NRF52810', 'NRF52840']),
+              required=True)
 @click.option('--application',
               help='The application firmware file. This can be omitted if'
                     'the target IC does not contain an application in flash.'
@@ -259,13 +267,15 @@ def settings():
               type=click.STRING)
 @click.option('--bootloader-version',
               help='The bootloader version.',
-              type=BASED_INT_OR_NONE)
+              type=BASED_INT_OR_NONE,
+              required=True)
 @click.option('--bl-settings-version',
               help='The Bootloader settings version.'
               'Defined in nrf_dfu_types.h, the following apply to released SDKs:'
               '\n|SDK12.0.0 - SDK15.2.0|1|'
               '\n|SDK15.3.0 -          |2|',
-              type=BASED_INT_OR_NONE)
+              type=BASED_INT_OR_NONE,
+              required=True)
 @click.option('--start-address',
               help='Custom start address for the settings page. If not specified, '
                    'then the last page of the flash is used.',
@@ -281,16 +291,16 @@ def settings():
               help='Address of the DFU settings backup page inside flash. '
                    'By default, the backup page address is placed one page below DFU settings. '
                    'The value is precalculated based on configured settings address '
-                   '(<DFU_settings_addrsss> - 0x1000).',
+                   '(<DFU_settings_address> - 0x1000).',
               type=BASED_INT_OR_NONE)
 @click.option('--app-boot-validation',
-              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for application.',
               required=False,
-              type=click.STRING)
+              type=click.Choice(BOOT_VALIDATION_ARGS))
 @click.option('--sd-boot-validation',
-              help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for SoftDevice.',
               required=False,
-              type=click.STRING)
+              type=click.Choice(BOOT_VALIDATION_ARGS))
 @click.option('--softdevice',
               help='The SoftDevice firmware file. Must be given if SD Boot Validation is used.',
               required=False,
@@ -314,11 +324,6 @@ def generate(hex_file,
              softdevice,
              key_file):
 
-    # Initial consistency checks
-    if family is None:
-        click.echo("Error: IC Family required.")
-        return
-
     # The user can specify the application version with two different
     # formats. As an integer, e.g. 102130, or as a string
     # "10.21.30". Internally we convert to integer.
@@ -329,23 +334,13 @@ def generate(hex_file,
 
     if application is not None:
         if not os.path.isfile(application):
-            click.echo("Error: Application file not found.")
-            return
+            raise click.FileError(application, hint="Application file not found")
         if application_version_internal is None:
-            click.echo("Error: Application version required.")
-            return
-
-    if bootloader_version is None:
-        click.echo("Error: Bootloader version required.")
-        return
-
-    if bl_settings_version is None:
-        click.echo("Error: Bootloader DFU settings version required.")
-        return
+            raise click.UsageError('--application-version or --application-version-string'
+                                   ' required with application image.')
 
     if (no_backup is not None) and (backup_address is not None):
-        click.echo("Error: Bootloader DFU settings backup page cannot be specified if backup is disabled.")
-        return
+        raise click.BadParameter("Bootloader DFU settings backup page cannot be specified if backup is disabled.", param_hint='backup_address')
 
     if no_backup is None:
         no_backup = False
@@ -356,30 +351,18 @@ def generate(hex_file,
     if (start_address is not None) and (backup_address is None):
         click.echo("WARNING: Using default offset in order to calculate bootloader settings backup page")
 
-    if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
-
-    if app_boot_validation and (app_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
-
     if bl_settings_version == 1 and (app_boot_validation or sd_boot_validation):
-        click.echo("Error: Bootloader settings version 1 does not support boot validation.")
-        return
+        raise click.BadParameter("Bootloader settings version 1 does not support boot validation.", param_hint='bl_settings_version')
 
     if (app_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None) or \
         (sd_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
-        click.echo("Error: Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
-        return
+        raise click.UsageError("Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
 
     if app_boot_validation and not application:
-        click.echo("Error: --application hex file must be set when using --app_boot_validation")
-        return
+        raise click.UsageError("--application hex file must be set when using --app_boot_validation")
 
     if sd_boot_validation and not softdevice:
-        click.echo("Error: --softdevice hex file must be set when using --sd_boot_validation")
-        return
+        raise click.UsageError("--softdevice hex file must be set when using --sd_boot_validation")
 
     # Default boot validation cases
     if app_boot_validation is None and application is not None and bl_settings_version == 2:
@@ -407,8 +390,7 @@ def display(hex_file):
     try:
         sett.fromhexfile(hex_file)
     except NordicSemiException as err:
-        click.echo(err)
-        return
+        raise click.UsageError(err)
 
     click.echo("{0}".format(str(sett)))
 
@@ -440,10 +422,12 @@ def generate(key_file):
 @click.argument('key_file', required=True, type=click.Path())
 @click.option('--key',
               help='(pk|sk) Display the public key (pk) or the private key (sk).',
-              type=click.STRING)
+              type=click.Choice(KEY_CHOICE),
+              required=True)
 @click.option('--format',
               help='(hex|code|pem) Display the key in hexadecimal format (hex), C code (code), or PEM (pem) format.',
-              type=click.STRING)
+              type=click.Choice(KEY_FORMAT),
+              required=True)
 @click.option('--out_file',
               help='If provided, save the output in file out_file.',
               type=click.STRING)
@@ -458,20 +442,6 @@ def display(key_file, key, format, out_file):
     if default_key:
         display_sec_warning()
 
-    if not key:
-        click.echo("You must specify a key with --key (pk|sk).")
-        return
-    if key != "pk" and key != "sk":
-        click.echo("Invalid key type. Valid types are (pk|sk).")
-        return
-
-    if not format:
-        click.echo("You must specify a format with --format (hex|code|pem).")
-        return
-    if format != "hex" and format != "code" and format != "pem" and format != "dbgcode":
-        click.echo("Invalid format. Valid formats are (hex|code|pem).")
-        return
-
     if format == "dbgcode":
         format = "code"
         dbg = True
@@ -479,8 +449,7 @@ def display(key_file, key, format, out_file):
         dbg = False
 
     if format == "code" and key == "sk":
-        click.echo("Displaying the private key as code is not available.")
-        return
+        raise click.UsageError("Displaying the private key as code is not available.")
 
     if key == "pk":
         kstr = signer.get_vk(format, dbg)
@@ -583,13 +552,13 @@ def pkg():
               help='The SoftDevice firmware file.',
               type=click.STRING)
 @click.option('--sd-boot-validation',
-              help='The method of boot validation for Softdevice. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for Softdevice.',
               required=False,
-              type=click.STRING)
+              type=click.Choice(BOOT_VALIDATION_ARGS))
 @click.option('--app-boot-validation',
-              help='The method of boot validation for application. Choose from:\n%s' % ('\n'.join(BOOT_VALIDATION_ARGS),),
+              help='The method of boot validation for application.',
               required=False,
-              type=click.STRING)
+              type=click.Choice(BOOT_VALIDATION_ARGS))
 @click.option('--key-file',
               help='The private (signing) key in PEM fomat.',
               required=False,
@@ -679,8 +648,7 @@ def generate(zipfile,
 
     # Check combinations
     if bootloader is not None and application is not None and softdevice is None:
-        click.echo("Error: Invalid combination: use two .zip packages instead.")
-        return
+        raise click.UsageError("Invalid combination: use two .zip packages instead.")
 
     if debug_mode is None:
         debug_mode = False
@@ -713,8 +681,7 @@ def generate(zipfile,
 
     # Convert multiple value into a single instance
     if len(sd_req) > 1:
-        click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...")
-        return
+        raise click.BadParameter("Please specify SoftDevice requirements as a comma-separated list: --sd-req 0xXXXX,0xYYYY,...", param_hint='sd_req')
     elif len(sd_req) == 0:
         sd_req = None
     else:
@@ -723,8 +690,7 @@ def generate(zipfile,
             sd_req = None
 
     if len(sd_id) > 1:
-        click.echo("Please specify SoftDevice requirements as a comma-separated list: --sd-id 0xXXXX,0xYYYY,...")
-        return
+        raise click.BadParameter("Please specify SoftDevice requirements as a comma-separated list: --sd-id 0xXXXX,0xYYYY,...", param_hint='sd_req')
     elif len(sd_id) == 0:
         sd_id = None
     else:
@@ -734,12 +700,10 @@ def generate(zipfile,
 
     # Initial consistency checks
     if application_version_internal is not None and application is None:
-        click.echo("Error: Application version with no image.")
-        return
+        raise click.UsageError("Application version with no image.")
 
     if bootloader_version is not None and bootloader is None:
-        click.echo("Error: Bootloader version with no image.")
-        return
+        raise click.UsageError("Bootloader version with no image.")
 
     if debug_mode:
         display_debug_warning()
@@ -756,21 +720,17 @@ def generate(zipfile,
 
     # Version checks
     if hw_version is None:
-        click.echo("Error: --hw-version required.")
-        return
+        raise click.UsageError("--hw-version required.")
 
     if sd_req is None and external_app is False:
-        click.echo("Error: --sd-req required.")
-        return
+        raise click.UsageError("--sd-req required.")
 
     if application is not None and application_version_internal is None:
-        click.echo('Error: --application-version or --application-version-string'
+        raise click.UsageError('--application-version or --application-version-string'
                    ' required with application image.')
-        return
 
     if bootloader is not None and bootloader_version is None:
-        click.echo("Error: --bootloader-version required with bootloader image.")
-        return
+        raise click.UsageError("--bootloader-version required with bootloader image.")
 
     # Zigbee only allows App, SoftDevice (minor), bootloader or Softdevice+bootloader
     if zigbee:
@@ -779,24 +739,19 @@ def generate(zipfile,
                        ' for Zigbee package generation (not a combination).')
 
     if application is not None and softdevice is not None and sd_id is None:
-        click.echo("Error: --sd-id required with softdevice and application images.")
-        return
+        raise click.UsageError("--sd-id required with softdevice and application images.")
 
     if application is None and external_app is True:
-        click.echo("Error: --external-app requires an application.")
-        return
+        raise click.UsageError("--external-app requires an application.")
 
     if application is not None and softdevice is not None and external_app is True:
-        click.echo("Error: --external-app is only possible for application only DFU packages.")
-        return
+        raise click.UsageError("--external-app is only possible for application only DFU packages.")
 
     if application is not None and bootloader is not None and external_app is True:
-        click.echo("Error: --external-app is only possible for application only DFU packages.")
-        return
+        raise click.UsageError("--external-app is only possible for application only DFU packages.")
 
     if zigbee and zigbee_ota_hw_version is None:
-        click.echo("Error: --zigbee-ota-hw-version is required.")
-        return
+        raise click.UsageError("--zigbee-ota-hw-version is required.")
 
     if zigbee and zigbee_ota_fw_version is None:
         zigbee_ota_fw_version = 0
@@ -839,14 +794,6 @@ def generate(zipfile,
         if default_key:
             display_sec_warning()
 
-    if sd_boot_validation and (sd_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --sd_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
-
-    if app_boot_validation and (app_boot_validation not in BOOT_VALIDATION_ARGS):
-        click.echo("Error: --app_boot_validation called with invalid argument. Must be one of:\n%s" % ("\n".join(BOOT_VALIDATION_ARGS)))
-        return
-
     if zigbee_comment is None:
         zigbee_comment = ''
     elif any(ord(char) > 127 for char in zigbee_comment): # Check if all the characters belong to the ASCII range
@@ -868,16 +815,13 @@ def generate(zipfile,
         inner_external_app = False
 
     if zigbee_ota_min_hw_version is not None and zigbee_ota_min_hw_version > 0xFFFF:
-        click.echo('Error: zigbee-ota-min-hw-version exceeds 2-byte long integer.')
-        return
+        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='zigbee-ota-min-hw-version')
 
     if zigbee_ota_max_hw_version is not None and zigbee_ota_max_hw_version > 0xFFFF:
-        click.echo('Error: zigbee-ota-max-hw-version exceeds 2-byte long integer.')
-        return
+        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='zigbee-ota-max-hw-version')
 
     if zigbee and (hw_version > 0xFFFF):
-        click.echo('Error: hw-version exceeds 2-byte long integer.')
-        return
+        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='hw-version')
 
     # Warn user if minimal/maximum zigbee ota hardware version are not correct:
     #   * only one of them is given
@@ -1161,9 +1105,8 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
     if address:
         address = address.replace(':', '')
         if not re.match('^[0-9A-Fa-f]{12}$', address):
-            click.echo('Invalid address. Must be exactly 6 bytes HEX, '
-                       'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.')
-            return
+            raise click.BadParameter('Must be exactly 6 bytes HEX, '
+                                     'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.', param_hint='address')
 
     if port is None and jlink_snr is not None:
         port = get_port_by_snr(jlink_snr)
@@ -1171,8 +1114,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
     elif port is None:
         port = enumerate_ports()
         if port is None:
-            click.echo("\nNo Segger USB CDC ports found, please connect your board.")
-            return
+            raise click.UsageError("\nNo Segger USB CDC ports found, please connect your board.")
 
     if flash_connectivity:
         flasher = Flasher(serial_port=port, snr = jlink_snr)
@@ -1496,8 +1438,7 @@ def production_config(input, output, offset):
     try:
         pc = ProductionConfig(input)
     except ProductionConfigWrongException:
-        click.echo("Error: Input YAML file format wrong. Please see the example YAML file in the documentation.")
-        return
+        raise click.UsageError("Input YAML file format wrong. Please see the example YAML file in the documentation.")
 
     try:
         if offset is None:
@@ -1506,8 +1447,7 @@ def production_config(input, output, offset):
             pc.generate(output, offset=offset)
         click.echo("Production Config hexfile generated.")
     except ProductionConfigTooLargeException as e:
-        click.echo("Error: Production Config too large: " + str(e.length) + " bytes")
-        return
+        raise click.UsageError("Production Config too large: " + str(e.length) + " bytes")
 
 if __name__ == '__main__':
     cli()
