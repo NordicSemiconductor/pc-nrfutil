@@ -168,7 +168,7 @@ BASED_INT_OR_NONE = BasedIntOrNoneParamType()
 class BasedIntParamType(BasedIntOrNoneParamType):
     name = 'Integer'
 
-BASED_INT= BasedIntParamType()
+BASED_INT = BasedIntParamType()
 
 class TextOrNoneParamType(click.ParamType):
     name = 'Text'
@@ -178,8 +178,7 @@ class TextOrNoneParamType(click.ParamType):
 
 TEXT_OR_NONE = TextOrNoneParamType()
 
-BOOT_VALIDATION_ARGS =\
-[
+BOOT_VALIDATION_ARGS = [
     'NO_VALIDATION',
     'VALIDATE_GENERATED_CRC',
     'VALIDATE_GENERATED_SHA256',
@@ -188,12 +187,11 @@ BOOT_VALIDATION_ARGS =\
 DEFAULT_BOOT_VALIDATION = 'VALIDATE_GENERATED_CRC'
 
 KEY_CHOICE = ['pk', 'sk']
-KEY_FORMAT =\
-[ 
+KEY_FORMAT = [
     'hex',
     'code',
     'pem',
-    'dbgcode'
+    'dbgcode',
 ]
 
 
@@ -339,7 +337,7 @@ def generate(hex_file,
             raise click.FileError(application, hint="Application file not found")
         if application_version_internal is None:
             raise click.UsageError('--application-version or --application-version-string'
-                   ' required with application image.')
+                                   ' required with application image.')
 
     if (no_backup is not None) and (backup_address is not None):
         raise click.BadParameter("Bootloader DFU settings backup page cannot be specified if backup is disabled.", param_hint='backup_address')
@@ -817,10 +815,10 @@ def generate(zipfile,
         inner_external_app = False
 
     if zigbee_ota_min_hw_version is not None and zigbee_ota_min_hw_version > 0xFFFF:
-        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='zigbee-ota-min-hw-version ')
+        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='zigbee-ota-min-hw-version')
 
     if zigbee_ota_max_hw_version is not None and zigbee_ota_max_hw_version > 0xFFFF:
-        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='zigbee-ota-max-hw-version ')
+        raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='zigbee-ota-max-hw-version')
 
     if zigbee and (hw_version > 0xFFFF):
         raise click.BadParameter('Exceeds 2-byte long integer.', param_hint='hw-version')
@@ -1108,7 +1106,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
         address = address.replace(':', '')
         if not re.match('^[0-9A-Fa-f]{12}$', address):
             raise click.BadParameter('Must be exactly 6 bytes HEX, '
-                       'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.', param_hint='address')
+                                     'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.', param_hint='address')
 
     if port is None and jlink_snr is not None:
         port = get_port_by_snr(jlink_snr)
