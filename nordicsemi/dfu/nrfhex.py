@@ -1,5 +1,4 @@
-#
-# Copyright (c) 2016 Nordic Semiconductor ASA
+# Copyright (c) 2016 - 2019 Nordic Semiconductor ASA
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
@@ -33,7 +32,6 @@
 # ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
 
 import intelhex
 from struct import unpack
@@ -84,9 +82,6 @@ class nRFHex(intelhex.IntelHex):
 
         if bootloader is not None:
             self.bootloaderhex = nRFHex(bootloader)
-
-    def tohexfile(self, dest):
-        pass
 
     def _removeuicr(self):
         uicr_start_address = 0x10000000
