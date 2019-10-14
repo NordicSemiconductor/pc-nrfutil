@@ -404,13 +404,10 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             return
         self.indication_q.put(data)
 
-    def on_att_mtu_exchanged(self, ble_driver, conn_handle, att_mtu):
+    def on_gattc_evt_exchange_mtu_rsp(self, ble_driver, conn_handle, *, status, att_mtu):
         logger.info('ATT MTU exchanged: conn_handle={} att_mtu={}'.format(conn_handle, att_mtu))
         self.att_mtu = att_mtu
         self.packet_size = att_mtu - 3
-
-    def on_gattc_evt_exchange_mtu_rsp(self, ble_driver, conn_handle, **kwargs):
-        pass
 
 
 class DfuBLEDriver(BLEDriver):
