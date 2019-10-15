@@ -40,12 +40,15 @@ class TestManifest(unittest.TestCase):
 
         address = 'AABBCC11223'
         result = self.runner.invoke(self.cli, argumentList + [address])
-        self.assertTrue('Invalid address' in result.output)
-        self.assertIsNone(result.exception)
+        self.assertTrue('Error: Invalid value for address' in result.output)
+        self.assertIsInstance(result.exception, SystemExit)
+        self.assertEqual(result.exception.code, SystemExit(2).code)
 
         address = 'AABBCC1122334'
         result = self.runner.invoke(self.cli, argumentList + [address])
-        self.assertIsNone(result.exception)
+        self.assertTrue('Error: Invalid value for address' in result.output)
+        self.assertIsInstance(result.exception, SystemExit)
+        self.assertEqual(result.exception.code, SystemExit(2).code)
 
 
 if __name__ == '__main__':
