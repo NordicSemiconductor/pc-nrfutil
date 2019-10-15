@@ -1,4 +1,4 @@
-antlib==1.1b0
+antlib==1.1b0.post0
 Click==7.0
 crcmod==1.7
 ecdsa==0.13.3
