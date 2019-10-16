@@ -121,7 +121,7 @@ class Signing(object):
 
         return True
 
-    def get_vk(self, output_type, dbg):
+    def get_vk(self, output_type, dbg) -> str:
         """
         Get public key (as hex, code or pem)
         """
@@ -135,11 +135,12 @@ class Signing(object):
         elif output_type == 'code':
             return self.get_vk_code(dbg)
         elif output_type == 'pem':
-            return self.get_vk_pem()
+            # Return pem as str to conform in type with the other cases.
+            return self.get_vk_pem().decode()
         else:
             raise InvalidArgumentException("Invalid argument. Can't get key")
 
-    def get_sk(self, output_type, dbg):
+    def get_sk(self, output_type, dbg) -> str:
         """
         Get private key (as hex, code or pem)
         """
@@ -153,7 +154,8 @@ class Signing(object):
         elif output_type == 'code':
             raise InvalidArgumentException("Private key cannot be shown as code")
         elif output_type == 'pem':
-            return self.sk.to_pem()
+            # Return pem as str to conform in type with the other cases.
+            return self.sk.to_pem().decode()
         else:
             raise InvalidArgumentException("Invalid argument. Can't get key")
 
