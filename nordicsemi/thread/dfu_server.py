@@ -132,10 +132,10 @@ class ThreadDfuServer():
     SPBLK_FLUSH_DELAY = 1.0     # delay between superblocks
     POST_UPLOAD_DELAY = 5.0     # delay after uploading the last block, in seconds
 
-    IMAGE_URI = 'f'
-    INIT_URI = 'i'
-    TRIGGER_URI = 't'
-    BITMAP_URI = 'b'
+    IMAGE_URI = b'f'
+    INIT_URI = b'i'
+    TRIGGER_URI = b't'
+    BITMAP_URI = b'b'
 
     def __init__(self, protocol, init_data, image_data, opts):
         assert(protocol != None)
@@ -323,7 +323,7 @@ class ThreadDfuServer():
                                           code = piccata.constants.PUT,
                                           token = self._draw_token())
 
-        request.opt.uri_path = ("r",)
+        request.opt.uri_path = (b"r",)
         request.remote = remote
         request.timeout = ThreadDfuServer.SPBLK_BMP_TIMEOUT
         request.payload = struct.pack(">I", delay)
@@ -371,7 +371,7 @@ class ThreadDfuServer():
         }
 
         for uri, handler in list(handlers.items()):
-            if '/'.join(request.opt.uri_path).startswith(uri):
+            if b'/'.join(request.opt.uri_path).startswith(uri):
                 return handler(request)
 
         return piccata.message.Message.AckMessage(request, piccata.constants.NOT_FOUND)

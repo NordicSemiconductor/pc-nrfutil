@@ -123,7 +123,7 @@ class NCPTransport():
                 pkt = self._udp6_parser.parse(io.BytesIO(value),
                                               spinel.common.MessageInfo())
                 endpoint = collections.namedtuple('endpoint', 'addr port')
-                payload = str(pkt.upper_layer_protocol.payload.to_bytes())
+                payload = pkt.upper_layer_protocol.payload.to_bytes()
                 src = endpoint(pkt.ipv6_header.source_address,
                                pkt.upper_layer_protocol.header.src_port)
                 dst = endpoint(pkt.ipv6_header.destination_address,
@@ -181,7 +181,7 @@ class NCPTransport():
             rloc16 = self._wpan.prop_get_value(SPINEL.PROP_THREAD_RLOC16)
 
             # Create an IPv6 Thread RLOC address from mesh-local prefix and RLOC16 MAC address.
-            src_addr = ipaddress.ip_address(self._ml_prefix + '\x00\x00\x00\xff\xfe\x00' + struct.pack('>H', rloc16))
+            src_addr = ipaddress.ip_address(self._ml_prefix + b'\x00\x00\x00\xff\xfe\x00' + struct.pack('>H', rloc16))
 
         else:
             src_addr = self._ml_eid
@@ -199,7 +199,7 @@ class NCPTransport():
         except Exception as e:
             logging.exception(e)
 
-        self._wpan.ip_send(str(datagram.to_bytes()))
+        self._wpan.ip_send(datagram.to_bytes())
 
     def register_receiver(self, callback):
         '''Registers a reciever, that will get all the data received from the transport.
