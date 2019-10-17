@@ -117,10 +117,10 @@ class OTAFlasher(Flasher):
     def randomize_eui64(self):
         '''Randomize the EUI64 address used by the board'''
         random_eui64 = uuid.uuid4().int >> 88 # Generate 128-bit UUID and take 40 upper bits
-        self.ser.write('zdo eui64 {0}{1:010x}\r\n'.format(OTAFlasher.OTA_EUI64_PREFIX, random_eui64))
+        self.ser.write(f'zdo eui64 {OTAFlasher.OTA_EUI64_PREFIX}{random_eui64:010x}\r\n'.encode())
 
     def setup_channel(self):
         '''Setup to the channel of the flashed board through the serial CLI; and start the internal stack'''
-        self.ser.write('bdb channel ' + str(self.channel) + '\r\n')
+        self.ser.write(f'bdb channel {self.channel}\r\n'.encode())
         time.sleep(1.0)
-        self.ser.write('bdb start' + '\r\n')
+        self.ser.write('bdb start\r\n'.encode())

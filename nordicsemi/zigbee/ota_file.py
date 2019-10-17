@@ -108,7 +108,7 @@ class OTA_file(object):
                                          OTA_UPGRADE_SUBELEMENT_TRIGGER_TYPE,
                                          OTA_UPGRADE_SUBELEMENT_TRIGGER_LENGTH)
         subelement_trigger_payload  = struct.pack(subelement_trigger_pack_format,
-                                                  chr(0x10), # flags
+                                                  bytes([0x10]),  # flags
                                                   init_cmd_len,
                                                   init_cmd_crc,
                                                   firmware_len,
@@ -160,7 +160,7 @@ class OTA_header(object):
                             image_type,
                             file_version,
                             zigbee_stack_version,
-                            chr(len(header_string)),
+                            bytes([len(header_string)]),
                             bytes(header_string.encode('ascii')),
                             self.__total_size]
         self.__pack_args.extend(self.__additional_fields)
