@@ -51,6 +51,7 @@ from collections import namedtuple
 import click
 import collections
 import time
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -91,11 +92,11 @@ def _make_trigger(init_data, image_data, mcast_mode = False, reset_suppress = 0)
                        crc(image_data))
 
 def _make_bitmap(resource):
-    return [(resource, i) for i in range(0, _block_count(len(resource.data), ThreadDfuServer.BLOCK_SZX) + 1)]
+    return [(resource, i) for i in range(0, _block_count(len(resource.data), ThreadDfuServer.BLOCK_SZX))]
 
 def _block_count(length, block_size):
     '''Return number of blocks of a given size for the total length of data.'''
-    return int((length - 1) / (2 ** (block_size + 4)) + 0.5)
+    return math.ceil(length / (2 ** (block_size + 4)))
 
 def _bmp_to_str(bitmap):
     '''Convert binary data into a bit string'''
