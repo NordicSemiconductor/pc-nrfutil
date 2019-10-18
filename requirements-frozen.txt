@@ -7,7 +7,7 @@ intelhex==2.2.1
 ipaddress==1.0.22
 libusb1==1.7.1
 pc-ble-driver-py==0.13.0
-piccata==2.0.0
+piccata==2.0.1
 protobuf==3.10.0
 pyserial==3.4
 pyspinel==1.0.0a3
