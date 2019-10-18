@@ -176,13 +176,15 @@ class ThreadDfuServer():
         # bar for it. Update otherwise.
         if (client.progress_bar is None):
             client.progress_bar = tqdm.tqdm(desc = str(address),
-                                            position = len(self.clients),
+                                            position = len(self.clients) - 1,
                                             initial = block_count,
                                             total = total_block_count)
         elif (block_count > client.last_block):
             client.progress_bar.update(block_count - client.last_block)
 
-        if (block_count == total_block_count):
+        if (block_count == total_block_count - 1):
+            # One last update to fill the progress bar (block_count is indexed from 0)
+            client.progress_bar.update()
             client.progress_bar.close()
             client.progress_bar = None
 
@@ -199,9 +201,11 @@ class ThreadDfuServer():
                                   block_num,
                                   total_block_count)
 
-        self.clients[request.remote].last_block = block_num
+        if (self.clients[request.remote].last_block is None) or (self.clients[request.remote].last_block < block_num):
+                self.clients[request.remote].last_block = block_num
 
-        if block_num == total_block_count:
+        if block_num == total_block_count - 1:
+            self.clients[request.remote].last_block = None
             click.echo() # New line after progress bar
             click.echo("Thread DFU upload complete")
 
@@ -295,6 +299,9 @@ class ThreadDfuServer():
 
             if (self.clients[remote].last_block is None) or (self.clients[remote].last_block < num):
                 self.clients[remote].last_block = num
+
+            if num == total_block_count - 1:
+                self.clients[remote].last_block = None
 
             self.bmp_received_event.clear()
             if len(bitmap):
