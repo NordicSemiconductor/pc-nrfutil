@@ -263,7 +263,7 @@ def settings():
               help='The application version.',
               type=BASED_INT_OR_NONE)
 @click.option('--application-version-string',
-              help='The application version string, e.g "2.7.31".',
+              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 207031.',
               type=click.STRING)
 @click.option('--bootloader-version',
               help='The bootloader version.',
@@ -329,6 +329,8 @@ def generate(hex_file,
     # "10.21.30". Internally we convert to integer.
     if application_version_string:
         application_version_internal = convert_version_string_to_int(application_version_string)
+        if application_version:
+            click.echo('Warning: When both application-version-string and application-version are provided, only the string will be used.')
     else:
         application_version_internal = application_version
 
@@ -488,7 +490,7 @@ def pkg():
               help='The application version.',
               type=BASED_INT_OR_NONE)
 @click.option('--application-version-string',
-              help='The application version string, e.g "2.7.31".',
+              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 207031.',
               type=click.STRING)
 @click.option('--bootloader',
               help='The bootloader firmware file.',
@@ -658,6 +660,8 @@ def generate(zipfile,
     # "10.21.30". Internally we convert to integer.
     if application_version_string:
         application_version_internal = convert_version_string_to_int(application_version_string)
+        if application_version:
+            click.echo('Warning: When both application-version-string and application-version are provided, only the string will be used.')
     else:
         application_version_internal = application_version
 
@@ -1240,6 +1244,8 @@ def ant(package, port, connect_delay, packet_receipt_notification, period,
 def convert_version_string_to_int(s):
     """Convert from semver string "1.2.3", to integer 10203"""
     numbers = s.split(".")
+    if len(numbers) != 3:
+        raise click.BadParameter("Must be on the format x.y.z", param_hint='application-version-string')
     js = [10000, 100, 1]
     return sum([js[i] * int(numbers[i]) for i in range(3)])
 
