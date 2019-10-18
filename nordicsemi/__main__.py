@@ -1240,6 +1240,8 @@ def ant(package, port, connect_delay, packet_receipt_notification, period,
 def convert_version_string_to_int(s):
     """Convert from semver string "1.2.3", to integer 10203"""
     numbers = s.split(".")
+    if len(numbers) != 3:
+        raise click.BadParameter("Must be on the format x.y.z", param_hint='application-version-string')
     js = [10000, 100, 1]
     return sum([js[i] * int(numbers[i]) for i in range(3)])
 
