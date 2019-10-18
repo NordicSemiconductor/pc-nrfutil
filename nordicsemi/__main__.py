@@ -329,6 +329,8 @@ def generate(hex_file,
     # "10.21.30". Internally we convert to integer.
     if application_version_string:
         application_version_internal = convert_version_string_to_int(application_version_string)
+        if application_version:
+            click.echo('Warning: When both application-version-string and application-version are provided, only the string will be used.')
     else:
         application_version_internal = application_version
 
@@ -658,6 +660,8 @@ def generate(zipfile,
     # "10.21.30". Internally we convert to integer.
     if application_version_string:
         application_version_internal = convert_version_string_to_int(application_version_string)
+        if application_version:
+            click.echo('Warning: When both application-version-string and application-version are provided, only the string will be used.')
     else:
         application_version_internal = application_version
 
