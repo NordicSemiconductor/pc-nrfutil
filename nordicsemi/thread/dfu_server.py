@@ -51,6 +51,7 @@ from collections import namedtuple
 import click
 import collections
 import time
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -91,11 +92,11 @@ def _make_trigger(init_data, image_data, mcast_mode = False, reset_suppress = 0)
                        crc(image_data))
 
 def _make_bitmap(resource):
-    return [(resource, i) for i in range(0, _block_count(len(resource.data), ThreadDfuServer.BLOCK_SZX) + 1)]
+    return [(resource, i) for i in range(0, _block_count(len(resource.data), ThreadDfuServer.BLOCK_SZX))]
 
 def _block_count(length, block_size):
     '''Return number of blocks of a given size for the total length of data.'''
-    return int((length - 1) / (2 ** (block_size + 4)) + 0.5)
+    return math.ceil(length / (2 ** (block_size + 4)))
 
 def _bmp_to_str(bitmap):
     '''Convert binary data into a bit string'''
@@ -132,10 +133,10 @@ class ThreadDfuServer():
     SPBLK_FLUSH_DELAY = 1.0     # delay between superblocks
     POST_UPLOAD_DELAY = 5.0     # delay after uploading the last block, in seconds
 
-    IMAGE_URI = 'f'
-    INIT_URI = 'i'
-    TRIGGER_URI = 't'
-    BITMAP_URI = 'b'
+    IMAGE_URI = b'f'
+    INIT_URI = b'i'
+    TRIGGER_URI = b't'
+    BITMAP_URI = b'b'
 
     def __init__(self, protocol, init_data, image_data, opts):
         assert(protocol != None)
@@ -175,13 +176,15 @@ class ThreadDfuServer():
         # bar for it. Update otherwise.
         if (client.progress_bar is None):
             client.progress_bar = tqdm.tqdm(desc = str(address),
-                                            position = len(self.clients),
+                                            position = len(self.clients) - 1,
                                             initial = block_count,
                                             total = total_block_count)
         elif (block_count > client.last_block):
             client.progress_bar.update(block_count - client.last_block)
 
-        if (block_count == total_block_count):
+        if (block_count == total_block_count - 1):
+            # One last update to fill the progress bar (block_count is indexed from 0)
+            client.progress_bar.update()
             client.progress_bar.close()
             client.progress_bar = None
 
@@ -198,9 +201,11 @@ class ThreadDfuServer():
                                   block_num,
                                   total_block_count)
 
-        self.clients[request.remote].last_block = block_num
+        if (self.clients[request.remote].last_block is None) or (self.clients[request.remote].last_block < block_num):
+                self.clients[request.remote].last_block = block_num
 
-        if block_num == total_block_count:
+        if block_num == total_block_count - 1:
+            self.clients[request.remote].last_block = None
             click.echo() # New line after progress bar
             click.echo("Thread DFU upload complete")
 
@@ -295,6 +300,9 @@ class ThreadDfuServer():
             if (self.clients[remote].last_block is None) or (self.clients[remote].last_block < num):
                 self.clients[remote].last_block = num
 
+            if num == total_block_count - 1:
+                self.clients[remote].last_block = None
+
             self.bmp_received_event.clear()
             if len(bitmap):
                 if (num % ThreadDfuServer.SPBLK_SIZE == 0) or (((num + 1) % ThreadDfuServer.SPBLK_SIZE) == 0):
@@ -323,7 +331,7 @@ class ThreadDfuServer():
                                           code = piccata.constants.PUT,
                                           token = self._draw_token())
 
-        request.opt.uri_path = ("r",)
+        request.opt.uri_path = (b"r",)
         request.remote = remote
         request.timeout = ThreadDfuServer.SPBLK_BMP_TIMEOUT
         request.payload = struct.pack(">I", delay)
@@ -371,7 +379,7 @@ class ThreadDfuServer():
         }
 
         for uri, handler in list(handlers.items()):
-            if '/'.join(request.opt.uri_path).startswith(uri):
+            if b'/'.join(request.opt.uri_path).startswith(uri):
                 return handler(request)
 
         return piccata.message.Message.AckMessage(request, piccata.constants.NOT_FOUND)
