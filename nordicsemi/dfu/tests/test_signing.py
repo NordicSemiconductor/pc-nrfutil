@@ -114,10 +114,10 @@ class TestSigning(unittest.TestCase):
 
     def test_get_vk_pem(self):
         key_file_name = 'key.pem'
-        expected_vk_pem = b"-----BEGIN PUBLIC KEY-----\n" \
-                          b"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZY2i7duYH2l9rnIg1oIXq+0/uHAF\n" \
-                          b"7IoFubVru6oX9GCQm67NrXImwgS2ErZi/0/MvRsMkIQQkNg6Wc2tbJgdTA==\n" \
-                          b"-----END PUBLIC KEY-----\n"
+        expected_vk_pem = "-----BEGIN PUBLIC KEY-----\n" \
+                          "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZY2i7duYH2l9rnIg1oIXq+0/uHAF\n" \
+                          "7IoFubVru6oX9GCQm67NrXImwgS2ErZi/0/MvRsMkIQQkNg6Wc2tbJgdTA==\n" \
+                          "-----END PUBLIC KEY-----\n"
 
         signing = Signing()
         signing.load_key(key_file_name)
