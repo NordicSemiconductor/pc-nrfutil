@@ -382,7 +382,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             logger.info('BLE: Found target advertiser, address: 0x{}, name: {}'.format(address_string, dev_name))
             logger.info('BLE: Connecting to 0x{}'.format(address_string))
             # Connect must specify tag=1 to enable the settings
-            # set with BLEConfigConnGatt (that implictly operates
+            # set with BLEConfigConnGatt (that implicitly operates
             # on connections with tag 1) to allow for larger MTU.
             self.adapter.connect(address=peer_addr,
                                  conn_params=self.conn_params,
@@ -623,10 +623,10 @@ class DfuTransportBle(DfuTransport):
         def validate_crc():
             if (crc != response['crc']):
                 raise ValidationException('Failed CRC validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
+                                + 'Expected: {} Received: {}.'.format(crc, response['crc']))
             if (offset != response['offset']):
                 raise ValidationException('Failed offset validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
+                                + 'Expected: {} Received: {}.'.format(offset, response['offset']))
 
         current_pnr = 0
         for i in range(0, len(data), self.dfu_adapter.packet_size):

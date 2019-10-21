@@ -268,7 +268,7 @@ class BLDFUSettings(object):
             self.sd_boot_validation_type = 0 & 0xffffffff
             self.sd_boot_validation_bytes = bytes(0)
 
-        # additional harcoded values
+        # additional hardcoded values
         self.bank_layout = 0x0 & 0xffffffff
         self.bank_current = 0x0 & 0xffffffff
 

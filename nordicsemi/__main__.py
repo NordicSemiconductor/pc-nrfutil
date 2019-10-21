@@ -306,7 +306,7 @@ def settings():
               required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 @click.option('--key-file',
-              help='The private (signing) key in PEM fomat. Needed for ECDSA Boot Validation.',
+              help='The private (signing) key in PEM format. Needed for ECDSA Boot Validation.',
               required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 def generate(hex_file,
@@ -562,7 +562,7 @@ def pkg():
               required=False,
               type=click.Choice(BOOT_VALIDATION_ARGS))
 @click.option('--key-file',
-              help='The private (signing) key in PEM fomat.',
+              help='The private (signing) key in PEM format.',
               required=False,
               type=click.Path(exists=True, resolve_path=True, file_okay=True, dir_okay=False))
 @click.option('--external-app',
@@ -840,7 +840,7 @@ def generate(zipfile,
             click.echo('Warning: hw-version is outside the specified range specified by zigbee_ota_min_hw_version and zigbee_ota_max_hw_version.')
 
     # Generate a DFU package. If --zigbee is set this is the inner DFU package
-    # which will be used as a binary input to the outter DFU package
+    # which will be used as a binary input to the outer DFU package
     package = Package(debug_mode,
                       hw_version,
                       application_version_internal,
@@ -1176,7 +1176,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
               type=click.INT,
               required=False)
 @click.option('--net-key',
-              help='Set the ANT network key. Must be formated as hexadecimal numbers seperated by dashes ("-").',
+              help='Set the ANT network key. Must be formatted as hexadecimal numbers separated by dashes ("-").',
               type=click.STRING,
               required=False)
 @click.option('--dev-type',
