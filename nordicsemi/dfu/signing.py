@@ -135,8 +135,7 @@ class Signing(object):
         elif output_type == 'code':
             return self.get_vk_code(dbg)
         elif output_type == 'pem':
-            # Return pem as str to conform in type with the other cases.
-            return self.get_vk_pem().decode()
+            return self.get_vk_pem()
         else:
             raise InvalidArgumentException("Invalid argument. Can't get key")
 
@@ -242,7 +241,7 @@ __ALIGN(4) const uint8_t pk[64] =
 
         return vk_code
 
-    def get_vk_pem(self):
+    def get_vk_pem(self) -> str:
         """
         Get the verification key as PEM
         """
@@ -252,4 +251,5 @@ __ALIGN(4) const uint8_t pk[64] =
         vk = self.sk.get_verifying_key()
         vk_pem = vk.to_pem()
 
-        return vk_pem
+        # Return pem as str to conform in type with the other cases.
+        return vk_pem.decode()
