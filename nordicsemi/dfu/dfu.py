@@ -45,8 +45,6 @@ import tempfile
 
 # Nordic libraries
 from nordicsemi.dfu.package         import Package
-from nordicsemi.dfu.dfu_transport   import DfuEvent
-from nordicsemi.dfu.manifest        import SoftdeviceBootloaderFirmware
 
 logger = logging.getLogger(__name__)
 

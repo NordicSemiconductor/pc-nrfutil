@@ -43,7 +43,6 @@ import sys
 import click
 import time
 import logging
-import subprocess
 import re
 sys.path.append(os.getcwd())
 
@@ -56,7 +55,7 @@ from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
 from nordicsemi.dfu.util import query_func
 from nordicsemi.zigbee.prod_config import ProductionConfig, ProductionConfigWrongException, ProductionConfigTooLargeException
-from pc_ble_driver_py.exceptions import NordicSemiException, NotImplementedException
+from pc_ble_driver_py.exceptions import NordicSemiException
 from nordicsemi.lister.device_lister import DeviceLister
 import spinel.util as util
 

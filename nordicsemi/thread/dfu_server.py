@@ -38,8 +38,6 @@ import binascii
 import struct
 import tqdm
 import threading
-import json
-import sys
 
 import piccata.core
 import piccata.block_transfer
@@ -49,7 +47,6 @@ from piccata import constants
 from ipaddress import ip_address
 from collections import namedtuple
 import click
-import collections
 import time
 import math
 

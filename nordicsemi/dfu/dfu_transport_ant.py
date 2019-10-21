@@ -37,7 +37,7 @@
 
 # Python imports
 import binascii
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 import queue
 import struct

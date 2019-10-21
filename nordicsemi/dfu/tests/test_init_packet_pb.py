@@ -36,7 +36,6 @@
 #
 import unittest
 from nordicsemi.dfu.init_packet_pb import *
-from google.protobuf.message import EncodeError
 import nordicsemi.dfu.dfu_cc_pb2 as pb
 
 HASH_BYTES_A = b'123123123123'

@@ -35,17 +35,14 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from queue import Empty
 import logging
 import os
-import time
-import sys
 import subprocess
 
 from click.testing import CliRunner
-from behave import then, given, when
+from behave import then, given
 
-from nordicsemi.__main__ import cli, int_as_text_to_int
+from nordicsemi.__main__ import cli
 from nordicsemi.lister.device_lister import DeviceLister
 from pc_ble_driver_py import config
 connectivity_root = os.path.join(os.path.dirname(config.__file__), 'hex', 'sd_api_v3')

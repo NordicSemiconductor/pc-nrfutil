@@ -46,7 +46,6 @@
 # the file.
 
 import hashlib
-import binascii
 import datetime
 
 try:

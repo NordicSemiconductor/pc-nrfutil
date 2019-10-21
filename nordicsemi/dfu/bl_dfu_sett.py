@@ -37,13 +37,11 @@
 
 # Python standard library
 import os
-import time
 import shutil
 import logging
 import tempfile
 import struct
 import binascii
-from enum import Enum
 
 # 3rd party libraries
 import intelhex

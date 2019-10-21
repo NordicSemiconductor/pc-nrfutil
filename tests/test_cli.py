@@ -1,10 +1,7 @@
 import os
 import unittest
-import click
 from click.testing import CliRunner
-import nordicsemi
 from nordicsemi import __main__
-from nordicsemi import dfu
 
 
 class TestManifest(unittest.TestCase):

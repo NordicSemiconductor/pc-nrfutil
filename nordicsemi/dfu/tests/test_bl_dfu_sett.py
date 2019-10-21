@@ -37,7 +37,6 @@
 
 import os
 import struct
-import binascii
 
 import unittest
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings

@@ -37,7 +37,6 @@
 
 # Python libraries
 import json
-import binascii
 import os
 
 # Nordic libraries

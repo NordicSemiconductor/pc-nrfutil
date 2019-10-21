@@ -35,14 +35,11 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from queue import Empty
 import logging
 import os
-import time
-import sys
 
 from click.testing import CliRunner
-from behave import then, given, when
+from behave import then, given
 
 from nordicsemi.__main__ import cli, int_as_text_to_int
 
