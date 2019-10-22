@@ -62,7 +62,7 @@ class ProductionConfig(object):
         try:
             # Open the YAML file
             with open(path, 'r') as f:
-                self._yaml = yaml.load(f)
+                self._yaml = yaml.load(f, Loader=yaml.FullLoader)
 
         except yaml.YAMLError as e:
             raise ProductionConfigWrongException
