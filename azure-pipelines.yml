@@ -4,34 +4,19 @@ trigger:
 - release/*
 
 jobs:
-  # # Linux
-  # - job: Linux
-  #   variables:
-  #     wheel_platform: 'manylinux2010_x86_64'
-  #   pool:
-  #     vmImage: 'ubuntu-16.04'
-  #   steps:
-  #   - task: Docker@2
-  #     displayName: 'Build ManyLinux wheel'
-  #     inputs:
-  #       containerRegistry: acr-nrfprivateeu
-  #       command: run
-  #       arguments: '--rm -e PLAT=$(wheel_platform) -v $(System.DefaultWorkingDirectory):/data nrfprivateeu.azurecr.io/nrf/projects-pc-ble-driver-py-linux:v2 /build/build-wheels.sh'
-  #   - bash: |
-  #       ls -R wheelhouse
-  #       cp --verbose -R wheelhouse/*.whl "$(Build.ArtifactStagingDirectory)"
-  #     displayName: 'Copy wheels'
-  #   - task: GitHubRelease@0
-  #     inputs:
-  #       gitHubConnection: 'waylandCI'
-  #       repositoryName: 'NordicSemiconductor/pc-ble-driver-py'
-  #       action: 'edit'
-  #       tagSource: 'Git tag'
-  #       tag: '$(Build.SourceBranchName)'
-  #       assetUploadMode: 'replace'
-  #       isDraft: 'true'
-  #       addChangeLog: 'false'
-  #     condition: ne(variables['Build.Reason'], 'PullRequest')
+  # Linux
+  - job: Linux
+    variables:
+      wheel_platform: 'manylinux2010_x86_64'
+    pool:
+      vmImage: 'ubuntu-16.04'
+    steps:
+    - bash: |
+        pypath=`which python3`
+        ${pypath} -m pip install -r requirements-frozen.txt
+        ${pypath} setup.py sdist
+      displayName: 'Build for python 3'
+
   # macOS
   - job: macOS
     variables:
@@ -39,22 +24,6 @@ jobs:
     pool:
       vmImage: 'macos-10.13'
     steps:
-    # - script: |
-    #     ls /Applications
-    #     sudo xcode-select -s /Applications/Xcode_10.1.app
-    #   displayName: 'Install XCode'
-    # - script: |
-    #     brew install swig gcc@6
-    #   displayName: 'Install gcc and swig'
-    # - script: |
-    #     git clone https://github.com/NordicPlayground/vcpkg.git $(VCPKG_ROOT)
-    #     CC=gcc-6 CXX=g++-6 $(VCPKG_ROOT)/bootstrap-vcpkg.sh
-    #   displayName: 'Install vcpkg'
-    # - script: |
-    #     export PATH=$VCPKG_ROOT:$PATH
-    #     export VCPKG_OSX_DEPLOYMENT_TARGET=10.9
-    #     vcpkg install nrf-ble-driver:$(python_arch)-osx
-    #   displayName: 'Install nrf-ble-driver'
     - bash: |
         wget https://www.python.org/ftp/python/3.7.3/python-3.7.3-macosx10.9.pkg
         sudo installer -pkg python-3.7.3-macosx10.9.pkg -target /
@@ -64,20 +33,6 @@ jobs:
         ${pypath} -m pip install -r requirements-frozen.txt
         ${pypath} setup.py sdist
       displayName: 'Build for python 3.7'
-    - bash: |
-        cp -R dist/*.tar.gz "$(Build.ArtifactStagingDirectory)"
-      displayName: 'Copy artifacts'
-    - task: GitHubRelease@0
-      inputs:
-        gitHubConnection: 'waylandCI'
-        repositoryName: 'NordicSemiconductor/pc-nrfutil'
-        action: 'edit'
-        tagSource: 'Git tag'
-        tag: '$(Build.SourceBranchName)'
-        assetUploadMode: 'replace'
-        isDraft: 'true'
-        addChangeLog: 'false'
-      condition: ne(variables['Build.Reason'], 'PullRequest')
 
   # Windows
   - job: Windows
@@ -85,24 +40,9 @@ jobs:
       matrix:
         win64:
           python_arch: 'x64'
-          # generator: 'Visual Studio 15 2017 Win64'
-        win32:
-          python_arch: 'x86'
-          # generator: 'Visual Studio 15 2017'
     pool:
       vmImage: 'vs2017-win2016'
     steps:
-    # - script: |
-    #     choco install -y --x86 swig
-    #   displayName: 'Install toolchain on Windows'
-    # - script: |
-    #     git clone https://github.com/NordicPlayground/vcpkg.git $(VCPKG_ROOT)
-    #     $(VCPKG_ROOT)\bootstrap-vcpkg.bat
-    #   displayName: 'Install vcpkg'
-    # - script: |
-    #     set PATH=$(VCPKG_ROOT);%PATH%
-    #     vcpkg install nrf-ble-driver:$(python_arch)-windows
-    #   displayName: 'Install nrf-ble-driver'
     - task: UsePythonVersion@0
       inputs:
         versionSpec: '3.7'
@@ -116,6 +56,7 @@ jobs:
         pyinstaller nrfutil.spec
       displayName: 'Build exe for python 3.7'
     - bash: |
+        cp -R dist/*.tar.gz "$(Build.ArtifactStagingDirectory)"
         cp -R dist/*.exe "$(Build.ArtifactStagingDirectory)"
       displayName: 'Copy artifacts'
     - task: GitHubRelease@0
@@ -129,31 +70,3 @@ jobs:
         isDraft: 'true'
         addChangeLog: 'false'
       condition: ne(variables['Build.Reason'], 'PullRequest')
-
-  # - job: Test
-  #   dependsOn: [
-  #     Windows,
-  #     Linux,
-  #     macOS,
-  #   ]
-  #   strategy:
-  #     matrix:
-  #       linux:
-  #         osType: 'linux'
-  #       mac:
-  #         osType: 'mac'
-  #       win64:
-  #         osType: 'win64'
-  #       win32:
-  #         osType: 'win32'
-  #   pool: server
-  #   steps:
-  #   - task: InvokeRESTAPI@1
-  #     displayName: Test
-  #     inputs:
-  #       connectionType: 'connectedServiceName'
-  #       serviceConnection: 'waylandJenkins'
-  #       method: 'POST'
-  #       urlSuffix: 'view/pc-ble-driver-py/job/pc-ble-driver-py-$(osType)/buildWithParameters?BRANCH=$(Build.SourceBranch)&VSTS_URL=$(system.CollectionUri)&TOKEN=$(system.AccessToken)&PROJECT_ID=$(system.teamProjectId)&HUB_NAME=$(system.hostType)&PLAN_ID=$(system.planId)&TASK_ID=$(system.taskInstanceId)&JOB_ID=$(system.jobId)'
-  #       waitForCompletion: 'true'
-  #     condition: ne(variables['Build.Reason'], 'PullRequest')
