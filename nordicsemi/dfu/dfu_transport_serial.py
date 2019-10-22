@@ -48,7 +48,7 @@ from serial.serialutil import SerialException
 
 # Nordic Semiconductor imports
 from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent, TRANSPORT_LOGGING_LEVEL
-from pc_ble_driver_py.exceptions    import NordicSemiException, IllegalStateException
+from pc_ble_driver_py.exceptions    import NordicSemiException
 from nordicsemi.lister.device_lister import DeviceLister
 from nordicsemi.dfu.dfu_trigger import DFUTrigger
 
@@ -369,9 +369,9 @@ class DfuTransportSerial(DfuTransport):
         self.ping_id = (self.ping_id + 1) % 256
 
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['Ping'], self.ping_id])
-        resp = self.dfu_adapter.get_message() # Receive raw reponse to check return code
+        resp = self.dfu_adapter.get_message() # Receive raw response to check return code
 
-        if (resp == None):
+        if (resp is None):
             logger.debug('Serial: No ping response')
             return False
 
@@ -449,10 +449,10 @@ class DfuTransportSerial(DfuTransport):
         def validate_crc():
             if (crc != response['crc']):
                 raise ValidationException('Failed CRC validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
+                                + 'Expected: {} Received: {}.'.format(crc, response['crc']))
             if (offset != response['offset']):
                 raise ValidationException('Failed offset validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
+                                + 'Expected: {} Received: {}.'.format(offset, response['offset']))
 
         current_pnr     = 0
 
@@ -481,7 +481,7 @@ class DfuTransportSerial(DfuTransport):
 
         resp = self.dfu_adapter.get_message()
 
-        if resp == None:
+        if resp is None:
             return None
 
         if resp[0] != DfuTransportSerial.OP_CODE['Response']:

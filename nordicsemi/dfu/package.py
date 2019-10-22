@@ -50,12 +50,12 @@ import hashlib
 
 # Nordic libraries
 from pc_ble_driver_py.exceptions import NordicSemiException
-from nordicsemi.dfu.nrfhex import *
-from nordicsemi.dfu.init_packet_pb import *
+from nordicsemi.dfu.nrfhex import nRFHex
+from nordicsemi.dfu.init_packet_pb import InitPacketPB, DFUType, CommandTypes, ValidationTypes, SigningTypes, HashTypes
 from nordicsemi.dfu.manifest import ManifestGenerator, Manifest
 from nordicsemi.dfu.model import HexType, FirmwareKeys
-from nordicsemi.dfu.crc16 import *
-from nordicsemi.zigbee.ota_file import *
+from nordicsemi.dfu.crc16 import calc_crc16
+from nordicsemi.zigbee.ota_file import OTA_file
 
 from .signing import Signing
 
