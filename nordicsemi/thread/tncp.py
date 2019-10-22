@@ -202,7 +202,7 @@ class NCPTransport():
         self._wpan.ip_send(datagram.to_bytes())
 
     def register_receiver(self, callback):
-        '''Registers a reciever, that will get all the data received from the transport.
+        '''Registers a receiver, that will get all the data received from the transport.
            The callback function shall be in format:
            receive_callback(src_addr, src_port, dest_port, dest_addr, payload)'''
         self._receivers.append(callback)

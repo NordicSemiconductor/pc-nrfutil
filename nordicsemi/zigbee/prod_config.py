@@ -112,13 +112,13 @@ class ProductionConfig(object):
         ZB_CRC32_POLY = 0x04C11DB7
         crc = 0
         for d in data:
-            c  = ((( crc ^ d ) & 0xff) << 24);
+            c  = ((( crc ^ d ) & 0xff) << 24)
             for j in range(8):
                 if c & 0x80000000:
                     c = (c << 1) ^ ZB_CRC32_POLY
                 else:
                     c = (c << 1)
-            crc = (0xFFFFFFFF & ((crc >> 8) ^ c));
+            crc = (0xFFFFFFFF & ((crc >> 8) ^ c))
         return (~crc & 0xFFFFFFFF)
 
     def generate(self, path, offset=PRODUCTION_CONFIG_DEFAULT_OFFSET):

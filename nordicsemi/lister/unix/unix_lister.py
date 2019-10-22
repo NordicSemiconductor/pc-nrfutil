@@ -39,7 +39,6 @@ import sys
 from nordicsemi.lister.lister_backend import AbstractLister
 
 if 'linux' in sys.platform or sys.platform == 'darwin':
-    from serial import Serial
     import serial.tools.list_ports
     from nordicsemi.lister.enumerated_device import EnumeratedDevice
 

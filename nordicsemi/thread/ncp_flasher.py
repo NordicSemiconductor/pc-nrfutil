@@ -59,7 +59,7 @@ class NCPFlasher(Flasher):
                 return False
             else:
                 raise
-        return (re.search(b'^Verified OK.$', result, re.MULTILINE) != None)
+        return (re.search(b'^Verified OK.$', result, re.MULTILINE) is not None)
 
     def fw_flash(self):
         self.erase()
