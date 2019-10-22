@@ -40,7 +40,7 @@ import struct
 
 import unittest
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
-from nordicsemi.dfu.nrfhex import *
+from nordicsemi.dfu.nrfhex import nRFArch
 
 
 class TestBLDFUSettingsV1(unittest.TestCase):

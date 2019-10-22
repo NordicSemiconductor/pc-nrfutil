@@ -40,7 +40,7 @@ import re
 import subprocess
 import time
 import uuid
-from intelhex import *
+from intelhex import IntelHex
 from serial import Serial
 from pc_ble_driver_py.ble_driver import Flasher
 
