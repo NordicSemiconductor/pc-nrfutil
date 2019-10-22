@@ -11,8 +11,8 @@ jobs:
     steps:
     - bash: |
         pypath=`which python3`
-        ${pypath} -m pip install -r requirements-frozen.txt
         ${pypath} -m pip install setuptools
+        ${pypath} -m pip install -r requirements-frozen.txt
         ${pypath} setup.py sdist
       displayName: 'Build for python 3'
 
