@@ -35,14 +35,11 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from queue import Empty
 import logging
 import os
-import time
-import sys
 
 from click.testing import CliRunner
-from behave import then, given, when
+from behave import then, given
 
 from nordicsemi.__main__ import cli, int_as_text_to_int
 
@@ -69,7 +66,7 @@ def step_impl(context, stdout_text, exit_code):
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
     assert result.exit_code == int_as_text_to_int(exit_code)
-    assert result.output != None
+    assert result.output is not None
     assert result.output.find(stdout_text) >= 0
 
 @then('output version is correct')
@@ -80,5 +77,5 @@ def step_impl(context):
 
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
-    assert result.output != None
+    assert result.output is not None
     assert result.output.find(version) >= 0

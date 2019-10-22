@@ -165,7 +165,7 @@ class nRFHex(intelhex.IntelHex):
 
     def tobinfile(self, fobj, start=None, end=None, pad=None, size=None):
         """
-        Writes a binary version of source and bootloader respectivly to fobj which could be a
+        Writes a binary version of source and bootloader respectively to fobj which could be a
         file object or a file path.
 
         :param str fobj: File path or object the function writes to

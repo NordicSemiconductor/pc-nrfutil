@@ -37,11 +37,10 @@
 
 import os
 import struct
-import binascii
 
 import unittest
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
-from nordicsemi.dfu.nrfhex import *
+from nordicsemi.dfu.nrfhex import nRFArch
 
 
 class TestBLDFUSettingsV1(unittest.TestCase):
@@ -482,7 +481,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           sd_file=None,
                           key_file='key.pem')
 
-        # Since ECDSA contains a random component the signature will be different everytime
+        # Since ECDSA contains a random component the signature will be different every time
         # it is generated. Therefore only overall structure of the boot validation will be checked.
         self.assertEqual(0x03, settings.app_boot_validation_type)
         self.assertEqual(64, len(settings.app_boot_validation_bytes))
@@ -543,7 +542,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           sd_file='firmwares/s132_nrf52_mini.hex',
                           key_file='key.pem')
 
-        # Since ECDSA contains a random component the signature will be different everytime
+        # Since ECDSA contains a random component the signature will be different every time
         # it is generated. Therefore only overall structure of the boot validation will be checked.
         self.assertEqual(0x03, settings.sd_boot_validation_type)
         self.assertEqual(64, len(settings.sd_boot_validation_bytes))

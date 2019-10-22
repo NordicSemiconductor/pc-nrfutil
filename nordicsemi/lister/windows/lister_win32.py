@@ -44,7 +44,6 @@ if sys.platform == 'win32':
     from .structures import GUID, DeviceInfoData, ctypesInternalGUID
 
     import ctypes
-    from ctypes.wintypes import *
     import winreg
     setup_api = ctypes.windll.setupapi
 

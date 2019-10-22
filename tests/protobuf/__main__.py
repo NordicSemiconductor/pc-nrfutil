@@ -24,7 +24,7 @@ class TestStringMethods(unittest.TestCase):
             RuntimeError,
             "app_size is not set. It must be set when type is APPLICATION",
             InitPacketPB,
-            from_bytes = "");
+            from_bytes = "")
 
 
     def test_construct_from_params(self):
@@ -47,8 +47,8 @@ class TestStringMethods(unittest.TestCase):
             sd_req=[0xffffffff]
             )
 
-        protobuf_bytes = i.get_init_command_bytes(); # bytes only for the InitCommand
-        hex_bytes = protobuf_bytes.encode('hex_codec');
+        protobuf_bytes = i.get_init_command_bytes() # bytes only for the InitCommand
+        hex_bytes = protobuf_bytes.encode('hex_codec')
 
         self.assertEqual(hex_bytes, "08ffffffff0f10ffffffff0f1a05ffffffff0f20002800"
                          "300038d2094204080312004800")
@@ -77,8 +77,8 @@ class TestStringMethods(unittest.TestCase):
 
         i.set_signature(b"signature bytes go here", SigningTypes.ECDSA_P256_SHA256)
 
-        protobuf_bytes = i.get_init_packet_pb_bytes(); # Bytes for the whole Packet
-        hex_bytes = protobuf_bytes.encode('hex_codec');
+        protobuf_bytes = i.get_init_packet_pb_bytes() # Bytes for the whole Packet
+        hex_bytes = protobuf_bytes.encode('hex_codec')
 
         self.assertEqual(hex_bytes, "12450a280801122408ffffffff0f10ffffffff0f1a"
         "05ffffffff0f20002800300038d209420408031200480010001a177369676e61747572"
@@ -106,8 +106,8 @@ class TestStringMethods(unittest.TestCase):
             sd_req=[0xffffffff]
             )
 
-        protobuf_bytes = i.get_init_packet_pb_bytes(); # Bytes for the whole Packet
-        hex_bytes = protobuf_bytes.encode('hex_codec');
+        protobuf_bytes = i.get_init_packet_pb_bytes() # Bytes for the whole Packet
+        hex_bytes = protobuf_bytes.encode('hex_codec')
 
         self.assertEqual(hex_bytes, "0a280801122408ffffffff0f10ffffffff0f1a"
         "05ffffffff0f20002800300038d2094204080312004800")

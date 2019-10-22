@@ -37,19 +37,17 @@
 
 # Python standard library
 import os
-import time
 import shutil
 import logging
 import tempfile
 import struct
 import binascii
-from enum import Enum
 
 # 3rd party libraries
 import intelhex
 
 # Nordic libraries
-from nordicsemi.dfu.nrfhex import *
+from nordicsemi.dfu.nrfhex import nRFArch
 from nordicsemi.dfu.package import Package
 from pc_ble_driver_py.exceptions import NordicSemiException
 
@@ -164,7 +162,7 @@ class BLDFUSettings(object):
 
     def _calculate_crc32_from_hex(self, ih_object, start_addr=None, end_addr=None):
         list = []
-        if start_addr == None and end_addr == None:
+        if start_addr is None and end_addr is None:
             hex_dict = ih_object.todict()
             for addr, byte in list(hex_dict.items()):
                 list.append(byte)
@@ -268,7 +266,7 @@ class BLDFUSettings(object):
             self.sd_boot_validation_type = 0 & 0xffffffff
             self.sd_boot_validation_bytes = bytes(0)
 
-        # additional harcoded values
+        # additional hardcoded values
         self.bank_layout = 0x0 & 0xffffffff
         self.bank_current = 0x0 & 0xffffffff
 

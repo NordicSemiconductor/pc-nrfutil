@@ -74,7 +74,7 @@ def create_dfu_server(transport, zip_file_path, opts):
 	Create a DFU server instance.
 	:param transpoort: A transport to be used.
 	:param zip_file_path: A path to the firmware package.
-	:param opts: Optional paramters:
+	:param opts: Optional parameters:
 		mcast_dfu: An information if multicast DFU is enabled.
 		rate: Multicast block transfer rate, in blocks per second
 		reset_suppress: A delay before sending multicast reset command (in milliseconds). -1 means that no reset will be sent.
