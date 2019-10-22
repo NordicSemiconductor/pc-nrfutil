@@ -6,21 +6,18 @@ trigger:
 jobs:
   # Linux
   - job: Linux
-    variables:
-      wheel_platform: 'manylinux2010_x86_64'
     pool:
       vmImage: 'ubuntu-16.04'
     steps:
     - bash: |
         pypath=`which python3`
         ${pypath} -m pip install -r requirements-frozen.txt
+        ${pypath} -m pip install setuptools
         ${pypath} setup.py sdist
       displayName: 'Build for python 3'
 
   # macOS
   - job: macOS
-    variables:
-      python_arch: 'x64'
     pool:
       vmImage: 'macos-10.13'
     steps:
