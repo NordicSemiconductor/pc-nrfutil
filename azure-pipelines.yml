@@ -79,60 +79,56 @@ jobs:
         addChangeLog: 'false'
       condition: ne(variables['Build.Reason'], 'PullRequest')
 
-  # # Windows
-  # - job: Windows
-  #   variables:
-  #     VCPKG_ROOT: '$(Agent.HomeDirectory)\vcpkg'
-  #   strategy:
-  #     matrix:
-  #       win64:
-  #         python_arch: 'x64'
-  #         generator: 'Visual Studio 15 2017 Win64'
-  #       win32:
-  #         python_arch: 'x86'
-  #         generator: 'Visual Studio 15 2017'
-  #   pool:
-  #     vmImage: 'vs2017-win2016'
-  #   steps:
-  #   - script: |
-  #       choco install -y --x86 swig
-  #     displayName: 'Install toolchain on Windows'
-  #   - script: |
-  #       git clone https://github.com/NordicPlayground/vcpkg.git $(VCPKG_ROOT)
-  #       $(VCPKG_ROOT)\bootstrap-vcpkg.bat
-  #     displayName: 'Install vcpkg'
-  #   - script: |
-  #       set PATH=$(VCPKG_ROOT);%PATH%
-  #       vcpkg install nrf-ble-driver:$(python_arch)-windows
-  #     displayName: 'Install nrf-ble-driver'
-  #   - task: UsePythonVersion@0
-  #     inputs:
-  #       versionSpec: '3.7'
-  #       architecture: '$(python_arch)'
-  #   - bash: |
-  #       rm -rf _skbuild
-  #       pypath=`which python`
-  #       pyroot=`dirname ${pypath}`
-  #       pyheader=`ls ${pyroot}/include/Python.h`
-  #       pyincldir=`dirname ${pyheader}`
-  #       pylib=`ls ${pyroot}/libs/python37.lib`
-  #       pip install -r requirements-dev.txt
-  #       python setup.py bdist_wheel --build-type Release -- -DPYTHON_INCLUDE_DIR=${pyincldir} -DPYTHON_LIBRARY=${pylib} -G "$(generator)"
-  #     displayName: 'Build for python 3.7'
-  #   - bash: |
-  #       cp -R dist/*.whl "$(Build.ArtifactStagingDirectory)"
-  #     displayName: 'Copy artifacts'
-  #   - task: GitHubRelease@0
-  #     inputs:
-  #       gitHubConnection: 'waylandCI'
-  #       repositoryName: 'NordicSemiconductor/pc-ble-driver-py'
-  #       action: 'edit'
-  #       tagSource: 'Git tag'
-  #       tag: '$(Build.SourceBranchName)'
-  #       assetUploadMode: 'replace'
-  #       isDraft: 'true'
-  #       addChangeLog: 'false'
-  #     condition: ne(variables['Build.Reason'], 'PullRequest')
+  # Windows
+  - job: Windows
+    strategy:
+      matrix:
+        win64:
+          python_arch: 'x64'
+          # generator: 'Visual Studio 15 2017 Win64'
+        win32:
+          python_arch: 'x86'
+          # generator: 'Visual Studio 15 2017'
+    pool:
+      vmImage: 'vs2017-win2016'
+    steps:
+    # - script: |
+    #     choco install -y --x86 swig
+    #   displayName: 'Install toolchain on Windows'
+    # - script: |
+    #     git clone https://github.com/NordicPlayground/vcpkg.git $(VCPKG_ROOT)
+    #     $(VCPKG_ROOT)\bootstrap-vcpkg.bat
+    #   displayName: 'Install vcpkg'
+    # - script: |
+    #     set PATH=$(VCPKG_ROOT);%PATH%
+    #     vcpkg install nrf-ble-driver:$(python_arch)-windows
+    #   displayName: 'Install nrf-ble-driver'
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.7'
+        architecture: '$(python_arch)'
+    - bash: |
+        pip install -r requirements-frozen.txt
+        python setup.py sdist
+      displayName: 'Build tar.gz for python 3.7'
+    - bash: |
+        pip install pyinstaller
+        pyinstaller nrfutil.spec
+      displayName: 'Build exe for python 3.7'
+    - bash: |
+        cp -R dist/*.exe "$(Build.ArtifactStagingDirectory)"
+      displayName: 'Copy artifacts'
+    - task: GitHubRelease@0
+      inputs:
+        gitHubConnection: 'waylandCI'
+        repositoryName: 'NordicSemiconductor/pc-nrfutil'
+        action: 'edit'
+        tagSource: 'Git tag'
+        tag: '$(Build.SourceBranchName)'
+        assetUploadMode: 'replace'
+        isDraft: 'true'
+        addChangeLog: 'false'
+      condition: ne(variables['Build.Reason'], 'PullRequest')
 
   # - job: Test
   #   dependsOn: [
