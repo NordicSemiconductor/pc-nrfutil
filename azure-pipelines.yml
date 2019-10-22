@@ -14,7 +14,11 @@ jobs:
         ${pypath} -m pip install setuptools
         ${pypath} -m pip install -r requirements-frozen.txt
         ${pypath} setup.py sdist
-      displayName: 'Build for python 3'
+      displayName: 'Build tar.gz with python 3'
+    - bash: |
+        pip install pyinstaller
+        pyinstaller nrfutil.spec
+      displayName: 'Build executable with python 3'
 
   # macOS
   - job: macOS
@@ -29,12 +33,18 @@ jobs:
         pypath=`which python3.7`
         ${pypath} -m pip install -r requirements-frozen.txt
         ${pypath} setup.py sdist
-      displayName: 'Build for python 3.7'
+      displayName: 'Build tar.gz with python 3.7'
+    - bash: |
+        pip install pyinstaller
+        pyinstaller nrfutil.spec
+      displayName: 'Build executable with python 3.7'
 
   # Windows
   - job: Windows
     strategy:
       matrix:
+        win32:
+          python_arch: 'x86'
         win64:
           python_arch: 'x64'
     pool:
@@ -47,14 +57,15 @@ jobs:
     - bash: |
         pip install -r requirements-frozen.txt
         python setup.py sdist
-      displayName: 'Build tar.gz for python 3.7'
+      displayName: 'Build tar.gz with python 3.7'
     - bash: |
         pip install pyinstaller
         pyinstaller nrfutil.spec
-      displayName: 'Build exe for python 3.7'
+      displayName: 'Build exe with python 3.7'
     - bash: |
         cp -R dist/*.tar.gz "$(Build.ArtifactStagingDirectory)"
         cp -R dist/*.exe "$(Build.ArtifactStagingDirectory)"
+      condition: eq(variables['python_arch'], 'x64')
       displayName: 'Copy artifacts'
     - task: GitHubRelease@0
       inputs:
