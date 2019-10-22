@@ -16,21 +16,11 @@ jobs:
         pip install setuptools
         pip install -r requirements-frozen.txt
         python setup.py sdist
-      displayName: 'Build tar.gz with python 3'
-    # - bash: |
-    #     pypath=`which python3`
-    #     ${pypath} -m pip install setuptools
-    #     ${pypath} -m pip install -r requirements-frozen.txt
-    #     ${pypath} setup.py sdist
-    #   displayName: 'Build tar.gz with python 3'
-    # - bash: |
-    #     ${pypath} -m pip install pyinstaller
-    #     pyinstaller nrfutil.spec
-    #   displayName: 'Build executable with python 3'
+      displayName: 'Build tar.gz with python 3.7'
     - bash: |
         pip install pyinstaller
         pyinstaller nrfutil.spec
-      displayName: 'Build executable with python 3'
+      displayName: 'Build executable with python 3.7'
 
   # macOS
   - job: macOS
@@ -40,25 +30,11 @@ jobs:
     - task: UsePythonVersion@0
       inputs:
         versionSpec: '3.7'
-    # - bash: |
-    #     wget https://www.python.org/ftp/python/3.7.3/python-3.7.3-macosx10.9.pkg
-    #     sudo installer -pkg python-3.7.3-macosx10.9.pkg -target /
-    #   displayName: 'Install all pythons'
-    # - bash: |
-    #     pypath=`which python3.7`
-    #     ${pypath} -m pip install setuptools
-    #     ${pypath} -m pip install -r requirements-frozen.txt
-    #     ${pypath} setup.py sdist
-    #   displayName: 'Build tar.gz with python 3.7'
     - bash: |
         pip install setuptools
         pip install -r requirements-frozen.txt
         python setup.py sdist
       displayName: 'Build tar.gz with python 3.7'
-    # - bash: |
-    #     ${pypath} -m pip install pyinstaller
-    #     pyinstaller nrfutil.spec
-    #   displayName: 'Build executable with python 3.7'
     - bash: |
         pip install pyinstaller
         pyinstaller nrfutil.spec
