@@ -16,7 +16,7 @@ jobs:
         ${pypath} setup.py sdist
       displayName: 'Build tar.gz with python 3'
     - bash: |
-        pip install pyinstaller
+        ${pypath} -m pip install pyinstaller
         pyinstaller nrfutil.spec
       displayName: 'Build executable with python 3'
 
@@ -31,11 +31,12 @@ jobs:
       displayName: 'Install all pythons'
     - bash: |
         pypath=`which python3.7`
+        ${pypath} -m pip install setuptools
         ${pypath} -m pip install -r requirements-frozen.txt
         ${pypath} setup.py sdist
       displayName: 'Build tar.gz with python 3.7'
     - bash: |
-        pip install pyinstaller
+        ${pypath} -m pip install pyinstaller
         pyinstaller nrfutil.spec
       displayName: 'Build executable with python 3.7'
 
