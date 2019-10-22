@@ -46,7 +46,6 @@
 # the file.
 
 import hashlib
-import binascii
 import datetime
 
 try:
@@ -166,7 +165,7 @@ class Signing(object):
             raise IllegalStateException("Can't get key. No key created/loaded")
 
         # Reverse the key for display. This emulates a memory
-        # dump of the key interpreted a 256bit litte endian
+        # dump of the key interpreted a 256bit little endian
         # integer.
         key = self.sk.to_string()
         displayed_key = key[::-1].hex()
@@ -182,7 +181,7 @@ class Signing(object):
 
         # Reverse the two halves of key for display. This
         # emulates a memory dump of the key interpreted as two
-        # 256bit litte endian integers.
+        # 256bit little endian integers.
         key = self.sk.get_verifying_key().to_string()
         displayed_key = (key[:32][::-1] + key[32:][::-1]).hex()
 
@@ -198,7 +197,7 @@ class Signing(object):
 """.format(datetime.datetime.now().strftime("%Y-%m-%d (YY-MM-DD) at %H:%M:%S"))
 
         dbg_header="""
-/* This file was generated with a throwaway private key, that is only inteded for a debug version of the DFU project.
+/* This file was generated with a throwaway private key, that is only intended for a debug version of the DFU project.
   Please see https://github.com/NordicSemiconductor/pc-nrfutil/blob/master/README.md to generate a valid public key. */
 
 #ifdef NRF_DFU_DEBUG_VERSION
