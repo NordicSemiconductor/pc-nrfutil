@@ -371,7 +371,7 @@ class DfuTransportSerial(DfuTransport):
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['Ping'], self.ping_id])
         resp = self.dfu_adapter.get_message() # Receive raw response to check return code
 
-        if (resp == None):
+        if (resp is None):
             logger.debug('Serial: No ping response')
             return False
 
@@ -481,7 +481,7 @@ class DfuTransportSerial(DfuTransport):
 
         resp = self.dfu_adapter.get_message()
 
-        if resp == None:
+        if resp is None:
             return None
 
         if resp[0] != DfuTransportSerial.OP_CODE['Response']:

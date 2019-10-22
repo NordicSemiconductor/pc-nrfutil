@@ -136,9 +136,9 @@ class ThreadDfuServer():
     BITMAP_URI = b'b'
 
     def __init__(self, protocol, init_data, image_data, opts):
-        assert(protocol != None)
-        assert(init_data != None)
-        assert(image_data != None)
+        assert(protocol is not None)
+        assert(init_data is not None)
+        assert(image_data is not None)
 
         self.opts = opts
         if (not opts or not opts.rate):

@@ -97,7 +97,7 @@ class OTAFlasher(Flasher):
                 return False
             else:
                 raise
-        return (re.search('^Verified OK.$', result, re.MULTILINE) != None)
+        return (re.search('^Verified OK.$', result, re.MULTILINE) is not None)
 
     def fw_check(self):
         '''Check if all the hex files (OTA Server firmware and Zigbee Update file) were flashed correctly'''

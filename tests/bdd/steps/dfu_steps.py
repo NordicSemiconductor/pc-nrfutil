@@ -217,7 +217,7 @@ def step_impl(context, image, image_type, board):
     full_image_path = resolve_hex_path(image)
 
     nrfjprog = find_nrfjprog("nrfjprog")
-    if nrfjprog == None:
+    if nrfjprog is None:
         nrfjprog = find_nrfjprog("nrfjprog.exe")
 
     assert nrfjprog, "nrfjprog is not installed"

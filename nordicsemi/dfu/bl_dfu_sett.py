@@ -162,7 +162,7 @@ class BLDFUSettings(object):
 
     def _calculate_crc32_from_hex(self, ih_object, start_addr=None, end_addr=None):
         list = []
-        if start_addr == None and end_addr == None:
+        if start_addr is None and end_addr is None:
             hex_dict = ih_object.todict()
             for addr, byte in list(hex_dict.items()):
                 list.append(byte)
