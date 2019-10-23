@@ -55,7 +55,8 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 install_package = True
 try:
-    #    If the version that is being installed is older than the one currently installed, suggest to use a virtual environment.
+    #  If the version that is being installed is older than the one currently installed, suggest
+    #  to use a virtual environment.
 
     import pkg_resources
     installed_packages = [d for d in pkg_resources.working_set]
@@ -73,7 +74,8 @@ try:
 
     if legacy_version:
         valid_response = ["y", "yes"]
-        msg = "A newer version of nrfutil may already be installed. Consider using a separate virtual environment when installing legacy versions. \nProceed (y/N)? "
+        msg = ("A newer version of nrfutil may already be installed. Consider using a separate "
+               "virtual environment when installing legacy versions. \nProceed (y/N)? ")
         print(msg)
         sys.stdout.flush()
         prompt = sys.stdin.readline().strip()
@@ -81,9 +83,9 @@ try:
             install_package = False
 
 except ImportError:
-    pass # pkg_resources not available.
-except:
-    pass # Nrfutil is not already installed.
+    pass  # pkg_resources not available.
+except Exception:
+    pass  # Nrfutil is not already installed.
 
 
 # Exit program if user doesn't want to replace newer version.
@@ -120,6 +122,7 @@ description = """A Python package that includes the nrfutil utility and the nord
 with open("requirements.txt") as reqs_file:
     reqs = reqs_file.readlines()
 
+
 class NoseTestCommand(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
@@ -130,16 +133,17 @@ class NoseTestCommand(TestCommand):
         import nose
         nose.run_exit(argv=['nosetests', '--with-xunit', '--xunit-file=test-reports/unittests.xml'])
 
+
 setup(
     name="nrfutil",
     version=version.NRFUTIL_VERSION,
     license="Modified BSD License",
-    author = "Nordic Semiconductor ASA",
+    author="Nordic Semiconductor ASA",
     url="https://github.com/NordicSemiconductor/pc-nrfutil",
     description="Nordic Semiconductor nrfutil utility and Python library",
     long_description=description,
     packages=find_packages(exclude=["tests.*", "tests"]),
-    package_data = {
+    package_data={
                 '': ['../requirements.txt', 'thread/hex/ncp.hex', 'zigbee/hex/ota.hex',
                      '../libusb/x86/libusb-1.0.dll', '../libusb/x64/libusb-1.0.dll',
                      '../libusb/x64/libusb-1.0.dylib', '../libusb/LICENSE']
@@ -169,7 +173,7 @@ setup(
 
         'Programming Language :: Python :: 3.7',
     ],
-    keywords = 'nordic nrf51 nrf52 ble bluetooth dfu ota softdevice serialization nrfutil pc-nrfutil',
+    keywords='nordic nrf51 nrf52 ble bluetooth dfu ota softdevice serialization nrfutil pc-nrfutil',
     cmdclass={
         'test': NoseTestCommand
     },
