@@ -123,6 +123,8 @@ class ctypesInternalGUID:
         self._internal = bytes
     def __str__(self):
         return self._internal.raw
+    def __bytes__(self):
+        return self._internal.raw
 
 DeviceInfoData.size = DeviceInfoData.cbSize
 DeviceInfoData.dev_inst = DeviceInfoData.DevInst
