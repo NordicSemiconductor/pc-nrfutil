@@ -58,6 +58,7 @@ class _GUID(ctypes.Structure):
     def __repr__(self):
         return "<GUID: {}>".format(str(self))
 
+
 assert ctypes.sizeof(_GUID) == 16
 
 
@@ -118,13 +119,14 @@ class DeviceInfoData(ctypes.Structure):
         super(ctypes.Structure, self).__init__()
         self.cbSize = ctypes.sizeof(self)
 
+
 class ctypesInternalGUID:
     def __init__(self, bytes):
         self._internal = bytes
-    def __str__(self):
-        return self._internal.raw
+
     def __bytes__(self):
         return self._internal.raw
+
 
 DeviceInfoData.size = DeviceInfoData.cbSize
 DeviceInfoData.dev_inst = DeviceInfoData.DevInst
