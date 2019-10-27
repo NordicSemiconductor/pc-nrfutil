@@ -47,8 +47,6 @@ This will also retrieve and install all additional required packages.
 
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
-**Note**: When installing on macOS, you may need to add ` --ignore-installed six` when running pip. See [issue #79](https://github.com/NordicSemiconductor/pc-nrfutil/issues/79).
-
 ## Downloading precompiled Windows executable
 
 A Windows standalone executable (.exe) of nrfutil is available for download on the [Releases](https://github.com/NordicSemiconductor/pc-nrfutil/releases) page.

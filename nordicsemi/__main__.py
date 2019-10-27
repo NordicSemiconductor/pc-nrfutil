@@ -59,9 +59,6 @@ from pc_ble_driver_py.exceptions import NordicSemiException
 from nordicsemi.lister.device_lister import DeviceLister
 import spinel.util as util
 
-# Python 2 compatibility provided by package future
-from builtins import input
-
 logger = logging.getLogger(__name__)
 
 def ble_driver_init(conn_ic_id):
