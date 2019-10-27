@@ -90,7 +90,7 @@ class ValidationException(NordicSemiException):
 logger = logging.getLogger(__name__)
 
 
-class AntParams(object):
+class AntParams:
     # 2466 MHz
     DEF_RF_FREQ = 66
     # 16 Hz
@@ -110,7 +110,7 @@ class AntParams(object):
         self.network_key = self.DEF_NETWORK_KEY
 
 
-class DfuAdapter(object):
+class DfuAdapter:
     ANT_RSP_TIMEOUT = 100
     ANT_DFU_CHAN = 0
     ANT_NET_KEY_IDX = 0

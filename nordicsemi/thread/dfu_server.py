@@ -119,7 +119,7 @@ class ThreadDfuClient:
 
 Resource = namedtuple('Resource', ['path', 'data'])
 
-class ThreadDfuServer():
+class ThreadDfuServer:
     REALM_LOCAL_ADDR  = ip_address('FF03::1')
 
     SPBLK_SIZE        = 64      # number of CoAP blocks of BLOCK_SZX size each

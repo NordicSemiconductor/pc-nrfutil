@@ -61,7 +61,7 @@ class _GUID(ctypes.Structure):
 assert ctypes.sizeof(_GUID) == 16
 
 
-class GUID(object):
+class GUID:
     def __init__(self, guid="{00000000-0000-0000-0000-000000000000}"):
         self._guid = _GUID(guid)
 

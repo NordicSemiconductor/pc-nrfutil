@@ -40,7 +40,7 @@ from nordicsemi.lister.windows.lister_win32 import Win32Lister
 from nordicsemi.lister.unix.unix_lister import UnixLister
 
 
-class DeviceLister(object):
+class DeviceLister:
     def __init__(self):
         if sys.platform == 'win32':
             self.lister_backend = Win32Lister()

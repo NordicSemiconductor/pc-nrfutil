@@ -74,7 +74,7 @@ class PacketField(Enum):
     FW_VERSION = 3
     REQUIRED_SOFTDEVICES_ARRAY = 4
 
-class Package(object):
+class Package:
     """
         Packages and unpacks Nordic DFU packages. Nordic DFU packages are zip files that contains firmware and meta-information
         necessary for utilities to perform a DFU on nRF5X devices.

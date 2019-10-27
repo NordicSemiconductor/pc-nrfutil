@@ -66,7 +66,7 @@ class ValidationTypes(Enum):
     VALIDATE_GENERATED_SHA256 = pb.VALIDATE_SHA256
     VALIDATE_ECDSA_P256_SHA256 = pb.VALIDATE_ECDSA_P256_SHA256
 
-class InitPacketPB(object):
+class InitPacketPB:
     def __init__(self,
                  from_bytes = None,
                  hash_bytes = None,

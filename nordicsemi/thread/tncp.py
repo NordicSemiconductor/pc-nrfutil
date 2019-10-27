@@ -51,7 +51,7 @@ import spinel.util as util
 
 logger = logging.getLogger(__name__)
 
-class NCPTransport():
+class NCPTransport:
     '''A CoAP Toolkit compatible transport'''
     CFG_KEY_CHANNEL = 'channel'
     CFG_KEY_PANID = 'panid'

@@ -61,7 +61,7 @@ class ValidationException(NordicSemiException):
 
 logger = logging.getLogger(__name__)
 
-class Slip(object):
+class Slip:
     SLIP_BYTE_END             = 0o300
     SLIP_BYTE_ESC             = 0o333
     SLIP_BYTE_ESC_END         = 0o334
@@ -112,7 +112,7 @@ class Slip(object):
 
         return (finished, current_state, decoded_data)
 
-class DFUAdapter(object):
+class DFUAdapter:
     def __init__(self, serial_port):
         self.serial_port = serial_port
 

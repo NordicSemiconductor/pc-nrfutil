@@ -47,7 +47,7 @@ class ProductionConfigTooLargeException(Exception):
     def __init__(self, length):
         self.length = length
 
-class ProductionConfig(object):
+class ProductionConfig:
     PRODUCTION_CONFIG_SIZE_MAX        = 128
     PRODUCTION_CONFIG_MAGIC_NUMBER    = 0xF6DD37E7
     PRODUCTION_CONFIG_VERSION         = 1
