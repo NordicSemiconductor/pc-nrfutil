@@ -137,7 +137,7 @@ class NCPTransport:
             except Exception as e:
                 logging.exception(e)
         else:
-            logger.warn("Unexpected property received (PROP_ID: {})".format(prop))
+            logger.warning("Unexpected property received (PROP_ID: {})".format(prop))
 
         return consumed
 
