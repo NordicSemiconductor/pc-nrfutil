@@ -416,8 +416,8 @@ class DfuBLEDriver(BLEDriver):
     @wrapt.synchronized(BLEDriver.api_lock)
     def ble_gap_sec_params_reply(self, conn_handle, sec_status, sec_params, own_keys, peer_keys):
         assert isinstance(sec_status, BLEGapSecStatus), 'Invalid argument type'
-        assert isinstance(sec_params, (BLEGapSecParams, NoneType)), 'Invalid argument type'
-        assert isinstance(peer_keys, NoneType), 'NOT IMPLEMENTED'
+        assert sec_params is None or isinstance(sec_params, BLEGapSecParams), 'Invalid argument type'
+        assert peer_keys is None, 'NOT IMPLEMENTED'
 
         return driver.sd_ble_gap_sec_params_reply(self.rpc_adapter,
                                                   conn_handle,
