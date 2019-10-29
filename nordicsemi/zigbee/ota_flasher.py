@@ -68,7 +68,7 @@ class OTAFlasher(Flasher):
 
         '''
         # Call the superclass constructor
-        Flasher.__init__(self, serial_port, snr)
+        super().__init__(serial_port, snr)
         # Create a Intel Hex out of the Zigbee Update file
         ih = IntelHex()
         update = open(fw, 'rb').read()

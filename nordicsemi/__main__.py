@@ -194,7 +194,7 @@ KEY_FORMAT = [
 class OptionRequiredIf(click.Option):
 
     def full_process_value(self, ctx, value):
-        value = super(OptionRequiredIf, self).full_process_value(ctx, value)
+        value = super().full_process_value(ctx, value)
         if ('serial_number' not in ctx.params or not ctx.params['serial_number']) and value is None:
             msg = 'Required if "-snr" / "--serial-number" is not defined.'
             raise click.MissingParameter(ctx=ctx, param=self, message=msg)

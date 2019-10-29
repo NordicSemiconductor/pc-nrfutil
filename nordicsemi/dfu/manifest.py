@@ -162,7 +162,7 @@ class SoftdeviceBootloaderFirmware(Firmware):
         :param int info_read_only_metadata: The metadata about this firwmare image
         :return: SoftdeviceBootloaderFirmware
         """
-        super(SoftdeviceBootloaderFirmware, self).__init__(
+        super().__init__(
             bin_file,
             dat_file,
             info_read_only_metadata)

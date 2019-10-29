@@ -84,7 +84,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     LOCAL_ATT_MTU         = 247
 
     def __init__(self, adapter, bonded=False, keyset=None):
-        super(DFUAdapter, self).__init__()
+        super().__init__()
 
         self.evt_sync           = EvtSync(['connected', 'disconnected', 'sec_params',
                                            'auth_status', 'conn_sec_update'])
@@ -410,7 +410,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
 class DfuBLEDriver(BLEDriver):
     def __init__(self, serial_port, baud_rate=115200, auto_flash=False):
-        super(DfuBLEDriver, self).__init__(serial_port, baud_rate)
+        super().__init__(serial_port, baud_rate)
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(BLEDriver.api_lock)
@@ -438,7 +438,7 @@ class DfuTransportBle(DfuTransport):
                  target_device_addr=None,
                  baud_rate=1000000,
                  prn=0):
-        super(DfuTransportBle, self).__init__()
+        super().__init__()
         DFUAdapter.LOCAL_ATT_MTU = att_mtu
         self.baud_rate          = baud_rate
         self.serial_port        = serial_port
@@ -455,7 +455,7 @@ class DfuTransportBle(DfuTransport):
         if self.dfu_adapter:
             raise IllegalStateException('DFU Adapter is already open')
 
-        super(DfuTransportBle, self).open()
+        super().open()
         driver           = DfuBLEDriver(serial_port = self.serial_port,
                                         baud_rate   = self.baud_rate)
         adapter          = BLEAdapter(driver)
@@ -474,7 +474,7 @@ class DfuTransportBle(DfuTransport):
 
         if not self.dfu_adapter:
             raise IllegalStateException('DFU Adapter is already closed')
-        super(DfuTransportBle, self).close()
+        super().close()
         self.dfu_adapter.close()
         self.dfu_adapter = None
 
