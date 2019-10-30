@@ -90,7 +90,7 @@ class ValidationException(NordicSemiException):
 logger = logging.getLogger(__name__)
 
 
-class AntParams(object):
+class AntParams:
     # 2466 MHz
     DEF_RF_FREQ = 66
     # 16 Hz
@@ -110,7 +110,7 @@ class AntParams(object):
         self.network_key = self.DEF_NETWORK_KEY
 
 
-class DfuAdapter(object):
+class DfuAdapter:
     ANT_RSP_TIMEOUT = 100
     ANT_DFU_CHAN = 0
     ANT_NET_KEY_IDX = 0
@@ -326,7 +326,7 @@ class DfuTransportAnt(DfuTransport):
                  prn=DEFAULT_PRN,
                  debug=DEFAULT_DO_DEBUG):
 
-        super(DfuTransportAnt, self).__init__()
+        super().__init__()
         if ant_config is None:
             ant_config = AntParams()
         self.ant_config     = ant_config
@@ -341,7 +341,7 @@ class DfuTransportAnt(DfuTransport):
 
 
     def open(self):
-        super(DfuTransportAnt, self).open()
+        super().open()
         ant_dev = None
         try:
             ant_dev = antlib.ANTDevice(self.port, 57600,
@@ -368,7 +368,7 @@ class DfuTransportAnt(DfuTransport):
         self.__get_mtu()
 
     def close(self):
-        super(DfuTransportAnt, self).close()
+        super().close()
         self.dfu_adapter.close()
 
     def send_init_packet(self, init_packet):

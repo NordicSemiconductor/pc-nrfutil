@@ -44,7 +44,7 @@ from pc_ble_driver_py.exceptions import NotImplementedException
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 
 
-class ManifestGenerator(object):
+class ManifestGenerator:
     def __init__(self, firmwares_data):
         """
         The Manifest Generator constructor. Needs a data structure to generate a manifest from.
@@ -99,7 +99,7 @@ class ManifestGenerator(object):
                           separators=(',', ': '))
 
 
-class FWMetaData(object):
+class FWMetaData:
     def __init__(self,
                  is_debug=None,
                  hw_version=None,
@@ -127,7 +127,7 @@ class FWMetaData(object):
         self.bl_size = bl_size
 
 
-class Firmware(object):
+class Firmware:
     def __init__(self,
                  bin_file=None,
                  dat_file=None,
@@ -162,7 +162,7 @@ class SoftdeviceBootloaderFirmware(Firmware):
         :param int info_read_only_metadata: The metadata about this firwmare image
         :return: SoftdeviceBootloaderFirmware
         """
-        super(SoftdeviceBootloaderFirmware, self).__init__(
+        super().__init__(
             bin_file,
             dat_file,
             info_read_only_metadata)

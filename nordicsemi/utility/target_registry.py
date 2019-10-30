@@ -113,7 +113,7 @@ class FileTargetDatabase(TargetDatabase):
         self.targets = None
 
 
-class TargetRegistry(object):
+class TargetRegistry:
     def __init__(self, target_db=EnvTargetDatabase()):
         self.target_db = target_db
 

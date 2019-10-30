@@ -65,7 +65,7 @@ class nRFHex(intelhex.IntelHex):
         :param str bootloader: Optional file path to bootloader firmware
         :return: None
         """
-        super(nRFHex, self).__init__()
+        super().__init__()
         self.arch = arch
         self.file_format = 'hex'
 
@@ -92,7 +92,7 @@ class nRFHex(intelhex.IntelHex):
 
     def _removembr(self):
         mbr_end_address = 0x1000
-        minaddress = super(nRFHex, self).minaddr()
+        minaddress = super().minaddr()
         if minaddress < mbr_end_address:
             for i in range(minaddress, mbr_end_address):
                 self._buf.pop(i, 0)
@@ -128,7 +128,7 @@ class nRFHex(intelhex.IntelHex):
             return nRFHex.s1x0_mbr_end_address
 
     def minaddr(self):
-        min_address = super(nRFHex, self).minaddr()
+        min_address = super().minaddr()
 
         # Lower addresses are reserved for master boot record
         if self.file_format != 'bin':
@@ -180,7 +180,7 @@ class nRFHex(intelhex.IntelHex):
 
         start_address = self.minaddr()
         size = self.size()
-        super(nRFHex, self).tobinfile(fobj, start=start_address, size=size)
+        super().tobinfile(fobj, start=start_address, size=size)
 
         if self.bootloaderhex is not None:
             self.bootloaderhex.tobinfile(fobj)

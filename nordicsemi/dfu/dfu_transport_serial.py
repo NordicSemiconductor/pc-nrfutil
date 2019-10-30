@@ -61,7 +61,7 @@ class ValidationException(NordicSemiException):
 
 logger = logging.getLogger(__name__)
 
-class Slip(object):
+class Slip:
     SLIP_BYTE_END             = 0o300
     SLIP_BYTE_ESC             = 0o333
     SLIP_BYTE_ESC_END         = 0o334
@@ -112,7 +112,7 @@ class Slip(object):
 
         return (finished, current_state, decoded_data)
 
-class DFUAdapter(object):
+class DFUAdapter:
     def __init__(self, serial_port):
         self.serial_port = serial_port
 
@@ -175,7 +175,7 @@ class DfuTransportSerial(DfuTransport):
                  prn=DEFAULT_PRN,
                  do_ping=DEFAULT_DO_PING):
 
-        super(DfuTransportSerial, self).__init__()
+        super().__init__()
         self.com_port = com_port
         self.baud_rate = baud_rate
         self.flow_control = 1 if flow_control else 0
@@ -192,7 +192,7 @@ class DfuTransportSerial(DfuTransport):
 
 
     def open(self):
-        super(DfuTransportSerial, self).open()
+        super().open()
         try:
             self.__ensure_bootloader()
             self.serial_port = Serial(port=self.com_port,
@@ -217,7 +217,7 @@ class DfuTransportSerial(DfuTransport):
         self.__get_mtu()
 
     def close(self):
-        super(DfuTransportSerial, self).close()
+        super().close()
         self.serial_port.close()
 
     def send_init_packet(self, init_packet):

@@ -66,7 +66,7 @@ OTA_UPGRADE_MAX_HW_VERSION_LENGTH         = 2
     } background_dfu_trigger_t;
 '''
 
-class OTA_file(object):
+class OTA_file:
 
     def __init__(self,
                  file_version,
@@ -124,7 +124,7 @@ class OTA_file(object):
                                   comment]) + '.zigbee'
 
 
-class OTA_header(object):
+class OTA_header:
     def __init__(self,
                  file_id,
                  header_version,

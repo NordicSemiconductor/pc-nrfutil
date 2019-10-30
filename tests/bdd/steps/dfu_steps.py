@@ -38,6 +38,7 @@
 import logging
 import os
 import subprocess
+import time
 
 from click.testing import CliRunner
 from behave import then, given

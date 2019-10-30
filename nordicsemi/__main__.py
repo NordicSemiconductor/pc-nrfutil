@@ -59,9 +59,6 @@ from pc_ble_driver_py.exceptions import NordicSemiException
 from nordicsemi.lister.device_lister import DeviceLister
 import spinel.util as util
 
-# Python 2 compatibility provided by package future
-from builtins import input
-
 logger = logging.getLogger(__name__)
 
 def ble_driver_init(conn_ic_id):
@@ -197,7 +194,7 @@ KEY_FORMAT = [
 class OptionRequiredIf(click.Option):
 
     def full_process_value(self, ctx, value):
-        value = super(OptionRequiredIf, self).full_process_value(ctx, value)
+        value = super().full_process_value(ctx, value)
         if ('serial_number' not in ctx.params or not ctx.params['serial_number']) and value is None:
             msg = 'Required if "-snr" / "--serial-number" is not defined.'
             raise click.MissingParameter(ctx=ctx, param=self, message=msg)

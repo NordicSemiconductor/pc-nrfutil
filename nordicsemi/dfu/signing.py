@@ -64,7 +64,7 @@ AwEHoUQDQgAEaHYrUu/oFKIXN457GH+8IOuv6OIPBRLqoHjaEKM0wIzJZ0lhfO/A
 53hKGjKEjYT3VNTQ3Zq1YB3o5QSQMP/LRg==
 -----END EC PRIVATE KEY-----"""
 
-class Signing(object):
+class Signing:
     """
     Class for singing of hex-files
     """
