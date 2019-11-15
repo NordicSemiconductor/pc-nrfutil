@@ -198,13 +198,13 @@ class Signing(object):
 #include "compiler_abstraction.h"
 """.format(datetime.datetime.now().strftime("%Y-%m-%d (YY-MM-DD) at %H:%M:%S"))
 
-        dbg_header="""
+        dbg_header = """
 /* This file was generated with a throwaway private key, that is only inteded for a debug version of the DFU project.
   Please see https://github.com/NordicSemiconductor/pc-nrfutil/blob/master/README.md to generate a valid public key. */
 
 #ifdef NRF_DFU_DEBUG_VERSION
 """
-        dbg_footer="""
+        dbg_footer = """
 #else
 #error "Debug public key not valid for production. Please see https://github.com/NordicSemiconductor/pc-nrfutil/blob/master/README.md to generate it"
 #endif
@@ -226,10 +226,12 @@ class Signing(object):
         to_two_digit_hex_with_0x = '0x{0:02x}'.format
 
         key = self.sk.get_verifying_key().to_string()
-        vk_x_separated = ', '.join(map(to_two_digit_hex_with_0x, key[:64]))
-        vk_y_separated = ', '.join(map(to_two_digit_hex_with_0x, key[64:]))
+        vk_x_separated = ', '.join(map(to_two_digit_hex_with_0x,
+                                       key[:32][::-1]))
+        vk_y_separated = ', '.join(map(to_two_digit_hex_with_0x,
+                                       key[32:][::-1]))
 
-        key_code ="""
+        key_code = """
 /** @brief Public key used to verify DFU images */
 __ALIGN(4) const uint8_t pk[64] =
 {{
