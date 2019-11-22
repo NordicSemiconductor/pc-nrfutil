@@ -71,7 +71,7 @@ class EnvTargetDatabase(TargetDatabase):
             self.targets = []
 
             for key, value in os.environ.items():
-                match = re.match("NORDICSEMI_TARGET_(?P<target>\d+)_(?P<key>[a-zA-Z_]+)", key)
+                match = re.match(r"NORDICSEMI_TARGET_(?P<target>\d+)_(?P<key>[a-zA-Z_]+)", key)
 
                 if match:
                     key_value = match.groupdict()
@@ -113,7 +113,7 @@ class FileTargetDatabase(TargetDatabase):
         self.targets = None
 
 
-class TargetRegistry(object):
+class TargetRegistry:
     def __init__(self, target_db=EnvTargetDatabase()):
         self.target_db = target_db
 

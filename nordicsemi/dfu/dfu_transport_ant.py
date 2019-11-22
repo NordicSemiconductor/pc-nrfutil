@@ -37,7 +37,7 @@
 
 # Python imports
 import binascii
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 import queue
 import struct
@@ -90,7 +90,7 @@ class ValidationException(NordicSemiException):
 logger = logging.getLogger(__name__)
 
 
-class AntParams(object):
+class AntParams:
     # 2466 MHz
     DEF_RF_FREQ = 66
     # 16 Hz
@@ -110,7 +110,7 @@ class AntParams(object):
         self.network_key = self.DEF_NETWORK_KEY
 
 
-class DfuAdapter(object):
+class DfuAdapter:
     ANT_RSP_TIMEOUT = 100
     ANT_DFU_CHAN = 0
     ANT_NET_KEY_IDX = 0
@@ -195,7 +195,7 @@ class DfuAdapter(object):
             self.tx_result = None
 
             self.ant_dev.send_burst(self.ANT_DFU_CHAN, data)
-            self.__wait_for_condition(lambda: self.tx_result != None)
+            self.__wait_for_condition(lambda: self.tx_result is not None)
 
             # Wait for a beacon, needed in tx fail case to allow for flush of
             # any sequence number errors that could interrupt the burst.
@@ -326,7 +326,7 @@ class DfuTransportAnt(DfuTransport):
                  prn=DEFAULT_PRN,
                  debug=DEFAULT_DO_DEBUG):
 
-        super(DfuTransportAnt, self).__init__()
+        super().__init__()
         if ant_config is None:
             ant_config = AntParams()
         self.ant_config     = ant_config
@@ -341,7 +341,7 @@ class DfuTransportAnt(DfuTransport):
 
 
     def open(self):
-        super(DfuTransportAnt, self).open()
+        super().open()
         ant_dev = None
         try:
             ant_dev = antlib.ANTDevice(self.port, 57600,
@@ -368,7 +368,7 @@ class DfuTransportAnt(DfuTransport):
         self.__get_mtu()
 
     def close(self):
-        super(DfuTransportAnt, self).close()
+        super().close()
         self.dfu_adapter.close()
 
     def send_init_packet(self, init_packet):
@@ -476,7 +476,7 @@ class DfuTransportAnt(DfuTransport):
         self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['Ping'], self.ping_id])
         resp = self.dfu_adapter.get_message() # Receive raw response to check return code
 
-        if (resp == None):
+        if (resp is None):
             logger.debug('ANT: No ping response')
             return False
 
@@ -549,10 +549,10 @@ class DfuTransportAnt(DfuTransport):
         def validate_crc():
             if (crc != response['crc']):
                 raise ValidationException('Failed CRC validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
+                                + 'Expected: {} Received: {}.'.format(crc, response['crc']))
             if (offset != response['offset']):
                 raise ValidationException('Failed offset validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
+                                + 'Expected: {} Received: {}.'.format(offset, response['offset']))
 
         current_pnr     = 0
 
@@ -581,7 +581,7 @@ class DfuTransportAnt(DfuTransport):
 
         resp = self.dfu_adapter.get_message()
 
-        if resp == None:
+        if resp is None:
             return None
 
         if resp[0] != DfuTransportAnt.OP_CODE['Response']:

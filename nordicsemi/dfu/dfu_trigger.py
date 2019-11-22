@@ -64,7 +64,7 @@ DFU_DETACH_REQUEST = 0
 
 logger = logging.getLogger(__name__)
 
-is_32_bit = ctypes.sizeof(ctypes.c_voidp) == 4
+is_32_bit = ctypes.sizeof(ctypes.c_void_p) == 4
 abs_file_dir = os.path.dirname(os.path.abspath(__file__))
 rel_import_dir = ""
 

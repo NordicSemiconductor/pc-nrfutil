@@ -36,8 +36,6 @@
 #
 
 # Python standard library
-import os
-import sys
 import time
 import wrapt
 import queue
@@ -48,7 +46,7 @@ import binascii
 from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent
 from pc_ble_driver_py.exceptions    import NordicSemiException, IllegalStateException
 from pc_ble_driver_py.ble_driver    import BLEDriver, BLEDriverObserver, BLEEnableParams, BLEUUIDBase, BLEGapSecKDist, BLEGapSecParams, \
-    BLEGapIOCaps, BLEUUID, BLEAdvData, BLEGapConnParams, BLEEvtID, BLEGattHVXType, NordicSemiErrorCheck, BLEGapSecStatus, driver
+    BLEGapIOCaps, BLEUUID, BLEAdvData, BLEGapConnParams, NordicSemiErrorCheck, BLEGapSecStatus, driver
 from pc_ble_driver_py.ble_driver    import ATT_MTU_DEFAULT, BLEConfig, BLEConfigConnGatt
 from pc_ble_driver_py.ble_adapter   import BLEAdapter, BLEAdapterObserver, EvtSync
 
@@ -86,7 +84,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     LOCAL_ATT_MTU         = 247
 
     def __init__(self, adapter, bonded=False, keyset=None):
-        super(DFUAdapter, self).__init__()
+        super().__init__()
 
         self.evt_sync           = EvtSync(['connected', 'disconnected', 'sec_params',
                                            'auth_status', 'conn_sec_update'])
@@ -382,7 +380,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             logger.info('BLE: Found target advertiser, address: 0x{}, name: {}'.format(address_string, dev_name))
             logger.info('BLE: Connecting to 0x{}'.format(address_string))
             # Connect must specify tag=1 to enable the settings
-            # set with BLEConfigConnGatt (that implictly operates
+            # set with BLEConfigConnGatt (that implicitly operates
             # on connections with tag 1) to allow for larger MTU.
             self.adapter.connect(address=peer_addr,
                                  conn_params=self.conn_params,
@@ -412,14 +410,14 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
 class DfuBLEDriver(BLEDriver):
     def __init__(self, serial_port, baud_rate=115200, auto_flash=False):
-        super(DfuBLEDriver, self).__init__(serial_port, baud_rate)
+        super().__init__(serial_port, baud_rate)
 
     @NordicSemiErrorCheck
     @wrapt.synchronized(BLEDriver.api_lock)
     def ble_gap_sec_params_reply(self, conn_handle, sec_status, sec_params, own_keys, peer_keys):
         assert isinstance(sec_status, BLEGapSecStatus), 'Invalid argument type'
-        assert isinstance(sec_params, (BLEGapSecParams, NoneType)), 'Invalid argument type'
-        assert isinstance(peer_keys, NoneType), 'NOT IMPLEMENTED'
+        assert sec_params is None or isinstance(sec_params, BLEGapSecParams), 'Invalid argument type'
+        assert peer_keys is None, 'NOT IMPLEMENTED'
 
         return driver.sd_ble_gap_sec_params_reply(self.rpc_adapter,
                                                   conn_handle,
@@ -440,7 +438,7 @@ class DfuTransportBle(DfuTransport):
                  target_device_addr=None,
                  baud_rate=1000000,
                  prn=0):
-        super(DfuTransportBle, self).__init__()
+        super().__init__()
         DFUAdapter.LOCAL_ATT_MTU = att_mtu
         self.baud_rate          = baud_rate
         self.serial_port        = serial_port
@@ -457,7 +455,7 @@ class DfuTransportBle(DfuTransport):
         if self.dfu_adapter:
             raise IllegalStateException('DFU Adapter is already open')
 
-        super(DfuTransportBle, self).open()
+        super().open()
         driver           = DfuBLEDriver(serial_port = self.serial_port,
                                         baud_rate   = self.baud_rate)
         adapter          = BLEAdapter(driver)
@@ -476,7 +474,7 @@ class DfuTransportBle(DfuTransport):
 
         if not self.dfu_adapter:
             raise IllegalStateException('DFU Adapter is already closed')
-        super(DfuTransportBle, self).close()
+        super().close()
         self.dfu_adapter.close()
         self.dfu_adapter = None
 
@@ -623,10 +621,10 @@ class DfuTransportBle(DfuTransport):
         def validate_crc():
             if (crc != response['crc']):
                 raise ValidationException('Failed CRC validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
+                                + 'Expected: {} Received: {}.'.format(crc, response['crc']))
             if (offset != response['offset']):
                 raise ValidationException('Failed offset validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
+                                + 'Expected: {} Received: {}.'.format(offset, response['offset']))
 
         current_pnr = 0
         for i in range(0, len(data), self.dfu_adapter.packet_size):

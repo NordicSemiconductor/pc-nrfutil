@@ -38,7 +38,7 @@
 UART_HEADER_OCTET_COUNT = 4
 
 
-class ThreeWireUartPacket(object):
+class ThreeWireUartPacket:
     """
     This class encapsulate a three wire uart packet according to Bluetooth specification
     version 4.0 [Vol 4] part D.

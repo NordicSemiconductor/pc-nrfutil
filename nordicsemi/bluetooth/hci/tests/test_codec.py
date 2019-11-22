@@ -35,7 +35,6 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import json
 import unittest
 from nordicsemi.bluetooth.hci.slip import Slip
 from nordicsemi.bluetooth.hci import codec

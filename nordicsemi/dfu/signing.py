@@ -46,7 +46,6 @@
 # the file.
 
 import hashlib
-import binascii
 import datetime
 
 try:
@@ -65,7 +64,7 @@ AwEHoUQDQgAEaHYrUu/oFKIXN457GH+8IOuv6OIPBRLqoHjaEKM0wIzJZ0lhfO/A
 53hKGjKEjYT3VNTQ3Zq1YB3o5QSQMP/LRg==
 -----END EC PRIVATE KEY-----"""
 
-class Signing(object):
+class Signing:
     """
     Class for singing of hex-files
     """
@@ -135,8 +134,7 @@ class Signing(object):
         elif output_type == 'code':
             return self.get_vk_code(dbg)
         elif output_type == 'pem':
-            # Return pem as str to conform in type with the other cases.
-            return self.get_vk_pem().decode()
+            return self.get_vk_pem()
         else:
             raise InvalidArgumentException("Invalid argument. Can't get key")
 
@@ -167,7 +165,7 @@ class Signing(object):
             raise IllegalStateException("Can't get key. No key created/loaded")
 
         # Reverse the key for display. This emulates a memory
-        # dump of the key interpreted a 256bit litte endian
+        # dump of the key interpreted a 256bit little endian
         # integer.
         key = self.sk.to_string()
         displayed_key = key[::-1].hex()
@@ -183,7 +181,7 @@ class Signing(object):
 
         # Reverse the two halves of key for display. This
         # emulates a memory dump of the key interpreted as two
-        # 256bit litte endian integers.
+        # 256bit little endian integers.
         key = self.sk.get_verifying_key().to_string()
         displayed_key = (key[:32][::-1] + key[32:][::-1]).hex()
 
@@ -244,7 +242,7 @@ __ALIGN(4) const uint8_t pk[64] =
 
         return vk_code
 
-    def get_vk_pem(self):
+    def get_vk_pem(self) -> str:
         """
         Get the verification key as PEM
         """
@@ -254,4 +252,5 @@ __ALIGN(4) const uint8_t pk[64] =
         vk = self.sk.get_verifying_key()
         vk_pem = vk.to_pem()
 
-        return vk_pem
+        # Return pem as str to conform in type with the other cases.
+        return vk_pem.decode()

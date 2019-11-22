@@ -47,8 +47,6 @@ This will also retrieve and install all additional required packages.
 
 **Note**: Please refer to the [pc-ble-driver-py PyPI installation note on Windows](https://github.com/NordicSemiconductor/pc-ble-driver-py#installing-from-pypi) if you are running nrfutil on this operating system.
 
-**Note**: When installing on macOS, you may need to add ` --ignore-installed six` when running pip. See [issue #79](https://github.com/NordicSemiconductor/pc-nrfutil/issues/79).
-
 ## Downloading precompiled Windows executable
 
 A Windows standalone executable (.exe) of nrfutil is available for download on the [Releases](https://github.com/NordicSemiconductor/pc-nrfutil/releases) page.
@@ -370,9 +368,9 @@ The `--family` setting depends on the nRF IC that you are targeting:
 nRF IC    | Family Setting
 --------- | --------------
 nRF51xxx  | NRF51
-nRF52832  | NRF52
+nRF52832, nRF52833  | NRF52
 nRF52832-QFAB | NRF52QFAB
-nRF52810  | NRF52810
+nRF52810, nRF52811  | NRF52810
 nRF52840  | NRF52840
 
 The `--bl-settings-version` depends on the SDK version used. Check the following table to find out which version to use:

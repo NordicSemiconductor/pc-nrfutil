@@ -42,7 +42,7 @@ class NCPFlasher(Flasher):
     ERROR_CODE_VERIFY_ERROR = 55
 
     def __init__(self, serial_port = None, snr = None):
-        Flasher.__init__(self, serial_port, snr)
+        super().__init__(serial_port, snr)
 
     def __get_hex_path(self):
         return os.path.join(os.path.dirname(__file__), 'hex', 'ncp.hex')
@@ -59,7 +59,7 @@ class NCPFlasher(Flasher):
                 return False
             else:
                 raise
-        return (re.search(b'^Verified OK.$', result, re.MULTILINE) != None)
+        return (re.search(b'^Verified OK.$', result, re.MULTILINE) is not None)
 
     def fw_flash(self):
         self.erase()

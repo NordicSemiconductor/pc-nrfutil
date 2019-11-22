@@ -38,8 +38,6 @@ import binascii
 import struct
 import tqdm
 import threading
-import json
-import sys
 
 import piccata.core
 import piccata.block_transfer
@@ -49,7 +47,6 @@ from piccata import constants
 from ipaddress import ip_address
 from collections import namedtuple
 import click
-import collections
 import time
 import math
 
@@ -122,7 +119,7 @@ class ThreadDfuClient:
 
 Resource = namedtuple('Resource', ['path', 'data'])
 
-class ThreadDfuServer():
+class ThreadDfuServer:
     REALM_LOCAL_ADDR  = ip_address('FF03::1')
 
     SPBLK_SIZE        = 64      # number of CoAP blocks of BLOCK_SZX size each
@@ -139,9 +136,9 @@ class ThreadDfuServer():
     BITMAP_URI = b'b'
 
     def __init__(self, protocol, init_data, image_data, opts):
-        assert(protocol != None)
-        assert(init_data != None)
-        assert(image_data != None)
+        assert(protocol is not None)
+        assert(init_data is not None)
+        assert(image_data is not None)
 
         self.opts = opts
         if (not opts or not opts.rate):

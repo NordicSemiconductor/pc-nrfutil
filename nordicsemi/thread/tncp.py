@@ -51,7 +51,7 @@ import spinel.util as util
 
 logger = logging.getLogger(__name__)
 
-class NCPTransport():
+class NCPTransport:
     '''A CoAP Toolkit compatible transport'''
     CFG_KEY_CHANNEL = 'channel'
     CFG_KEY_PANID = 'panid'
@@ -137,7 +137,7 @@ class NCPTransport():
             except Exception as e:
                 logging.exception(e)
         else:
-            logger.warn("Unexpected property received (PROP_ID: {})".format(prop))
+            logger.warning("Unexpected property received (PROP_ID: {})".format(prop))
 
         return consumed
 
@@ -202,7 +202,7 @@ class NCPTransport():
         self._wpan.ip_send(datagram.to_bytes())
 
     def register_receiver(self, callback):
-        '''Registers a reciever, that will get all the data received from the transport.
+        '''Registers a receiver, that will get all the data received from the transport.
            The callback function shall be in format:
            receive_callback(src_addr, src_port, dest_port, dest_addr, payload)'''
         self._receivers.append(callback)

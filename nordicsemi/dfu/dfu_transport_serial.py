@@ -48,7 +48,7 @@ from serial.serialutil import SerialException
 
 # Nordic Semiconductor imports
 from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent, TRANSPORT_LOGGING_LEVEL
-from pc_ble_driver_py.exceptions    import NordicSemiException, IllegalStateException
+from pc_ble_driver_py.exceptions    import NordicSemiException
 from nordicsemi.lister.device_lister import DeviceLister
 from nordicsemi.dfu.dfu_trigger import DFUTrigger
 
@@ -61,7 +61,7 @@ class ValidationException(NordicSemiException):
 
 logger = logging.getLogger(__name__)
 
-class Slip(object):
+class Slip:
     SLIP_BYTE_END             = 0o300
     SLIP_BYTE_ESC             = 0o333
     SLIP_BYTE_ESC_END         = 0o334
@@ -112,7 +112,7 @@ class Slip(object):
 
         return (finished, current_state, decoded_data)
 
-class DFUAdapter(object):
+class DFUAdapter:
     def __init__(self, serial_port):
         self.serial_port = serial_port
 
@@ -175,7 +175,7 @@ class DfuTransportSerial(DfuTransport):
                  prn=DEFAULT_PRN,
                  do_ping=DEFAULT_DO_PING):
 
-        super(DfuTransportSerial, self).__init__()
+        super().__init__()
         self.com_port = com_port
         self.baud_rate = baud_rate
         self.flow_control = 1 if flow_control else 0
@@ -192,7 +192,7 @@ class DfuTransportSerial(DfuTransport):
 
 
     def open(self):
-        super(DfuTransportSerial, self).open()
+        super().open()
         try:
             self.__ensure_bootloader()
             self.serial_port = Serial(port=self.com_port,
@@ -217,7 +217,7 @@ class DfuTransportSerial(DfuTransport):
         self.__get_mtu()
 
     def close(self):
-        super(DfuTransportSerial, self).close()
+        super().close()
         self.serial_port.close()
 
     def send_init_packet(self, init_packet):
@@ -369,9 +369,9 @@ class DfuTransportSerial(DfuTransport):
         self.ping_id = (self.ping_id + 1) % 256
 
         self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['Ping'], self.ping_id])
-        resp = self.dfu_adapter.get_message() # Receive raw reponse to check return code
+        resp = self.dfu_adapter.get_message() # Receive raw response to check return code
 
-        if (resp == None):
+        if (resp is None):
             logger.debug('Serial: No ping response')
             return False
 
@@ -449,10 +449,10 @@ class DfuTransportSerial(DfuTransport):
         def validate_crc():
             if (crc != response['crc']):
                 raise ValidationException('Failed CRC validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(crc, response['crc']))
+                                + 'Expected: {} Received: {}.'.format(crc, response['crc']))
             if (offset != response['offset']):
                 raise ValidationException('Failed offset validation.\n'\
-                                + 'Expected: {} Recieved: {}.'.format(offset, response['offset']))
+                                + 'Expected: {} Received: {}.'.format(offset, response['offset']))
 
         current_pnr     = 0
 
@@ -481,7 +481,7 @@ class DfuTransportSerial(DfuTransport):
 
         resp = self.dfu_adapter.get_message()
 
-        if resp == None:
+        if resp is None:
             return None
 
         if resp[0] != DfuTransportSerial.OP_CODE['Response']:

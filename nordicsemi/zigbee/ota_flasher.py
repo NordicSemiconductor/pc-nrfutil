@@ -40,7 +40,7 @@ import re
 import subprocess
 import time
 import uuid
-from intelhex import *
+from intelhex import IntelHex
 from serial import Serial
 from pc_ble_driver_py.ble_driver import Flasher
 
@@ -68,7 +68,7 @@ class OTAFlasher(Flasher):
 
         '''
         # Call the superclass constructor
-        Flasher.__init__(self, serial_port, snr)
+        super().__init__(serial_port, snr)
         # Create a Intel Hex out of the Zigbee Update file
         ih = IntelHex()
         update = open(fw, 'rb').read()
@@ -97,7 +97,7 @@ class OTAFlasher(Flasher):
                 return False
             else:
                 raise
-        return (re.search('^Verified OK.$', result, re.MULTILINE) != None)
+        return (re.search('^Verified OK.$', result, re.MULTILINE) is not None)
 
     def fw_check(self):
         '''Check if all the hex files (OTA Server firmware and Zigbee Update file) were flashed correctly'''

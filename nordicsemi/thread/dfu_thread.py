@@ -45,52 +45,52 @@ from nordicsemi.thread.dfu_server import ThreadDfuServer
 logger = logging.getLogger(__name__)
 
 def _get_manifest_items(manifest):
-	import inspect
-	result = []
+    import inspect
+    result = []
 
-	for key, value in inspect.getmembers(manifest):
-		if (key.startswith('__')):
-			continue
-		if not value:
-			continue
-		if inspect.ismethod(value) or inspect.isfunction(value):
-			continue
+    for key, value in inspect.getmembers(manifest):
+        if (key.startswith('__')):
+            continue
+        if not value:
+            continue
+        if inspect.ismethod(value) or inspect.isfunction(value):
+            continue
 
-		result.append((key, value))
+        result.append((key, value))
 
-	return result
+    return result
 
 def _get_file_names(manifest):
-	data_attrs = _get_manifest_items(manifest)
-	if (len(data_attrs) > 1):
-		raise RuntimeError("More than one image present in manifest")
-	data_attrs = data_attrs[0]
-	firmware = data_attrs[1]
-	logger.info("Image type {} found".format(data_attrs[0]))
-	return firmware.dat_file, firmware.bin_file
+    data_attrs = _get_manifest_items(manifest)
+    if (len(data_attrs) > 1):
+        raise RuntimeError("More than one image present in manifest")
+    data_attrs = data_attrs[0]
+    firmware = data_attrs[1]
+    logger.info("Image type {} found".format(data_attrs[0]))
+    return firmware.dat_file, firmware.bin_file
 
 def create_dfu_server(transport, zip_file_path, opts):
-	'''
-	Create a DFU server instance.
-	:param transpoort: A transport to be used.
-	:param zip_file_path: A path to the firmware package.
-	:param opts: Optional paramters:
-		mcast_dfu: An information if multicast DFU is enabled.
-		rate: Multicast block transfer rate, in blocks per second
-		reset_suppress: A delay before sending multicast reset command (in milliseconds). -1 means that no reset will be sent.
-	'''
-	temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_")
-	unpacked_zip_path = os.path.join(temp_dir, 'unpacked_zip')
-	manifest = Package.unpack_package(zip_file_path, unpacked_zip_path)
+    '''
+    Create a DFU server instance.
+    :param transpoort: A transport to be used.
+    :param zip_file_path: A path to the firmware package.
+    :param opts: Optional parameters:
+        mcast_dfu: An information if multicast DFU is enabled.
+        rate: Multicast block transfer rate, in blocks per second
+        reset_suppress: A delay before sending multicast reset command (in milliseconds). -1 means that no reset will be sent.
+    '''
+    temp_dir = tempfile.mkdtemp(prefix="nrf_dfu_")
+    unpacked_zip_path = os.path.join(temp_dir, 'unpacked_zip')
+    manifest = Package.unpack_package(zip_file_path, unpacked_zip_path)
 
-	protocol = piccata.core.Coap(transport)
-	transport.register_receiver(protocol)
+    protocol = piccata.core.Coap(transport)
+    transport.register_receiver(protocol)
 
-	init_file, image_file = _get_file_names(manifest)
+    init_file, image_file = _get_file_names(manifest)
 
-	with open(os.path.join(unpacked_zip_path, init_file), 'rb') as f:
-		init_data = f.read()
-	with open(os.path.join(unpacked_zip_path, image_file), 'rb') as f:
-		image_data = f.read()
+    with open(os.path.join(unpacked_zip_path, init_file), 'rb') as f:
+        init_data = f.read()
+    with open(os.path.join(unpacked_zip_path, image_file), 'rb') as f:
+        image_data = f.read()
 
-	return ThreadDfuServer(protocol, init_data, image_data, opts)
+    return ThreadDfuServer(protocol, init_data, image_data, opts)
