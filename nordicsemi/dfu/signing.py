@@ -197,7 +197,7 @@ class Signing:
 """.format(datetime.datetime.now().strftime("%Y-%m-%d (YY-MM-DD) at %H:%M:%S"))
 
         dbg_header = """
-/* This file was generated with a throwaway private key, that is only inteded for a debug version of the DFU project.
+/* This file was generated with a throwaway private key, that is only intended for a debug version of the DFU project.
   Please see https://github.com/NordicSemiconductor/pc-nrfutil/blob/master/README.md to generate a valid public key. */
 
 #ifdef NRF_DFU_DEBUG_VERSION
