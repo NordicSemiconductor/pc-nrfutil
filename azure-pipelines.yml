@@ -96,7 +96,7 @@ jobs:
       - bash: |
           cp -R dist/*.tar.gz "$(Build.ArtifactStagingDirectory)"
           cp -R dist/*.exe "$(Build.ArtifactStagingDirectory)"
-        condition: eq(variables['python_arch'], 'x64')
+        condition: and(eq(variables['python_arch'], 'x64'), eq[variables['python_version'], '3.7'])
         displayName: "Copy artifacts"
       - task: GitHubRelease@0
         inputs:
