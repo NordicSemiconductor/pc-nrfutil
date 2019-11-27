@@ -26,7 +26,7 @@ jobs:
           python setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
-          pip install pyinstaller
+          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
 
@@ -52,7 +52,7 @@ jobs:
           python setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
-          pip install pyinstaller
+          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
 
@@ -90,13 +90,13 @@ jobs:
           python setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
-          pip install pyinstaller
+          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build exe with python $(python_version)"
       - bash: |
           cp -R dist/*.tar.gz "$(Build.ArtifactStagingDirectory)"
           cp -R dist/*.exe "$(Build.ArtifactStagingDirectory)"
-        condition: eq(variables['python_arch'], 'x64')
+        condition: and(eq(variables['python_arch'], 'x64'), eq(variables['python_version'], '3.7'))
         displayName: "Copy artifacts"
       - task: GitHubRelease@0
         inputs:

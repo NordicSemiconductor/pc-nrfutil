@@ -144,7 +144,7 @@ setup(
                      '../libusb/x86/libusb-1.0.dll', '../libusb/x64/libusb-1.0.dll',
                      '../libusb/x64/libusb-1.0.dylib', '../libusb/LICENSE']
     },
-    python_requires='~= 3.6',
+    python_requires='>=3.6, <=3.8',
     install_requires=reqs,
     zipfile=None,
     tests_require=[
@@ -167,7 +167,9 @@ setup(
 
         'License :: Other/Proprietary License',
 
+        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     keywords = 'nordic nrf51 nrf52 ble bluetooth dfu ota softdevice serialization nrfutil pc-nrfutil',
     cmdclass={
