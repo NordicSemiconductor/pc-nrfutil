@@ -1,81 +1,111 @@
 trigger:
-- test-azure
-- master
-- release/*
+  - test-azure
+  - master
+  - release/*
 
 jobs:
   # Linux
   - job: Linux
+    strategy:
+      matrix:
+        py36:
+          python_version: "3.6"
+        py37:
+          python_version: "3.7"
+        py38:
+          python_version: "3.8"
     pool:
-      vmImage: 'ubuntu-16.04'
+      vmImage: "ubuntu-16.04"
     steps:
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '3.7'
-    - bash: |
-        pip install setuptools
-        pip install -r requirements-frozen.txt
-        python setup.py sdist
-      displayName: 'Build tar.gz with python 3.7'
-    - bash: |
-        pip install pyinstaller
-        pyinstaller nrfutil.spec
-      displayName: 'Build executable with python 3.7'
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: "$(python_version)"
+      - bash: |
+          pip install setuptools
+          pip install -r requirements-frozen.txt
+          python setup.py sdist
+        displayName: "Build tar.gz with python $(python_version)"
+      - bash: |
+          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+          pyinstaller nrfutil.spec
+        displayName: "Build executable with python $(python_version)"
 
   # macOS
   - job: macOS
+    strategy:
+      matrix:
+        py36:
+          python_version: "3.6"
+        py37:
+          python_version: "3.7"
+        py38:
+          python_version: "3.8"
     pool:
-      vmImage: 'macos-10.13'
+      vmImage: "macos-10.13"
     steps:
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '3.7'
-    - bash: |
-        pip install setuptools
-        pip install -r requirements-frozen.txt
-        python setup.py sdist
-      displayName: 'Build tar.gz with python 3.7'
-    - bash: |
-        pip install pyinstaller
-        pyinstaller nrfutil.spec
-      displayName: 'Build executable with python 3.7'
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: "$(python_version)"
+      - bash: |
+          pip install setuptools
+          pip install -r requirements-frozen.txt
+          python setup.py sdist
+        displayName: "Build tar.gz with python $(python_version)"
+      - bash: |
+          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+          pyinstaller nrfutil.spec
+        displayName: "Build executable with python $(python_version)"
 
   # Windows
   - job: Windows
     strategy:
       matrix:
-        win32:
-          python_arch: 'x86'
-        win64:
-          python_arch: 'x64'
+        py36_win32:
+          python_version: "3.6"
+          python_arch: "x86"
+        py36_win64:
+          python_version: "3.6"
+          python_arch: "x64"
+        py37_win32:
+          python_version: "3.7"
+          python_arch: "x86"
+        py37_win64:
+          python_version: "3.7"
+          python_arch: "x64"
+        py38_win32:
+          python_version: "3.8"
+          python_arch: "x86"
+        py38_win64:
+          python_version: "3.8"
+          python_arch: "x64"
     pool:
-      vmImage: 'vs2017-win2016'
+      vmImage: "vs2017-win2016"
     steps:
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '3.7'
-        architecture: '$(python_arch)'
-    - bash: |
-        pip install -r requirements-frozen.txt
-        python setup.py sdist
-      displayName: 'Build tar.gz with python 3.7'
-    - bash: |
-        pip install pyinstaller
-        pyinstaller nrfutil.spec
-      displayName: 'Build exe with python 3.7'
-    - bash: |
-        cp -R dist/*.tar.gz "$(Build.ArtifactStagingDirectory)"
-        cp -R dist/*.exe "$(Build.ArtifactStagingDirectory)"
-      condition: eq(variables['python_arch'], 'x64')
-      displayName: 'Copy artifacts'
-    - task: GitHubRelease@0
-      inputs:
-        gitHubConnection: 'waylandCI'
-        repositoryName: 'NordicSemiconductor/pc-nrfutil'
-        action: 'edit'
-        tagSource: 'Git tag'
-        tag: '$(Build.SourceBranchName)'
-        assetUploadMode: 'replace'
-        isDraft: 'true'
-        addChangeLog: 'false'
-      condition: ne(variables['Build.Reason'], 'PullRequest')
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: "$(python_version)"
+          architecture: "$(python_arch)"
+      - bash: |
+          pip install -r requirements-frozen.txt
+          python setup.py sdist
+        displayName: "Build tar.gz with python $(python_version)"
+      - bash: |
+          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+          pyinstaller nrfutil.spec
+        displayName: "Build exe with python $(python_version)"
+      - bash: |
+          cp -R dist/*.tar.gz "$(Build.ArtifactStagingDirectory)"
+          cp -R dist/*.exe "$(Build.ArtifactStagingDirectory)"
+        condition: and(eq(variables['python_arch'], 'x64'), eq(variables['python_version'], '3.7'))
+        displayName: "Copy artifacts"
+      - task: GitHubRelease@0
+        inputs:
+          gitHubConnection: "waylandCI"
+          repositoryName: "NordicSemiconductor/pc-nrfutil"
+          action: "edit"
+          tagSource: "Git tag"
+          tag: "$(Build.SourceBranchName)"
+          assetUploadMode: "replace"
+          isDraft: "true"
+          addChangeLog: "false"
+        condition: ne(variables['Build.Reason'], 'PullRequest')

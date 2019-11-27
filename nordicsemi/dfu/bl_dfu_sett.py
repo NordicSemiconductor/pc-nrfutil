@@ -53,7 +53,7 @@ from pc_ble_driver_py.exceptions import NordicSemiException
 
 logger = logging.getLogger(__name__)
 
-class BLDFUSettingsStructV1(object):
+class BLDFUSettingsStructV1:
 
     def __init__(self, settings_address):
         self.bytes_count = 92
@@ -72,7 +72,7 @@ class BLDFUSettingsStructV1(object):
         self.last_addr         = settings_address + 0x5C
 
 
-class BLDFUSettingsStructV2(object):
+class BLDFUSettingsStructV2:
 
     def __init__(self, settings_address):
         self.bytes_count = 803 # Entire settings page
@@ -97,7 +97,7 @@ class BLDFUSettingsStructV2(object):
         self.last_addr            = settings_address + 0x322
 
 
-class BLDFUSettings(object):
+class BLDFUSettings:
     """ Class to abstract a bootloader and its settings """
 
     flash_page_51_sz      = 0x400

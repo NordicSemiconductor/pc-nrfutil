@@ -51,7 +51,7 @@ import spinel.util as util
 
 logger = logging.getLogger(__name__)
 
-class NCPTransport():
+class NCPTransport:
     '''A CoAP Toolkit compatible transport'''
     CFG_KEY_CHANNEL = 'channel'
     CFG_KEY_PANID = 'panid'
@@ -137,7 +137,7 @@ class NCPTransport():
             except Exception as e:
                 logging.exception(e)
         else:
-            logger.warn("Unexpected property received (PROP_ID: {})".format(prop))
+            logger.warning("Unexpected property received (PROP_ID: {})".format(prop))
 
         return consumed
 

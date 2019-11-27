@@ -49,7 +49,7 @@ from nordicsemi.dfu.package         import Package
 logger = logging.getLogger(__name__)
 
 
-class Dfu(object):
+class Dfu:
     """ Class to handle upload of a new hex image to the device. """
 
     def __init__(self, zip_file_path, dfu_transport, connect_delay):

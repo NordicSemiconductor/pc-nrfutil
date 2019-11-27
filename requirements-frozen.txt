@@ -2,16 +2,14 @@ antlib==1.1b0.post0 ; sys_platform == 'win32'
 Click==7.0
 crcmod==1.7
 ecdsa==0.13.3
-future==0.17.1
 intelhex==2.2.1
 ipaddress==1.0.22
 libusb1==1.7.1
-pc-ble-driver-py==0.13.0
+pc-ble-driver-py==0.14.0
 piccata==2.0.1
 protobuf==3.10.0
 pyserial==3.4
 pyspinel==1.0.0a3
 PyYAML==5.1.2
-six==1.12.0
 tqdm==4.36.1
 wrapt==1.11.2

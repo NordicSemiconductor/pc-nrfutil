@@ -36,7 +36,7 @@ class _GUID(ctypes.Structure):
     ]
 
     def __init__(self, guid="{00000000-0000-0000-0000-000000000000}"):
-        super(ctypes.Structure, self).__init__()
+        super().__init__()
         if isinstance(guid, str):
             ret = _ole32.CLSIDFromString(ctypes.create_unicode_buffer(guid), ctypes.byref(self))
             if ret < 0:
@@ -62,7 +62,7 @@ class _GUID(ctypes.Structure):
 assert ctypes.sizeof(_GUID) == 16
 
 
-class GUID(object):
+class GUID:
     def __init__(self, guid="{00000000-0000-0000-0000-000000000000}"):
         self._guid = _GUID(guid)
 
@@ -84,7 +84,7 @@ class DevicePropertyKey(ctypes.Structure):
     ]
 
     def __init__(self, guid, pid, name=None):
-        super(ctypes.Structure, self).__init__()
+        super().__init__()
         self.fmtid.__init__(guid)
         self.pid = pid
         self.name = name
@@ -116,7 +116,7 @@ class DeviceInfoData(ctypes.Structure):
     ]
 
     def __init__(self):
-        super(ctypes.Structure, self).__init__()
+        super().__init__()
         self.cbSize = ctypes.sizeof(self)
 
 

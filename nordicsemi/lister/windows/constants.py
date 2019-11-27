@@ -46,14 +46,14 @@ class DiGetClassDevsFlags(enum.IntEnum):
 
 
 # noinspection SpellCheckingInspection
-class DevicePropertyKeys(object):
+class DevicePropertyKeys:
     """DEVPKEY_xxx constants"""
     NAME = DevicePropertyKey('{b725f130-47ef-101a-a5f1-02608c9eebac}', 10, 'DEVPKEY_NAME')
     Numa_Proximity_Domain = DevicePropertyKey('{540b947e-8b40-45bc-a8a2-6a0b894cbda2}', 1,
                                               'DEVPKEY_Numa_Proximity_Domain')
 
     # noinspection SpellCheckingInspection
-    class Device(object):
+    class Device:
         """DEVPKEY_Device_xxx constants"""
         ContainerId = DevicePropertyKey('{8c7ed206-3f8a-4827-b3ab-ae9e1faefc6c}', 2,
                                         'DEVPKEY_Device_ContainerId')

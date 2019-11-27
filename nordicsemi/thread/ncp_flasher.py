@@ -42,7 +42,7 @@ class NCPFlasher(Flasher):
     ERROR_CODE_VERIFY_ERROR = 55
 
     def __init__(self, serial_port = None, snr = None):
-        Flasher.__init__(self, serial_port, snr)
+        super().__init__(serial_port, snr)
 
     def __get_hex_path(self):
         return os.path.join(os.path.dirname(__file__), 'hex', 'ncp.hex')
