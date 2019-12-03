@@ -39,6 +39,7 @@
 import os
 import sys
 import ctypes
+import usb1
 from importlib import import_module
 import logging
 
