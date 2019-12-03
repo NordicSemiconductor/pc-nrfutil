@@ -29,6 +29,29 @@ jobs:
           pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
+      - bash: |
+          python setup.py test
+        displayName: "Smoke test for python $(python_version)"
+      - bash: |
+          dist/nrfutil keys generate key-test.txt
+          dist/nrfutil keys display --key pk --format code key-test.txt
+        displayName: "Smoke test for python $(python_version)"
+      - bash: |
+          tar czvf nrfutil-linux.tar.gz nrfutil
+          cp -R dist/nrfutil-linux.tar.gz "$(Build.ArtifactStagingDirectory)"
+        condition: and(eq(variables['python_arch'], 'x64'), eq(variables['python_version'], '3.7'))
+        displayName: "Copy artifacts"
+      - task: GitHubRelease@0
+        inputs:
+          gitHubConnection: "waylandCI"
+          repositoryName: "NordicSemiconductor/pc-nrfutil"
+          action: "edit"
+          tagSource: "Git tag"
+          tag: "$(Build.SourceBranchName)"
+          assetUploadMode: "replace"
+          isDraft: "true"
+          addChangeLog: "false"
+        condition: ne(variables['Build.Reason'], 'PullRequest')
 
   # macOS
   - job: macOS
@@ -55,6 +78,31 @@ jobs:
           pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
+      - bash: |
+          python setup.py test
+        displayName: "Smoke test for python $(python_version)"
+      - bash: |
+          dist/nrfutil keys generate key-test.txt
+          dist/nrfutil keys display --key pk --format code key-test.txt
+        displayName: "Smoke test for python $(python_version)"
+      - bash: |
+          tar czvf nrfutil-mac.tar.gz nrfutil
+          cp -R dist/nrfutil-mac.tar.gz "$(Build.ArtifactStagingDirectory)"
+        condition: and(eq(variables['python_arch'], 'x64'), eq(variables['python_version'], '3.7'))
+        displayName: "Copy artifacts"
+      - task: GitHubRelease@0
+        inputs:
+          gitHubConnection: "waylandCI"
+          repositoryName: "NordicSemiconductor/pc-nrfutil"
+          action: "edit"
+          tagSource: "Git tag"
+          tag: "$(Build.SourceBranchName)"
+          assetUploadMode: "replace"
+          isDraft: "true"
+          addChangeLog: "false"
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+
+
 
   # Windows
   - job: Windows
@@ -93,6 +141,13 @@ jobs:
           pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build exe with python $(python_version)"
+      - bash: |
+          python setup.py test
+        displayName: "Smoke test for python $(python_version)"
+      - bash: |
+          dist/nrfutil keys generate key-test.txt
+          dist/nrfutil keys display --key pk --format code key-test.txt
+        displayName: "Smoke test for python $(python_version)"
       - bash: |
           cp -R dist/*.tar.gz "$(Build.ArtifactStagingDirectory)"
           cp -R dist/*.exe "$(Build.ArtifactStagingDirectory)"
