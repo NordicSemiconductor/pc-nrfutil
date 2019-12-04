@@ -66,6 +66,10 @@ jobs:
     pool:
       vmImage: "macos-10.13"
     steps:
+      - bash: |
+          brew rm libusb --force
+          brew install libusb
+        displayName: "Setup toolchain for python $(python_version)"
       - task: UsePythonVersion@0
         inputs:
           versionSpec: "$(python_version)"

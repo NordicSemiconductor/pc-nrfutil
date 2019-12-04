@@ -39,11 +39,13 @@
 import os
 import sys
 import ctypes
-import usb1
 from importlib import import_module
 import logging
 
 from pc_ble_driver_py.exceptions import NordicSemiException
+
+if sys.platform != 'win32':
+    import usb1
 
 LIBUSB_ENDPOINT_IN = 0x80
 LIBUSB_ENDPOINT_OUT = 0x00
