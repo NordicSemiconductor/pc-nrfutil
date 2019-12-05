@@ -84,6 +84,7 @@ jobs:
         displayName: "Build executable with python $(python_version)"
       - bash: |
           python setup.py test
+          cat unittests.xml
         displayName: "Smoke test for python $(python_version)"
       - bash: |
           dist/nrfutil keys generate key-test.txt
