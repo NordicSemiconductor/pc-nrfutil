@@ -87,6 +87,7 @@ jobs:
       - bash: |
           pypath=`which python$(python_bin)`
           export PATH=${pypath/\/python*/}:$PATH
+          echo $PATH
           ${pypath} -m pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
