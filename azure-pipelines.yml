@@ -77,7 +77,7 @@ jobs:
       - bash: |
           wget https://www.python.org/ftp/python/$(python_version)/python-$(python_version)-macosx10.9.pkg
           sudo installer -pkg python-$(python_version)-macosx10.9.pkg -target /
-      displayName: 'Install pythons $(python_version)'
+        displayName: 'Install python $(python_version)'
       - bash: |
           pip install setuptools
           pip install -r requirements-frozen.txt
