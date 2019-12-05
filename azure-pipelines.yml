@@ -37,8 +37,9 @@ jobs:
           dist/nrfutil keys display --key pk --format code key-test.txt
         displayName: "Smoke test for python $(python_version)"
       - bash: |
-          tar czvf dist/nrfutil-linux.tar.gz dist/nrfutil
-          cp -R dist/nrfutil-linux.tar.gz "$(Build.ArtifactStagingDirectory)"
+          # tar czvf dist/nrfutil-linux.tar.gz dist/nrfutil
+          mv dist/nrfutil dist/nrfutil-linux
+          cp -R dist/nrfutil-linux "$(Build.ArtifactStagingDirectory)"
         condition: eq(variables['python_version'], '3.7')
         displayName: "Copy artifacts"
       - task: GitHubRelease@0
@@ -89,6 +90,7 @@ jobs:
           sudo ln -sf /Users/runner/hostedtoolcache/Python/3.7.5/x64 /Library/Frameworks/Python.framework/Versions/3.7
           /Library/Frameworks/Python.framework/Versions/3.7/Python --version
           ls /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib
+          otool -L /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib/_nrf_ble_driver_sd_api_v5.so
           python setup.py test
           cat unittests.xml
         displayName: "Smoke test for python $(python_version)"
@@ -97,8 +99,9 @@ jobs:
           dist/nrfutil keys display --key pk --format code key-test.txt
         displayName: "Smoke test for python $(python_version)"
       - bash: |
-          tar czvf dist/nrfutil-mac.tar.gz dist/nrfutil
-          cp -R dist/nrfutil-mac.tar.gz "$(Build.ArtifactStagingDirectory)"
+          # tar czvf dist/nrfutil-mac.tar.gz dist/nrfutil
+          mv dist/nrfutil dist/nrfutil-mac
+          cp -R dist/nrfutil-mac "$(Build.ArtifactStagingDirectory)"
         condition: eq(variables['python_version'], '3.7')
         displayName: "Copy artifacts"
       - task: GitHubRelease@0
