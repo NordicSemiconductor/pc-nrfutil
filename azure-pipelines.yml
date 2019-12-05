@@ -92,6 +92,7 @@ jobs:
           /Library/Frameworks/Python.framework/Versions/3.7/Python --version
           ls /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib
           otool -L /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib/_nrf_ble_driver_sd_api_v5.so
+          rm -rf /usr/local/lib/python3.7/site-packages
           python setup.py test
           cat unittests.xml
         displayName: "Smoke test for python $(python_version)"
