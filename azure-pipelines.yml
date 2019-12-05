@@ -86,6 +86,7 @@ jobs:
       - bash: |
           which python
           python --version
+          ls /Users/runner/hostedtoolcache/Python/3.7.5/x64
           sudo mkdir -p /Library/Frameworks/Python.framework/Versions
           sudo ln -sf /Users/runner/hostedtoolcache/Python/3.7.5/x64/Python /Library/Frameworks/Python.framework/Versions/3.7/Python
           /Library/Frameworks/Python.framework/Versions/3.7/Python --version
