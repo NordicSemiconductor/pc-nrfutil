@@ -37,7 +37,6 @@ jobs:
           dist/nrfutil keys display --key pk --format code key-test.txt
         displayName: "Smoke test for python $(python_version)"
       - bash: |
-          # tar czvf dist/nrfutil-linux.tar.gz dist/nrfutil
           mv dist/nrfutil dist/nrfutil-linux
           cp -R dist/nrfutil-linux "$(Build.ArtifactStagingDirectory)"
         condition: eq(variables['python_version'], '3.7')
@@ -92,17 +91,13 @@ jobs:
         displayName: "Build executable with python $(python_version)"
       - bash: |
           pypath=`which python$(python_bin)`
-          which python
-          python --version
           ${pypath} setup.py test
-          cat unittests.xml
         displayName: "Smoke test for python $(python_version)"
       - bash: |
           dist/nrfutil keys generate key-test.txt
           dist/nrfutil keys display --key pk --format code key-test.txt
         displayName: "Smoke test for python $(python_version)"
       - bash: |
-          # tar czvf dist/nrfutil-mac.tar.gz dist/nrfutil
           mv dist/nrfutil dist/nrfutil-mac
           cp -R dist/nrfutil-mac "$(Build.ArtifactStagingDirectory)"
         condition: eq(variables['python_version'], '3.7.5')
