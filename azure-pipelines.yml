@@ -140,6 +140,7 @@ jobs:
       - bash: |
           pip install -r requirements-frozen.txt
           pip install --upgrade setuptools==42.0.0
+          pip install wheel
           python setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
