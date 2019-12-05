@@ -75,9 +75,9 @@ jobs:
           brew install libusb
         displayName: "Setup toolchain for python $(python_version)"
       - bash: |
-        wget https://www.python.org/ftp/python/$(python_version)/python-$(python_version)-macosx10.9.pkg
-        sudo installer -pkg python-$(python_version)-macosx10.9.pkg -target /
-      displayName: 'Install pythons $()python_version'
+          wget https://www.python.org/ftp/python/$(python_version)/python-$(python_version)-macosx10.9.pkg
+          sudo installer -pkg python-$(python_version)-macosx10.9.pkg -target /
+      displayName: 'Install pythons $(python_version)'
       - bash: |
           pip install setuptools
           pip install -r requirements-frozen.txt
@@ -90,13 +90,6 @@ jobs:
       - bash: |
           which python
           python --version
-          ls /Users/runner/hostedtoolcache/Python/3.7.5/x64
-          sudo mkdir -p /Library/Frameworks/Python.framework/Versions
-          sudo ln -sf /Users/runner/hostedtoolcache/Python/3.7.5/x64/python /Library/Frameworks/Python.framework/Versions/3.7/Python
-          /Library/Frameworks/Python.framework/Versions/3.7/Python --version
-          ls /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib
-          otool -L /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib/_nrf_ble_driver_sd_api_v5.so
-          rm -rf /usr/local/lib/python3.7/site-packages
           python setup.py test
           cat unittests.xml
         displayName: "Smoke test for python $(python_version)"
