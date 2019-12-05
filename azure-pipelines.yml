@@ -84,6 +84,8 @@ jobs:
         displayName: "Build executable with python $(python_version)"
       - bash: |
           which python
+          python --version
+          /Library/Frameworks/Python.framework/Versions/3.7/Python --version
           ls /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib
           python setup.py test
           cat unittests.xml
