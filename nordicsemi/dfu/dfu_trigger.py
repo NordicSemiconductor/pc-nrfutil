@@ -44,6 +44,9 @@ import logging
 
 from pc_ble_driver_py.exceptions import NordicSemiException
 
+if sys.platform != 'win32':
+    import usb1
+
 LIBUSB_ENDPOINT_IN = 0x80
 LIBUSB_ENDPOINT_OUT = 0x00
 LIBUSB_REQUEST_TYPE_STANDARD = 0x00 << 5

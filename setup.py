@@ -131,7 +131,7 @@ class NoseTestCommand(TestCommand):
 
     def run_tests(self):
         import nose
-        nose.run_exit(argv=['nosetests', '--with-xunit', '--xunit-file=test-reports/unittests.xml'])
+        nose.run_exit(argv=['nosetests', '--with-xunit', '--xunit-file=unittests.xml'])
 
 
 setup(

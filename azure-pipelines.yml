@@ -29,32 +29,92 @@ jobs:
           pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
+      - bash: |
+          python setup.py test
+        displayName: "Regression tests for python $(python_version)"
+      - bash: |
+          dist/nrfutil keys generate key-test.txt
+          dist/nrfutil keys display --key pk --format code key-test.txt
+        displayName: "Smoke test for python $(python_version)"
+      - bash: |
+          mv dist/nrfutil dist/nrfutil-linux
+          cp -R dist/nrfutil-linux "$(Build.ArtifactStagingDirectory)"
+        condition: eq(variables['python_version'], '3.7')
+        displayName: "Copy artifacts"
+      - task: GitHubRelease@0
+        inputs:
+          gitHubConnection: "waylandCI"
+          repositoryName: "NordicSemiconductor/pc-nrfutil"
+          action: "edit"
+          tagSource: "Git tag"
+          tag: "$(Build.SourceBranchName)"
+          assetUploadMode: "replace"
+          isDraft: "true"
+          addChangeLog: "false"
+        condition: ne(variables['Build.Reason'], 'PullRequest')
 
   # macOS
   - job: macOS
     strategy:
       matrix:
         py36:
-          python_version: "3.6"
+          python_version: '3.6.8'
+          python_bin: '3.6'
         py37:
-          python_version: "3.7"
+          python_version: '3.7.5'
+          python_bin: '3.7'
         py38:
-          python_version: "3.8"
+          python_version: '3.8.0'
+          python_bin: '3.8'
     pool:
       vmImage: "macos-10.13"
     steps:
-      - task: UsePythonVersion@0
-        inputs:
-          versionSpec: "$(python_version)"
       - bash: |
-          pip install setuptools
-          pip install -r requirements-frozen.txt
-          python setup.py sdist
+          brew rm libusb --force
+          brew install libusb
+        displayName: "Setup toolchain for python $(python_version)"
+      - bash: |
+          wget https://www.python.org/ftp/python/$(python_version)/python-$(python_version)-macosx10.9.pkg
+          sudo installer -pkg python-$(python_version)-macosx10.9.pkg -target /
+        displayName: 'Install python $(python_version)'
+      - bash: |
+          pypath=`which python$(python_bin)`
+          ${pypath} -m pip install setuptools
+          ${pypath} -m pip install -r requirements-frozen.txt
+          ${pypath} setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
-          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+          pypath=`which python$(python_bin)`
+          ${pypath} -m pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+          export PATH=/Library/Frameworks/Python.framework/Versions/$(python_bin)/bin:$PATH
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
+      - bash: |
+          pypath=`which python$(python_bin)`
+          ${pypath} setup.py test
+        displayName: "Regression tests for python $(python_version)"
+      - bash: |
+          dist/nrfutil keys generate key-test.txt
+          dist/nrfutil keys display --key pk --format code key-test.txt
+        displayName: "Smoke test for python $(python_version)"
+      - bash: |
+          mv dist/nrfutil dist/nrfutil-mac
+          cp -R dist/nrfutil-mac "$(Build.ArtifactStagingDirectory)"
+        condition: eq(variables['python_version'], '3.7.5')
+        displayName: "Copy artifacts"
+      - task: GitHubRelease@0
+        inputs:
+          gitHubConnection: "waylandCI"
+          repositoryName: "NordicSemiconductor/pc-nrfutil"
+          action: "edit"
+          tagSource: "Git tag"
+          tag: "$(Build.SourceBranchName)"
+          assetUploadMode: "replace"
+          isDraft: "true"
+          addChangeLog: "false"
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+
+
 
   # Windows
   - job: Windows
@@ -87,12 +147,21 @@ jobs:
           architecture: "$(python_arch)"
       - bash: |
           pip install -r requirements-frozen.txt
+          pip install --upgrade setuptools==42.0.0
+          pip install wheel
           python setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
           pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build exe with python $(python_version)"
+      - bash: |
+          python setup.py test
+        displayName: "Regression tests for python $(python_version)"
+      - bash: |
+          dist/nrfutil keys generate key-test.txt
+          dist/nrfutil keys display --key pk --format code key-test.txt
+        displayName: "Smoke test for python $(python_version)"
       - bash: |
           cp -R dist/*.tar.gz "$(Build.ArtifactStagingDirectory)"
           cp -R dist/*.exe "$(Build.ArtifactStagingDirectory)"
