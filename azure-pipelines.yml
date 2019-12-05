@@ -83,6 +83,8 @@ jobs:
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
       - bash: |
+          which python
+          ls /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib
           python setup.py test
           cat unittests.xml
         displayName: "Smoke test for python $(python_version)"
