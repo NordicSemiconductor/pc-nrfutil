@@ -39,7 +39,7 @@ jobs:
       - bash: |
           tar czvf nrfutil-linux.tar.gz nrfutil
           cp -R dist/nrfutil-linux.tar.gz "$(Build.ArtifactStagingDirectory)"
-        condition: and(eq(variables['python_arch'], 'x64'), eq(variables['python_version'], '3.7'))
+        condition: eq(variables['python_version'], '3.7')
         displayName: "Copy artifacts"
       - task: GitHubRelease@0
         inputs:
@@ -74,7 +74,7 @@ jobs:
         inputs:
           versionSpec: "$(python_version)"
       - bash: |
-          pip install setuptools
+          pip install setuptools==42.0.0
           pip install -r requirements-frozen.txt
           python setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
@@ -92,7 +92,7 @@ jobs:
       - bash: |
           tar czvf nrfutil-mac.tar.gz nrfutil
           cp -R dist/nrfutil-mac.tar.gz "$(Build.ArtifactStagingDirectory)"
-        condition: and(eq(variables['python_arch'], 'x64'), eq(variables['python_version'], '3.7'))
+        condition: eq(variables['python_version'], '3.7')
         displayName: "Copy artifacts"
       - task: GitHubRelease@0
         inputs:
