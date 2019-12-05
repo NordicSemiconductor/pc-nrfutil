@@ -6,9 +6,9 @@
 
 nRF Util is a Python package and command-line utility that supports Device Firmware Updates (DFU) and cryptographic functionality.
 
-![screenshot](resources/screenshot.gif)
+![screenshot](screenshot.gif)
 
-## Installation and usage
+## Documentation
 
 See the [InfoCenter](https://infocenter.nordicsemi.com/topic/ug_nrfutil/UG/nrfutil/nrfutil_intro.html) pages for information on how to install and use nRF Util.
 
