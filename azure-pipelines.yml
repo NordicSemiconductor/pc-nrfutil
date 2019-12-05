@@ -85,13 +85,9 @@ jobs:
           ${pypath} setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
-          which python$(python_bin)
           pypath=`which python$(python_bin)`
-          echo $pypath
-          echo ${pypath/\/python*/}
-          export PATH=${pypath/\/python*/}:$PATH
-          echo $PATH
           ${pypath} -m pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+          export PATH=/Library/Frameworks/Python.framework/Versions/$(python_bin)/bin:$PATH
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
       - bash: |
