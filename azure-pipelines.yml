@@ -87,7 +87,7 @@ jobs:
       - bash: |
           pypath=`which python$(python_bin)`
           which python
-          echo pypath
+          echo $pypath
           echo ${pypath/\/python*/}
           export PATH=${pypath/\/python*/}:$PATH
           echo $PATH
