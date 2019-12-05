@@ -79,18 +79,21 @@ jobs:
           sudo installer -pkg python-$(python_version)-macosx10.9.pkg -target /
         displayName: 'Install python $(python_version)'
       - bash: |
-          pip install setuptools
-          pip install -r requirements-frozen.txt
-          python setup.py sdist
+          pypath=`which python$(python_bin)`
+          ${pypath} -m pip install setuptools
+          ${pypath} -m pip install -r requirements-frozen.txt
+          ${pypath} setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
-          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+          pypath=`which python$(python_bin)`
+          ${pypath} -m pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
       - bash: |
+          pypath=`which python$(python_bin)`
           which python
           python --version
-          python setup.py test
+          ${pypath} setup.py test
           cat unittests.xml
         displayName: "Smoke test for python $(python_version)"
       - bash: |
