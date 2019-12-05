@@ -74,8 +74,8 @@ jobs:
         inputs:
           versionSpec: "$(python_version)"
       - bash: |
+          pip install --upgrade setuptools
           pip install -r requirements-frozen.txt
-          pip install --upgrade setuptools==42.0.0
           python setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
@@ -146,6 +146,7 @@ jobs:
           pyinstaller nrfutil.spec
         displayName: "Build exe with python $(python_version)"
       - bash: |
+          pip install --upgrade setuptools==42.0.0
           python setup.py test
         displayName: "Smoke test for python $(python_version)"
       - bash: |
