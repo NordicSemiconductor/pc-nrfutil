@@ -87,7 +87,7 @@ jobs:
           which python
           python --version
           sudo mkdir -p /Library/Frameworks/Python.framework/Versions
-          sudo ln -sf /Users/runner/hostedtoolcache/Python/3.7.5/x64 /Library/Frameworks/Python.framework/Versions/3.7
+          sudo ln -sf /Users/runner/hostedtoolcache/Python/3.7.5/x64/Python /Library/Frameworks/Python.framework/Versions/3.7/Python
           /Library/Frameworks/Python.framework/Versions/3.7/Python --version
           ls /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib
           otool -L /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib/_nrf_ble_driver_sd_api_v5.so
