@@ -85,8 +85,8 @@ jobs:
           ${pypath} setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
+          which python$(python_bin)
           pypath=`which python$(python_bin)`
-          which python
           echo $pypath
           echo ${pypath/\/python*/}
           export PATH=${pypath/\/python*/}:$PATH
