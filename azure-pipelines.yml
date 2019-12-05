@@ -86,7 +86,7 @@ jobs:
           which python
           python --version
           sudo mkdir -p /Library/Frameworks/Python.framework/Versions/3.7
-          sudo ln -sf /Users/runner/hostedtoolcache/Python/3.7.5/x64 /Library/Frameworks/Python.framework/Versions/3.7/Python
+          sudo ln -sf /Users/runner/hostedtoolcache/Python/3.7.5/x64 /Library/Frameworks/Python.framework/Versions/3.7
           /Library/Frameworks/Python.framework/Versions/3.7/Python --version
           ls /Users/runner/hostedtoolcache/Python/3.7.5/x64/lib/python3.7/site-packages/pc_ble_driver_py/lib
           python setup.py test
