@@ -37,7 +37,7 @@ jobs:
           dist/nrfutil keys display --key pk --format code key-test.txt
         displayName: "Smoke test for python $(python_version)"
       - bash: |
-          tar czvf nrfutil-linux.tar.gz nrfutil
+          tar czvf dist/nrfutil-linux.tar.gz dist/nrfutil
           cp -R dist/nrfutil-linux.tar.gz "$(Build.ArtifactStagingDirectory)"
         condition: eq(variables['python_version'], '3.7')
         displayName: "Copy artifacts"
@@ -74,8 +74,8 @@ jobs:
         inputs:
           versionSpec: "$(python_version)"
       - bash: |
-          pip install setuptools==42.0.0
           pip install -r requirements-frozen.txt
+          pip install --upgrade setuptools==42.0.0
           python setup.py sdist
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
@@ -90,7 +90,7 @@ jobs:
           dist/nrfutil keys display --key pk --format code key-test.txt
         displayName: "Smoke test for python $(python_version)"
       - bash: |
-          tar czvf nrfutil-mac.tar.gz nrfutil
+          tar czvf dist/nrfutil-mac.tar.gz dist/nrfutil
           cp -R dist/nrfutil-mac.tar.gz "$(Build.ArtifactStagingDirectory)"
         condition: eq(variables['python_version'], '3.7')
         displayName: "Copy artifacts"
