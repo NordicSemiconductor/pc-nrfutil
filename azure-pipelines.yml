@@ -86,6 +86,7 @@ jobs:
         displayName: "Build tar.gz with python $(python_version)"
       - bash: |
           pypath=`which python$(python_bin)`
+          export PATH=${pypath/\/python*/}:$PATH
           ${pypath} -m pip install https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
           pyinstaller nrfutil.spec
         displayName: "Build executable with python $(python_version)"
