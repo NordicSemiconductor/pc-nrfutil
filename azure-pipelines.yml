@@ -70,10 +70,6 @@ jobs:
       vmImage: "macos-10.13"
     steps:
       - bash: |
-          brew rm libusb --force
-          brew install libusb
-        displayName: "Setup toolchain for python $(python_version)"
-      - bash: |
           wget https://www.python.org/ftp/python/$(python_version)/python-$(python_version)-macosx10.9.pkg
           sudo installer -pkg python-$(python_version)-macosx10.9.pkg -target /
         displayName: 'Install python $(python_version)'
