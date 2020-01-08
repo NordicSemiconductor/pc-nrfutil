@@ -233,7 +233,7 @@ class Signing:
 /** @brief Public key used to verify DFU images */
 __ALIGN(4) const uint8_t pk[64] =
 {{
-    {0}
+    {0},
     {1}
 }};
 """

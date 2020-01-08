@@ -47,7 +47,7 @@ from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent
 from pc_ble_driver_py.exceptions    import NordicSemiException, IllegalStateException
 from pc_ble_driver_py.ble_driver    import BLEDriver, BLEDriverObserver, BLEEnableParams, BLEUUIDBase, BLEGapSecKDist, BLEGapSecParams, \
     BLEGapIOCaps, BLEUUID, BLEAdvData, BLEGapConnParams, NordicSemiErrorCheck, BLEGapSecStatus, driver
-from pc_ble_driver_py.ble_driver    import ATT_MTU_DEFAULT, BLEConfig, BLEConfigConnGatt
+from pc_ble_driver_py.ble_driver    import ATT_MTU_DEFAULT, BLEConfig, BLEConfigConnGatt, BLEConfigConnGap
 from pc_ble_driver_py.ble_adapter   import BLEAdapter, BLEAdapterObserver, EvtSync
 
 logger  = logging.getLogger(__name__)
@@ -120,6 +120,9 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
                 BLEConfig.conn_gatt,
                 BLEConfigConnGatt(att_mtu=DFUAdapter.LOCAL_ATT_MTU),
             )
+            self.adapter.driver.ble_cfg_set(
+                BLEConfig.conn_gap,
+                BLEConfigConnGap(event_length=5))  # Event length 5 is required for max data length
             self.adapter.driver.ble_enable()
 
         self.adapter.driver.ble_vs_uuid_add(DFUAdapter.BASE_UUID)
@@ -168,6 +171,13 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             if DFUAdapter.LOCAL_ATT_MTU > ATT_MTU_DEFAULT:
                 logger.info('BLE: Enabling longer ATT MTUs')
                 self.att_mtu = self.adapter.att_mtu_exchange(self.conn_handle, DFUAdapter.LOCAL_ATT_MTU)
+
+                logger.info('BLE: Enabling longer Data Length')
+                max_data_length = 251  # Max data length for SD v5
+                data_length = self.att_mtu + 4  # ATT PDU overhead is 4
+                if data_length > max_data_length:
+                    data_length = max_data_length
+                self.adapter.data_length_update(self.conn_handle, data_length)
             else:
                 logger.info('BLE: Using default ATT MTU')
 
