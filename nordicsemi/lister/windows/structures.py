@@ -23,16 +23,18 @@ SOFTWARE.
 """
 
 import ctypes
+from ctypes.wintypes import DWORD, BYTE, WORD
+from serial.win32 import ULONG_PTR
 
 _ole32 = ctypes.WinDLL('ole32')
 
 
 class _GUID(ctypes.Structure):
     _fields_ = [
-        ('Data1', ctypes.c_uint32),
-        ('Data2', ctypes.c_uint16),
-        ('Data3', ctypes.c_uint16),
-        ('Data4', ctypes.c_ubyte * 8)
+        ('Data1', DWORD),
+        ('Data2', WORD),
+        ('Data3', WORD),
+        ('Data4', BYTE * 8),
     ]
 
     def __init__(self, guid="{00000000-0000-0000-0000-000000000000}"):
@@ -109,15 +111,18 @@ class DevicePropertyKey(ctypes.Structure):
 
 class DeviceInfoData(ctypes.Structure):
     _fields_ = [
-        ('cbSize', ctypes.c_ulong),
+        ('cbSize', DWORD),
         ('ClassGuid', _GUID),
-        ('DevInst', ctypes.c_ulong),
-        ('Reserved', ctypes.c_void_p)
+        ('DevInst', DWORD),
+        ('Reserved', ULONG_PTR),
     ]
 
     def __init__(self):
         super().__init__()
         self.cbSize = ctypes.sizeof(self)
+
+    def __str__(self):
+        return "ClassGuid:{} DevInst:{}".format(self.ClassGuid, self.DevInst)
 
 
 class ctypesInternalGUID:
@@ -125,7 +130,13 @@ class ctypesInternalGUID:
         self._internal = bytes
 
     def __bytes__(self):
-        return self._internal.raw
+        return bytes(self._internal)
+
+
+def ValidHandle(value, func, arguments):
+    if value == 0:
+        raise ctypes.WinError()
+    return value
 
 
 DeviceInfoData.size = DeviceInfoData.cbSize
