@@ -87,12 +87,19 @@ for path in ['PATH', 'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBR
 class DFUTrigger:
     def __init__(self):
         self.context = None
+
+        if sys.platform == 'win32':
+            try:
+                # Load the libusb dll in advance so that libusb1 module is better able to load it
+                ctypes.CDLL(os.path.join(abs_file_dir, "libusb-1.0.dll"));
+            except OSError as err:
+                logger.info(err)
+
         try:
             self.usb1 = import_module('usb1')
             self.context = self.usb1.USBContext()
         except OSError as err:
             if "libusb" in str(err):
-                show_msg = "Libusb1 is not compatible with your operating system."
                 if sys.platform == 'win32' or sys.platform == 'darwin':
                     show_msg = "Libusb1 binaries are bundled with nrfutil for Windows and MacOS. " \
                                "Python is unable to locate or load the binaries. "
@@ -101,6 +108,8 @@ class DFUTrigger:
                                     "If you see this message, they are probably not installed on your system. "\
                                     "If you want to use DFU trigger, please install 'libusb1' using your package manager. "\
                                     "E.g: 'sudo apt-get install libusb-dev'."
+                else:
+                    show_msg = "Libusb1 is not compatible with your operating system."
 
                 logger.warning("Could not load libusb1-0 library, which is a requirement to use DFU trigger. "\
                             "This is not a problem unless you intend to use this functionality. "\
