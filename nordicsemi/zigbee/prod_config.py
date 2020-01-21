@@ -48,12 +48,27 @@ class ProductionConfigTooLargeException(Exception):
         self.length = length
 
 class ProductionConfig:
-    PRODUCTION_CONFIG_SIZE_MAX        = 128
-    PRODUCTION_CONFIG_MAGIC_NUMBER    = 0xF6DD37E7
-    PRODUCTION_CONFIG_VERSION         = 1
-    PRODUCTION_CONFIG_HEADER_FORMAT   = '<HHLQ16s16sH'
-    PRODUCTION_CONFIG_DEFAULT_OFFSET  = 0xFC000
-    PRODUCTION_CONFIG_DEFAULT_CHANNEL = 0x07FFF800
+    SIZE_MAX = 128
+    MAGIC_NUMBER = 0xF6DD37E7
+    VERSION = 1
+    HEADER_FORMAT = '<HHLQ16s16sH'
+    OFFSETS = {
+        "SDK 3.x": {
+            "nRF52840": 0xFC000,
+        },
+        "SDK 4.x": {
+            "nRF52840": 0xFF000,
+            "nRF52833": 0x7F000,
+        }
+    }
+    DEFAULT_OFFSET_SDK = "SDK 3.x"
+    DEFAULT_OFFSET_CHIP = "nRF52840"
+    DEFAULT_OFFSET = OFFSETS[DEFAULT_OFFSET_SDK][DEFAULT_OFFSET_CHIP]
+    DEFAULT_CHANNEL = 0x07FFF800
+
+    @classmethod
+    def offset_help(cls):
+        return format_offsets(cls.OFFSETS)
 
     def __init__(self, path):
         self._parsed_values = {}
@@ -70,7 +85,7 @@ class ProductionConfig:
         try:
             # Handle the channel mask
             if "channel_mask" not in self._yaml:
-                self._parsed_values["channel_mask"] = self.PRODUCTION_CONFIG_DEFAULT_CHANNEL
+                self._parsed_values["channel_mask"] = self.DEFAULT_CHANNEL
             else:
                 self._parsed_values["channel_mask"] = self._yaml["channel_mask"]
 
@@ -121,25 +136,34 @@ class ProductionConfig:
             crc = (0xFFFFFFFF & ((crc >> 8) ^ c))
         return (~crc & 0xFFFFFFFF)
 
-    def generate(self, path, offset=PRODUCTION_CONFIG_DEFAULT_OFFSET):
+    def generate(self, path, offset=DEFAULT_OFFSET):
         # Calculate the CRC-16 of the install code
-        self._struct = (struct.pack(self.PRODUCTION_CONFIG_HEADER_FORMAT,
-                                   struct.calcsize(self.PRODUCTION_CONFIG_HEADER_FORMAT) + 4 + self._ad_len, # Plus the CRC-32; plus the app_data
-                                   self.PRODUCTION_CONFIG_VERSION,
-                                   self._parsed_values["channel_mask"],
-                                   self._parsed_values["extended_address"],
-                                   self._parsed_values["tx_power"],
-                                   self._parsed_values["install_code"],
-                                   self._ic_crc) +
+        self._struct = (struct.pack(self.HEADER_FORMAT,
+                                    struct.calcsize(self.HEADER_FORMAT) + 4 + self._ad_len,  # Plus the CRC-32; plus the app_data
+                                    self.VERSION,
+                                    self._parsed_values["channel_mask"],
+                                    self._parsed_values["extended_address"],
+                                    self._parsed_values["tx_power"],
+                                    self._parsed_values["install_code"],
+                                    self._ic_crc) +
                                    self._parsed_values["app_data"])
 
         crc32 = self._custom_crc32(self._struct)
 
-        output = struct.pack('<L', self.PRODUCTION_CONFIG_MAGIC_NUMBER) + struct.pack('<L', crc32) + self._struct
+        output = struct.pack('<L', self.MAGIC_NUMBER) + struct.pack('<L', crc32) + self._struct
 
-        if len(output) > self.PRODUCTION_CONFIG_SIZE_MAX + 4: # 4 is for Magic Number
+        if len(output) > self.SIZE_MAX + 4: # 4 is for Magic Number
             raise ProductionConfigTooLargeException(len(output))
 
         ih = intelhex.IntelHex()
         ih.puts(offset, output)
         ih.write_hex_file(path)
+
+
+def format_offsets(offset_dict: dict):
+    result = ""
+    for sdk, boards in offset_dict.items():
+        result += f"{sdk}:\n"
+        for board, offset in boards.items():
+            result += f"- {board}: {hex(offset)}\n"
+    return result

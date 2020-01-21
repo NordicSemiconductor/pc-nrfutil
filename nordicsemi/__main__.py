@@ -1427,15 +1427,38 @@ def zigbee():
     """
     pass
 
-@zigbee.command(short_help='Generate the Zigbee Production Config hex file.', name='production_config')
+
+def _pretty_help_option(text: str):
+    formatted_lines = []
+    for line in text.split("\n"):
+        formatted_lines.append(line + " " * 100)
+    return "\n".join(formatted_lines)
+
+
+@zigbee.command(short_help='Generate the Zigbee Production Config hex file.', name='production_config',)
 @click.argument('input', required=True, type=click.Path())
 @click.argument('output', required=True, type=click.Path())
 @click.option('--offset',
-              help='Offset at which the Production Config is located',
+              help=_pretty_help_option("Offset at which the Production Config is located.\n"
+                                       + "Depending on the SDK and the device versions, use the following values:\n"
+                                       + ProductionConfig.offset_help()
+                                       + f"By default, the value for {ProductionConfig.DEFAULT_OFFSET_SDK} {ProductionConfig.DEFAULT_OFFSET_CHIP} is used."),
               type=BASED_INT_OR_NONE)
 def production_config(input, output, offset):
     """
     Generate the Production config hex file for Zigbee Devices out of YAML-structured description.
+
+    INPUT - path to yaml file.\n
+            Example yaml content:
+
+    \b
+                channel_mask: 0x00100000
+                install_code: 83FED3407A939723A5C639B26916D505
+                extended_address: AABBCCDDEEFF0011
+                tx_power: 9
+                app_data: 01ABCD
+
+    OUTPUT - name of output file
     """
     try:
         pc = ProductionConfig(input)
@@ -1450,6 +1473,7 @@ def production_config(input, output, offset):
         click.echo("Production Config hexfile generated.")
     except ProductionConfigTooLargeException as e:
         raise click.UsageError("Production Config too large: " + str(e.length) + " bytes")
+
 
 if __name__ == '__main__':
     cli()
