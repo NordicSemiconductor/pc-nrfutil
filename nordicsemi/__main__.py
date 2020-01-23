@@ -1435,7 +1435,7 @@ def _pretty_help_option(text: str):
     return "\n".join(formatted_lines)
 
 
-@zigbee.command(short_help='Generate the Zigbee Production Config hex file.', name='production_config',)
+@zigbee.command(short_help='Generate the Zigbee Production Config (version 1) hex file.', name='production_config',)
 @click.argument('input', required=True, type=click.Path())
 @click.argument('output', required=True, type=click.Path())
 @click.option('--offset',
@@ -1447,6 +1447,7 @@ def _pretty_help_option(text: str):
 def production_config(input, output, offset):
     """
     Generate the Production config hex file for Zigbee Devices out of YAML-structured description.
+    Generated Production config is in version 1.
 
     INPUT - path to yaml file.\n
             Example yaml content:
