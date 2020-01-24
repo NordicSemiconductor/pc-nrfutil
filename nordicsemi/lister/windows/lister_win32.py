@@ -49,38 +49,36 @@ if sys.platform == 'win32':
     import winreg
     setup_api = ctypes.windll.setupapi
 
+    SetupDiGetClassDevs = setup_api.SetupDiGetClassDevsW
+    SetupDiGetClassDevs.argtypes = [ctypes.POINTER(_GUID), ctypes.c_wchar_p,
+                                    HWND, DWORD]
+    SetupDiGetClassDevs.restype = ctypes.c_void_p
+    SetupDiGetClassDevs.errcheck = ValidHandle
+
+    SetupDiEnumDeviceInfo = setup_api.SetupDiEnumDeviceInfo
+    SetupDiEnumDeviceInfo.argtypes = [ctypes.c_void_p, DWORD,
+                                      ctypes.POINTER(DeviceInfoData)]
+    SetupDiEnumDeviceInfo.restype = BOOL
+
+    SetupDiGetDeviceInstanceId = setup_api.SetupDiGetDeviceInstanceIdW
+    SetupDiGetDeviceInstanceId.argtypes = [ctypes.c_void_p,
+                                           ctypes.POINTER(DeviceInfoData),
+                                           ctypes.c_wchar_p, DWORD,
+                                           ctypes.POINTER(DWORD)]
+    SetupDiGetDeviceInstanceId.restype = BOOL
+
+    SetupDiGetDeviceProperty = setup_api.SetupDiGetDevicePropertyW
+    SetupDiGetDeviceProperty.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
+                                         ctypes.c_void_p, ctypes.c_void_p,
+                                         ctypes.c_void_p, ctypes.c_uint,
+                                         ctypes.c_void_p, ctypes.c_uint]
+    SetupDiGetDeviceProperty.restype = BOOL
 
 #  constants
 DICS_FLAG_GLOBAL = 1
 DIREG_DEV = 1
 INVALID_HANDLE_VALUE = -1
 MAX_BUFSIZE = 1000
-
-
-SetupDiGetClassDevs = setup_api.SetupDiGetClassDevsW
-SetupDiGetClassDevs.argtypes = [ctypes.POINTER(_GUID), ctypes.c_wchar_p,
-                                HWND, DWORD]
-SetupDiGetClassDevs.restype = ctypes.c_void_p
-SetupDiGetClassDevs.errcheck = ValidHandle
-
-SetupDiEnumDeviceInfo = setup_api.SetupDiEnumDeviceInfo
-SetupDiEnumDeviceInfo.argtypes = [ctypes.c_void_p, DWORD,
-                                  ctypes.POINTER(DeviceInfoData)]
-SetupDiEnumDeviceInfo.restype = BOOL
-
-SetupDiGetDeviceInstanceId = setup_api.SetupDiGetDeviceInstanceIdW
-SetupDiGetDeviceInstanceId.argtypes = [ctypes.c_void_p,
-                                       ctypes.POINTER(DeviceInfoData),
-                                       ctypes.c_wchar_p, DWORD,
-                                       ctypes.POINTER(DWORD)]
-SetupDiGetDeviceInstanceId.restype = BOOL
-
-SetupDiGetDeviceProperty = setup_api.SetupDiGetDevicePropertyW
-SetupDiGetDeviceProperty.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
-                                     ctypes.c_void_p, ctypes.c_void_p,
-                                     ctypes.c_void_p, ctypes.c_uint,
-                                     ctypes.c_void_p, ctypes.c_uint]
-SetupDiGetDeviceProperty.restype = BOOL
 
 
 def get_serial_serial_no(vendor_id, product_id, h_dev_info, device_info_data):
