@@ -1427,20 +1427,46 @@ def zigbee():
     """
     pass
 
-@zigbee.command(short_help='Generate the Zigbee Production Config hex file.', name='production_config')
+
+def _pretty_help_option(text: str):
+    formatted_lines = []
+    for line in text.split("\n"):
+        formatted_lines.append(line + " " * 100)
+    return "\n".join(formatted_lines)
+
+
+@zigbee.command(short_help='Generate the Zigbee Production Config (version 1) hex file.',
+                name='production_config',)
 @click.argument('input', required=True, type=click.Path())
 @click.argument('output', required=True, type=click.Path())
-@click.option('--offset',
-              help='Offset at which the Production Config is located',
-              type=BASED_INT_OR_NONE)
+@click.option('--offset', type=BASED_INT_OR_NONE, help=_pretty_help_option(
+    "Offset at which the Production Config is located.\n"
+    "Depending on the SDK and the device versions, use the following values:\n"
+    f"{ProductionConfig.offset_help()}"
+    f"By default, the value for {ProductionConfig.DEFAULT_OFFSET_SDK} "
+    f"{ProductionConfig.DEFAULT_OFFSET_CHIP} is used."))
 def production_config(input, output, offset):
     """
     Generate the Production config hex file for Zigbee Devices out of YAML-structured description.
+    Generated Production config is in version 1.
+
+    INPUT - path to yaml file.\n
+            Example yaml content:
+
+    \b
+                channel_mask: 0x00100000
+                install_code: 83FED3407A939723A5C639B26916D505
+                extended_address: AABBCCDDEEFF0011
+                tx_power: 9
+                app_data: 01ABCD
+
+    OUTPUT - name of output file
     """
     try:
         pc = ProductionConfig(input)
     except ProductionConfigWrongException:
-        raise click.UsageError("Input YAML file format wrong. Please see the example YAML file in the documentation.")
+        raise click.UsageError("Input YAML file format wrong."
+                               " Please see the example YAML file in the documentation.")
 
     try:
         if offset is None:
@@ -1449,7 +1475,8 @@ def production_config(input, output, offset):
             pc.generate(output, offset=offset)
         click.echo("Production Config hexfile generated.")
     except ProductionConfigTooLargeException as e:
-        raise click.UsageError("Production Config too large: " + str(e.length) + " bytes")
+        raise click.UsageError(f"Production Config too large: {e.length} bytes")
+
 
 if __name__ == '__main__':
     cli()
