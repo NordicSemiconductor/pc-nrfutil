@@ -1435,15 +1435,16 @@ def _pretty_help_option(text: str):
     return "\n".join(formatted_lines)
 
 
-@zigbee.command(short_help='Generate the Zigbee Production Config (version 1) hex file.', name='production_config',)
+@zigbee.command(short_help='Generate the Zigbee Production Config (version 1) hex file.',
+                name='production_config',)
 @click.argument('input', required=True, type=click.Path())
 @click.argument('output', required=True, type=click.Path())
-@click.option('--offset',
-              help=_pretty_help_option("Offset at which the Production Config is located.\n"
-                                       + "Depending on the SDK and the device versions, use the following values:\n"
-                                       + ProductionConfig.offset_help()
-                                       + f"By default, the value for {ProductionConfig.DEFAULT_OFFSET_SDK} {ProductionConfig.DEFAULT_OFFSET_CHIP} is used."),
-              type=BASED_INT_OR_NONE)
+@click.option('--offset', type=BASED_INT_OR_NONE, help=_pretty_help_option(
+    "Offset at which the Production Config is located.\n"
+    "Depending on the SDK and the device versions, use the following values:\n"
+    f"{ProductionConfig.offset_help()}"
+    f"By default, the value for {ProductionConfig.DEFAULT_OFFSET_SDK} "
+    f"{ProductionConfig.DEFAULT_OFFSET_CHIP} is used."))
 def production_config(input, output, offset):
     """
     Generate the Production config hex file for Zigbee Devices out of YAML-structured description.
@@ -1464,7 +1465,8 @@ def production_config(input, output, offset):
     try:
         pc = ProductionConfig(input)
     except ProductionConfigWrongException:
-        raise click.UsageError("Input YAML file format wrong. Please see the example YAML file in the documentation.")
+        raise click.UsageError("Input YAML file format wrong."
+                               " Please see the example YAML file in the documentation.")
 
     try:
         if offset is None:
@@ -1473,7 +1475,7 @@ def production_config(input, output, offset):
             pc.generate(output, offset=offset)
         click.echo("Production Config hexfile generated.")
     except ProductionConfigTooLargeException as e:
-        raise click.UsageError("Production Config too large: " + str(e.length) + " bytes")
+        raise click.UsageError(f"Production Config too large: {e.length} bytes")
 
 
 if __name__ == '__main__':

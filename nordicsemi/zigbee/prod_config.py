@@ -40,12 +40,15 @@ import struct
 import intelhex
 import yaml
 
+
 class ProductionConfigWrongException(Exception):
     pass
+
 
 class ProductionConfigTooLargeException(Exception):
     def __init__(self, length):
         self.length = length
+
 
 class ProductionConfig:
     SIZE_MAX = 128
@@ -91,7 +94,7 @@ class ProductionConfig:
 
             # Handle the EUI64 extended address
             if "extended_address" not in self._yaml:
-                self._parsed_values["extended_address"] = 0 #int('0000000000000000', 16)
+                self._parsed_values["extended_address"] = 0  # int('0000000000000000', 16)
             else:
                 self._parsed_values["extended_address"] = int(self._yaml["extended_address"], 16)
 
