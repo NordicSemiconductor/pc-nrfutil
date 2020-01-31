@@ -45,34 +45,33 @@ if sys.platform == 'win32':
                              ValidHandle)
 
     import ctypes
-    from ctypes.wintypes import DWORD, HWND, BOOL
     import winreg
     setup_api = ctypes.windll.setupapi
 
     SetupDiGetClassDevs = setup_api.SetupDiGetClassDevsW
     SetupDiGetClassDevs.argtypes = [ctypes.POINTER(_GUID), ctypes.c_wchar_p,
-                                    HWND, DWORD]
+                                    ctypes.c_void_p, ctypes.c_uint32]
     SetupDiGetClassDevs.restype = ctypes.c_void_p
     SetupDiGetClassDevs.errcheck = ValidHandle
 
     SetupDiEnumDeviceInfo = setup_api.SetupDiEnumDeviceInfo
-    SetupDiEnumDeviceInfo.argtypes = [ctypes.c_void_p, DWORD,
+    SetupDiEnumDeviceInfo.argtypes = [ctypes.c_void_p, ctypes.c_uint32,
                                       ctypes.POINTER(DeviceInfoData)]
-    SetupDiEnumDeviceInfo.restype = BOOL
+    SetupDiEnumDeviceInfo.restype = ctypes.c_bool
 
     SetupDiGetDeviceInstanceId = setup_api.SetupDiGetDeviceInstanceIdW
     SetupDiGetDeviceInstanceId.argtypes = [ctypes.c_void_p,
                                            ctypes.POINTER(DeviceInfoData),
-                                           ctypes.c_wchar_p, DWORD,
-                                           ctypes.POINTER(DWORD)]
-    SetupDiGetDeviceInstanceId.restype = BOOL
+                                           ctypes.c_wchar_p, ctypes.c_uint32,
+                                           ctypes.POINTER(ctypes.c_uint32)]
+    SetupDiGetDeviceInstanceId.restype = ctypes.c_bool
 
     SetupDiGetDeviceProperty = setup_api.SetupDiGetDevicePropertyW
     SetupDiGetDeviceProperty.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
                                          ctypes.c_void_p, ctypes.c_void_p,
                                          ctypes.c_void_p, ctypes.c_uint,
                                          ctypes.c_void_p, ctypes.c_uint]
-    SetupDiGetDeviceProperty.restype = BOOL
+    SetupDiGetDeviceProperty.restype = ctypes.c_bool
 
 #  constants
 DICS_FLAG_GLOBAL = 1

@@ -23,18 +23,16 @@ SOFTWARE.
 """
 
 import ctypes
-from ctypes.wintypes import DWORD, BYTE, WORD
-from serial.win32 import ULONG_PTR
 
 _ole32 = ctypes.WinDLL('ole32')
 
 
 class _GUID(ctypes.Structure):
     _fields_ = [
-        ('Data1', DWORD),
-        ('Data2', WORD),
-        ('Data3', WORD),
-        ('Data4', BYTE * 8),
+        ('Data1', ctypes.c_uint32),
+        ('Data2', ctypes.c_uint16),
+        ('Data3', ctypes.c_uint16),
+        ('Data4', ctypes.c_ubyte * 8),
     ]
 
     def __init__(self, guid="{00000000-0000-0000-0000-000000000000}"):
@@ -111,10 +109,10 @@ class DevicePropertyKey(ctypes.Structure):
 
 class DeviceInfoData(ctypes.Structure):
     _fields_ = [
-        ('cbSize', DWORD),
+        ('cbSize', ctypes.c_ulong),
         ('ClassGuid', _GUID),
-        ('DevInst', DWORD),
-        ('Reserved', ULONG_PTR),
+        ('DevInst', ctypes.c_ulong),
+        ('Reserved', ctypes.c_void_p),
     ]
 
     def __init__(self):
