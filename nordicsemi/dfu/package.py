@@ -49,7 +49,6 @@ import hashlib
 
 
 # Nordic libraries
-from pc_ble_driver_py.exceptions import NordicSemiException
 from nordicsemi.dfu.nrfhex import nRFHex
 from nordicsemi.dfu.init_packet_pb import InitPacketPB, DFUType, CommandTypes, ValidationTypes, SigningTypes, HashTypes
 from nordicsemi.dfu.manifest import ManifestGenerator, Manifest
@@ -67,6 +66,8 @@ HexTypeToInitPacketFwTypemap = {
     HexType.EXTERNAL_APPLICATION:   DFUType.EXTERNAL_APPLICATION
 }
 
+class PackageException(Exception):
+    pass
 
 class PacketField(Enum):
     DEBUG_MODE = 1
@@ -569,7 +570,7 @@ DFU Package: <{0}>:
         elif crc == 32:
             return binascii.crc32(data_buffer)
         else:
-            raise NordicSemiException("Invalid CRC type")
+            raise ValueError("Invalid CRC type")
 
     @staticmethod
     def sign_firmware(key, firmware_filename):
@@ -627,19 +628,19 @@ DFU Package: <{0}>:
         """
 
         if not os.path.isfile(package_path):
-            raise NordicSemiException("Package {0} not found.".format(package_path))
+            raise PackageException("Package {0} not found.".format(package_path))
 
         target_dir = os.path.abspath(target_dir)
         target_base_path = os.path.dirname(target_dir)
 
         if not os.path.exists(target_base_path):
-            raise NordicSemiException("Base path to target directory {0} does not exist.".format(target_base_path))
+            raise PackageException("Base path to target directory {0} does not exist.".format(target_base_path))
 
         if not os.path.isdir(target_base_path):
-            raise NordicSemiException("Base path to target directory {0} is not a directory.".format(target_base_path))
+            raise PackageException("Base path to target directory {0} is not a directory.".format(target_base_path))
 
         if os.path.exists(target_dir):
-            raise NordicSemiException(
+            raise PackageException(
                 "Target directory {0} exists, not able to unpack to that directory.",
                 target_dir)
 
