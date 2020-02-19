@@ -113,14 +113,20 @@ class Slip:
         return (finished, current_state, decoded_data)
 
 class DFUAdapter:
-    def __init__(self, serial_port):
-        self.serial_port = serial_port
+    def __init__(self, com_port, baud_rate, flow_control, timeout):
+
+        self.ping_id     = 0
+        self._serial = Serial(
+                port=com_port,
+                baudrate=baud_rate, 
+                rtscts=1 if flow_control else 0,
+                timeout=timeout)
 
     def send_message(self, data):
         packet = Slip.encode(data)
         logger.log(TRANSPORT_LOGGING_LEVEL, 'SLIP: --> ' + str(data))
         try:
-            self.serial_port.write(packet)
+            self._serial.write(packet)
         except SerialException as e:
             raise NordicSemiException('Writing to serial port failed: ' + str(e) + '. '
                                       'If MSD is enabled on the target device, try to disable it ref. '
@@ -132,7 +138,7 @@ class DFUAdapter:
         decoded_data = []
 
         while finished == False:
-            byte = self.serial_port.read(1)
+            byte = self._serial.read(1)
             if byte:
                 (byte) = struct.unpack('B', byte)[0]
                 (finished, current_state, decoded_data) \
@@ -145,6 +151,41 @@ class DFUAdapter:
 
         return decoded_data
 
+    def close(self):
+        self._serial.close()
+
+
+    def op_read(self, opcode):
+        rxdata = self.get_message()
+        if rxdata is None:
+            return None
+        return op_rxd_unpack(opcode, rxdata)
+
+    def op_write(self, opcode, **kwargs):
+        txdata = op_txd_pack(opcode, **kwargs)
+        self.send_message(txdata)
+
+    def op_cmd(self, opcode, **kwargs):
+        txdata = op_txd_pack(opcode, **kwargs)
+        self.send_message(txdata)
+        rxdata = self.get_message()
+        # TODO is this OK? (how it was)
+        if rxdata is None and opcode == OP_CODE.OBJECT_CREATE:
+            return None
+        return op_rxd_unpack(opcode, rxdata)
+
+    def ping(self):
+
+        self.ping_id = (self.ping_id + 1) % 256
+        try:
+            rx_ping_id = self.op_cmd(OP_CODE.PING, ping_id=self.ping_id)
+        except DfuOperationResCodeError as e:
+            logger.debug("ignoring ping response error {}".format(e))
+            # Returning an error code is seen as good enough. The bootloader is up and running
+            return True
+        
+        return bool(rx_ping_id == self.ping_id)
+
 class DfuTransportSerial(DfuTransport):
 
     DEFAULT_BAUD_RATE = 115200
@@ -153,19 +194,6 @@ class DfuTransportSerial(DfuTransport):
     DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
     DEFAULT_PRN                 = 0
     DEFAULT_DO_PING = True
-
-    OP_CODE = {
-        'CreateObject'          : 0x01,
-        'SetPRN'                : 0x02,
-        'CalcChecSum'           : 0x03,
-        'Execute'               : 0x04,
-        'ReadError'             : 0x05,
-        'ReadObject'            : 0x06,
-        'GetSerialMTU'          : 0x07,
-        'WriteObject'           : 0x08,
-        'Ping'                  : 0x09,
-        'Response'              : 0x60,
-    }
 
     def __init__(self,
                  com_port,
@@ -181,7 +209,6 @@ class DfuTransportSerial(DfuTransport):
         self.flow_control = 1 if flow_control else 0
         self.timeout = timeout
         self.prn         = prn
-        self.serial_port = None
         self.dfu_adapter = None
         self.ping_id     = 0
         self.do_ping     = do_ping
@@ -195,12 +222,14 @@ class DfuTransportSerial(DfuTransport):
         super().open()
         try:
             self.__ensure_bootloader()
-            self.serial_port = Serial(port=self.com_port,
-                baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.DEFAULT_SERIAL_PORT_TIMEOUT)
-            self.dfu_adapter = DFUAdapter(self.serial_port)
+            self.dfu_adapter = DFUAdapter(com_port=com_port, 
+                    baud_rate=self.baud_rate, 
+                    flow_control=self.flow_control, 
+                    timeout=self.timeout)
+
         except Exception as e:
             raise NordicSemiException("Serial port could not be opened on {0}"
-              ". Reason: {1}".format(self.com_port, e.strerror))
+              ". Reason: {1}".format(self.com_port, str(e)))
 
         if self.do_ping:
             ping_success = False
@@ -213,12 +242,12 @@ class DfuTransportSerial(DfuTransport):
             if ping_success == False:
                 raise NordicSemiException("No ping response after opening COM port")
 
-        self.__set_prn()
-        self.__get_mtu()
+        self.dfu_adapter.op_cmd(OP_CODE.PRN_SET, prn=self.prn) #self.__set_prn()
+        self.mtu = self.dfu_adapter.op_cmd(OP_CODE.MTU_GET) # self.__get_mtu()
 
     def close(self):
         super().close()
-        self.serial_port.close()
+        self.dfu_adapter.close()
 
     def send_init_packet(self, init_packet):
         def try_to_recover():
@@ -241,7 +270,7 @@ class DfuTransportSerial(DfuTransport):
                 except ValidationException:
                     return False
 
-            self.__execute()
+            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE) # self.__execute()
             return True
 
         response = self.__select_command()
@@ -251,9 +280,12 @@ class DfuTransportSerial(DfuTransport):
             return
 
         try:
-            self.__create_command(len(init_packet))
+            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_CREATE,
+                object_type=OBJ_TYPE.COMMAND,
+                size=len(init_packet)
+            )
             self.__stream_data(data=init_packet)
-            self.__execute()
+            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
         except ValidationException:
             raise NordicSemiException("Failed to send init packet")
 
@@ -289,7 +321,7 @@ class DfuTransportSerial(DfuTransport):
                         binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
                     return
 
-            self.__execute()
+            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=response['offset'])
 
         response = self.__select_data()
@@ -299,7 +331,7 @@ class DfuTransportSerial(DfuTransport):
             try:
                 self.__create_data(len(data))
                 response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
-                self.__execute()
+                self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE) 
             except ValidationException:
                 raise NordicSemiException("Failed to send firmware")
 
@@ -353,45 +385,7 @@ class DfuTransportSerial(DfuTransport):
              or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '0105') # JLink CDC UART Port
              or (device.vendor_id.lower() == '1366' and device.product_id.lower() == '1015'))# JLink CDC UART Port (MSD)
 
-    def __set_prn(self):
-        logger.debug("Serial: Set Packet Receipt Notification {}".format(self.prn))
-        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['SetPRN']]
-            + list(struct.pack('<H', self.prn)))
-        self.__get_response(DfuTransportSerial.OP_CODE['SetPRN'])
-
-    def __get_mtu(self):
-        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['GetSerialMTU']])
-        response = self.__get_response(DfuTransportSerial.OP_CODE['GetSerialMTU'])
-
-        self.mtu = struct.unpack('<H', bytearray(response))[0]
-
-    def __ping(self):
-        self.ping_id = (self.ping_id + 1) % 256
-
-        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['Ping'], self.ping_id])
-        resp = self.dfu_adapter.get_message() # Receive raw response to check return code
-
-        if (resp is None):
-            logger.debug('Serial: No ping response')
-            return False
-
-        if resp[0] != DfuTransportSerial.OP_CODE['Response']:
-            logger.debug('Serial: No Response: 0x{:02X}'.format(resp[0]))
-            return False
-
-        if resp[1] != DfuTransportSerial.OP_CODE['Ping']:
-            logger.debug('Serial: Unexpected Executed OP_CODE.\n' \
-                + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(DfuTransportSerial.OP_CODE['Ping'], resp[1]))
-            return False
-
-        if resp[2] != DfuTransport.RES_CODE['Success']:
-            # Returning an error code is seen as good enough. The bootloader is up and running
-            return True
-        else:
-            if struct.unpack('B', bytearray(resp[3:]))[0] == self.ping_id:
-                return True
-            else:
-                return False
+        
 
     def __create_command(self, size):
         self.__create_object(0x01, size)
@@ -415,10 +409,6 @@ class DfuTransportSerial(DfuTransport):
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
-
-    def __execute(self):
-        self.dfu_adapter.send_message([DfuTransportSerial.OP_CODE['Execute']])
-        self.__get_response(DfuTransportSerial.OP_CODE['Execute'])
 
     def __select_command(self):
         return self.__select_object(0x01)
@@ -461,9 +451,10 @@ class DfuTransportSerial(DfuTransport):
             # here the maximum data size is self.mtu/2,
             # due to the slip encoding which at maximum doubles the size
             to_transmit = data[i:i + (self.mtu-1)//2 - 1 ]
-            to_transmit = struct.pack('B',DfuTransportSerial.OP_CODE['WriteObject']) + to_transmit
+            # to_transmit = struct.pack('B',DfuTransportSerial.OP_CODE['WriteObject']) + to_transmit
+            #self.dfu_adapter.send_message(list(to_transmit))
+            self.dfu_adapter.op_write(OP_CODE.OBJECT_WRITE, data=list(to_transmit))
 
-            self.dfu_adapter.send_message(list(to_transmit))
             crc     = binascii.crc32(to_transmit[1:], crc) & 0xFFFFFFFF
             offset += len(to_transmit) - 1
             current_pnr    += 1
