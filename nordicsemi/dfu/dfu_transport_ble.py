@@ -509,10 +509,10 @@ class DfuTransportBle(DfuTransport):
                 except ValidationException:
                     return False
 
-            self.__execute()
+            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
             return True
 
-        response = self.__select_command()
+        response = self.dfu_adapter.op_cmd(OP_CODE.OBJECT_SELECT,object_type=OBJ_TYPE.COMMAND)
         assert len(init_packet) <= response['max_size'], 'Init command is too long'
 
         if try_to_recover():
@@ -520,9 +520,9 @@ class DfuTransportBle(DfuTransport):
 
         for r in range(DfuTransportBle.RETRIES_NUMBER):
             try:
-                self.__create_command(len(init_packet))
+                self.dfu_adapter.op_cmd(OP_CODE.OBJECT_CREATE,object_type=OBJ_TYPE.COMMAND,size=len(init_packet))
                 self.__stream_data(data=init_packet)
-                self.__execute()
+                self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
             except ValidationException:
                 pass
             break
@@ -558,19 +558,19 @@ class DfuTransportBle(DfuTransport):
                     response['crc']     = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
                     return
 
-            self.__execute()
+            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=response['offset'])
 
-        response = self.__select_data()
+        response = self.dfu_adapter.op_cmd(OP_CODE.OBJECT_SELECT,object_type=OBJ_TYPE.DATA)
         try_to_recover()
 
         for i in range(response['offset'], len(firmware), response['max_size']):
             data = firmware[i:i+response['max_size']]
             for r in range(DfuTransportBle.RETRIES_NUMBER):
                 try:
-                    self.__create_data(len(data))
+                    self.dfu_adapter.op_cmd(OP_CODE.OBJECT_CREATE,object_type=OBJ_TYPE.DATA,size=len(data))
                     response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
-                    self.__execute()
+                    self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
                 except ValidationException:
                     pass
                 break
@@ -645,10 +645,10 @@ class DfuTransportBle(DfuTransport):
             current_pnr    += 1
             if self.prn == current_pnr:
                 current_pnr = 0
-                response    = self.__get_checksum_response()
+                response    = self.dfu_adapter.op_read(OP_CODE.CRC_GET)()
                 validate_crc()
 
-        response = self.__calculate_checksum()
+        response = self.dfu_adapter.op_cmd(OP_CODE.CRC_GET)
         validate_crc()
 
         return crc
