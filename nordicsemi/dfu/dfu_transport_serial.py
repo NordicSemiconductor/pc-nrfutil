@@ -63,66 +63,79 @@ class ValidationException(NordicSemiException):
 
 logger = logging.getLogger(__name__)
 
-
 class Slip:
-
+    """
+    Serial Line Internet Protocol (SLIP) encode and decode
+    """
     # fmt: off
-    SLIP_BYTE_END             = 0o300
-    SLIP_BYTE_ESC             = 0o333
-    SLIP_BYTE_ESC_END         = 0o334
-    SLIP_BYTE_ESC_ESC         = 0o335
+    BYTE_END             = 0o300
+    BYTE_ESC             = 0o333
+    BYTE_ESC_END         = 0o334
+    BYTE_ESC_ESC         = 0o335
 
-    SLIP_STATE_DECODING                 = 1
-    SLIP_STATE_ESC_RECEIVED             = 2
-    SLIP_STATE_CLEARING_INVALID_PACKET  = 3
+    STATE_DECODING                 = 1
+    STATE_ESC_RECEIVED             = 2
+    STATE_CLEARING_INVALID_PACKET  = 3
     # fmt: on
 
-    @staticmethod
-    def encode(data):
-        newData = []
+    def __init__(self):
+        self._state = self.STATE_DECODING
+        self._decoded = bytearray()
+
+    def reset_decoder(self):
+        self._state = self.STATE_DECODING
+        self._decoded = bytearray()
+
+    @property
+    def decoded(self):
+        return self._decoded
+
+    def encode(self, data):
+        newData = bytearray()
         for elem in data:
-            if elem == Slip.SLIP_BYTE_END:
-                newData.append(Slip.SLIP_BYTE_ESC)
-                newData.append(Slip.SLIP_BYTE_ESC_END)
-            elif elem == Slip.SLIP_BYTE_ESC:
-                newData.append(Slip.SLIP_BYTE_ESC)
-                newData.append(Slip.SLIP_BYTE_ESC_ESC)
+            if elem == self.BYTE_END:
+                newData.append(self.BYTE_ESC)
+                newData.append(self.BYTE_ESC_END)
+            elif elem == self.BYTE_ESC:
+                newData.append(self.BYTE_ESC)
+                newData.append(self.BYTE_ESC_ESC)
             else:
                 newData.append(elem)
-        newData.append(Slip.SLIP_BYTE_END)
+        newData.append(self.BYTE_END)
         return newData
 
-    @staticmethod
-    def decode_add_byte(c, decoded_data, current_state):
+    def decode_byte(self, c):
         finished = False
-        if current_state == Slip.SLIP_STATE_DECODING:
-            if c == Slip.SLIP_BYTE_END:
+        if self._state == self.STATE_DECODING:
+            if c == self.BYTE_END:
                 finished = True
-            elif c == Slip.SLIP_BYTE_ESC:
-                current_state = Slip.SLIP_STATE_ESC_RECEIVED
+            elif c == self.BYTE_ESC:
+                self._state = self.STATE_ESC_RECEIVED
             else:
-                decoded_data.append(c)
-        elif current_state == Slip.SLIP_STATE_ESC_RECEIVED:
-            if c == Slip.SLIP_BYTE_ESC_END:
-                decoded_data.append(Slip.SLIP_BYTE_END)
-                current_state = Slip.SLIP_STATE_DECODING
-            elif c == Slip.SLIP_BYTE_ESC_ESC:
-                decoded_data.append(Slip.SLIP_BYTE_ESC)
-                current_state = Slip.SLIP_STATE_DECODING
+                self._decoded.append(c)
+        elif self._state == self.STATE_ESC_RECEIVED:
+            if c == self.BYTE_ESC_END:
+                self._decoded.append(self.BYTE_END)
+                self._state = self.STATE_DECODING
+            elif c == self.BYTE_ESC_ESC:
+                self._decoded.append(self.BYTE_ESC)
+                self._state = self.STATE_DECODING
             else:
-                current_state = Slip.SLIP_STATE_CLEARING_INVALID_PACKET
-        elif current_state == Slip.SLIP_STATE_CLEARING_INVALID_PACKET:
-            if c == Slip.SLIP_BYTE_END:
-                current_state = Slip.SLIP_STATE_DECODING
-                decoded_data = []
+                logger.warning("SLIP: Invalid package ignored")
+                self._state = self.STATE_CLEARING_INVALID_PACKET
+        elif self._state == self.STATE_CLEARING_INVALID_PACKET:
+            if c == self.BYTE_END:
+                self._state = self.STATE_DECODING
+                self._decoded = bytearray()
 
-        return (finished, current_state, decoded_data)
+        return finished:
 
 
 class _DfuAdapter:
     def __init__(self, com_port, baud_rate, flow_control, timeout):
 
         self.ping_id = 0
+        self._slip = Slip()
         self._serial = Serial(
             port=com_port,
             baudrate=baud_rate,
@@ -130,8 +143,9 @@ class _DfuAdapter:
             timeout=timeout,
         )
 
-    def _send_message(self, data):
-        packet = Slip.encode(data)
+    def _slip_send(self, data):
+        """SLIP encode message send/write it"""
+        packet = slip.encode(data)
         logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: --> " + str(data))
         try:
             self._serial.write(packet)
@@ -142,31 +156,29 @@ class _DfuAdapter:
                 "https://wiki.segger.com/index.php?title=J-Link-OB_SAM3U"
             )
 
-    def _get_message(self):
-        current_state = Slip.SLIP_STATE_DECODING
-        finished = False
-        decoded_data = []
+    def _slip_recv(self):
+        """ Receive/read SLIP message and decode it """
+        decoded = None
+        self._slip.reset_decoder()
+        while True:
+            rxdata = self._serial.read(1)
+            if not rxdata:
+                logger.warning("SLIP: serial read timeout")
+                return  None
 
-        while finished == False:
-            byte = self._serial.read(1)
-            if byte:
-                (byte) = struct.unpack("B", byte)[0]
-                (finished, current_state, decoded_data) = Slip.decode_add_byte(
-                    byte, decoded_data, current_state
-                )
-            else:
-                current_state = Slip.SLIP_STATE_CLEARING_INVALID_PACKET
-                return None
+            have_packet = self._slip.decode_byte(rxdata[0])
+            if have_packet:
+                decoded = self.slip.decoded
+                break
 
-        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(decoded_data))
-
-        return decoded_data
+        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(decoded))
+        return decoded
 
     def close(self):
         self._serial.close()
 
     def op_recv(self, opcode):
-        rxdata = self._get_message()
+        rxdata = self._slip_recv()
         # TODO is this OK? (how it was)
         if rxdata is None and opcode == OP_CODE.OBJECT_CREATE:
             return None
@@ -174,7 +186,7 @@ class _DfuAdapter:
 
     def op_send(self, opcode, **kwargs):
         txdata = op_txd_pack(opcode, **kwargs)
-        self._send_message(txdata)
+        self._slip_send(txdata)
 
     def op_cmd(self, opcode, **kwargs):
         self.op_send(opcode, **kwargs)
