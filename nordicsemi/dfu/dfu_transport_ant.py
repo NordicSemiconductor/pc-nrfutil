@@ -498,50 +498,6 @@ class DfuTransportAnt(DfuTransport):
             else:
                 return False
 
-    def __create_command(self, size):
-        self.__create_object(0x01, size)
-
-    def __create_data(self, size):
-        self.__create_object(0x02, size)
-
-    def __create_object(self, object_type, size):
-        self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['CreateObject'], object_type]\
-                                            + list(struct.pack('<L', size)))
-        self.__get_response(DfuTransportAnt.OP_CODE['CreateObject'])
-
-    def __calculate_checksum(self):
-        self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['CalcChecSum']])
-        response = self.__get_response(DfuTransportAnt.OP_CODE['CalcChecSum'])
-
-        (offset, crc) = struct.unpack('<II', bytearray(response))
-        return {'offset': offset, 'crc': crc}
-
-    def __execute(self):
-        self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['Execute']])
-        self.__get_response(DfuTransportAnt.OP_CODE['Execute'])
-
-    def __select_command(self):
-        return self.__select_object(0x01)
-
-    def __select_data(self):
-        return self.__select_object(0x02)
-
-    def __select_object(self, object_type):
-        logger.debug("ANT: Selecting Object: type:{}".format(object_type))
-        self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['ReadObject'], object_type])
-
-        response = self.__get_response(DfuTransportAnt.OP_CODE['ReadObject'])
-        (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
-
-        logger.debug("ANT: Object selected: " +
-            " max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
-        return {'max_size': max_size, 'offset': offset, 'crc': crc}
-
-    def __get_checksum_response(self):
-        resp = self.__get_response(DfuTransportAnt.OP_CODE['CalcChecSum'])
-
-        (offset, crc) = struct.unpack('<II', bytearray(resp))
-        return {'offset': offset, 'crc': crc}
 
     def __stream_data(self, data, crc=0, offset=0):
         logger.debug("ANT: Streaming Data: " +
@@ -574,32 +530,3 @@ class DfuTransportAnt(DfuTransport):
         response = self.dfu_adapter.op_cmd(OP_CODE.CRC_GET)
         validate_crc()
         return crc
-
-    def __get_response(self, operation):
-        def get_dict_key(dictionary, value):
-            return next((key for key, val in list(dictionary.items()) if val == value), None)
-
-        resp = self.dfu_adapter.get_message()
-
-        if resp is None:
-            return None
-
-        if resp[0] != DfuTransportAnt.OP_CODE['Response']:
-            raise NordicSemiException('No Response: 0x{:02X}'.format(resp[0]))
-
-        if resp[1] != operation:
-            raise NordicSemiException('Unexpected Executed OP_CODE.\n' \
-                             + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
-
-        if resp[2] == DfuTransport.RES_CODE['Success']:
-            return resp[3:]
-
-        elif resp[2] == DfuTransport.RES_CODE['ExtendedError']:
-            try:
-                data = DfuTransport.EXT_ERROR_CODE[resp[3]]
-            except IndexError:
-                data = "Unsupported extended error type {}".format(resp[3])
-            raise NordicSemiException('Extended Error 0x{:02X}: {}'.format(resp[3], data))
-        else:
-            raise NordicSemiException('Response Code {}'.format(
-                get_dict_key(DfuTransport.RES_CODE, resp[2])))
