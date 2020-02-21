@@ -40,33 +40,39 @@ import time
 from datetime import datetime, timedelta
 import binascii
 import logging
-import struct
 
 # Python 3rd party imports
 from serial import Serial
 from serial.serialutil import SerialException
 
 # Nordic Semiconductor imports
-from nordicsemi.dfu.dfu_transport import DfuTransport, DfuEvent, TRANSPORT_LOGGING_LEVEL
 from pc_ble_driver_py.exceptions import NordicSemiException
+
+# Local imports
+from nordicsemi.dfu.dfu_transport import (
+    DfuTransport,
+    DfuEvent,
+    TRANSPORT_LOGGING_LEVEL,
+    ValidationException,
+)
 from nordicsemi.lister.device_lister import DeviceLister
 from nordicsemi.dfu.dfu_trigger import DFUTrigger
-
-
-class ValidationException(NordicSemiException):
-    """"
-    Exception used when validation failed
-    """
-
-    pass
-
+from nordicsemi.dfu.operation import (
+    OP_CODE,
+    OBJ_TYPE,
+    op_txd_pack,
+    op_rxd_unpack,
+    DfuOperationResCodeError,
+)
 
 logger = logging.getLogger(__name__)
+
 
 class Slip:
     """
     Serial Line Internet Protocol (SLIP) encode and decode
     """
+
     # fmt: off
     BYTE_END             = 0o300
     BYTE_ESC             = 0o333
@@ -128,7 +134,7 @@ class Slip:
                 self._state = self.STATE_DECODING
                 self._decoded = bytearray()
 
-        return finished:
+        return finished
 
 
 class _DfuAdapter:
@@ -145,10 +151,10 @@ class _DfuAdapter:
 
     def _slip_send(self, data):
         """SLIP encode message send/write it"""
-        packet = slip.encode(data)
+        encoded = self._slip.encode(data)
         logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: --> " + str(data))
         try:
-            self._serial.write(packet)
+            self._serial.write(encoded)
         except SerialException as e:
             raise NordicSemiException(
                 "Writing to serial port failed: " + str(e) + ". "
@@ -160,15 +166,17 @@ class _DfuAdapter:
         """ Receive/read SLIP message and decode it """
         decoded = None
         self._slip.reset_decoder()
+        # TODO add timeout if slip package
+        # dropped. Add SlipDecodeException or something?
         while True:
             rxdata = self._serial.read(1)
             if not rxdata:
                 logger.warning("SLIP: serial read timeout")
-                return  None
+                return None
 
             have_packet = self._slip.decode_byte(rxdata[0])
             if have_packet:
-                decoded = self.slip.decoded
+                decoded = self._slip.decoded
                 break
 
         logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(decoded))
@@ -238,7 +246,7 @@ class DfuTransportSerial(DfuTransport):
         try:
             self.__ensure_bootloader()
             self.dfu_adapter = _DfuAdapter(
-                com_port=com_port,
+                com_port=self.com_port,
                 baud_rate=self.baud_rate,
                 flow_control=self.flow_control,
                 timeout=self.timeout,
@@ -481,4 +489,3 @@ class DfuTransportSerial(DfuTransport):
         response = self.dfu_adapter.op_cmd(OP_CODE.CRC_GET)
         validate_crc()
         return crc
-

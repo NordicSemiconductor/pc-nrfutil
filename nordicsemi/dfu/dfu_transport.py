@@ -47,6 +47,12 @@ logger = logging.getLogger(__name__)
 # Note that this logging level is more verbose than logging.DEBUG.
 TRANSPORT_LOGGING_LEVEL = 5
 
+class ValidationException(Exception):
+    """"
+    Exception used when validation failed
+    """
+
+    pass
 
 class DfuEvent:
     PROGRESS_EVENT = 1
