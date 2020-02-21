@@ -101,7 +101,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     LOCAL_ATT_MTU         = 247
     # fmt: on
 
-    def __init__(self, serial_port, baud_rate, bonded=False, keyset=None):
+    def __init__(self, serial_port, baud_rate, bonded=False, keyset=None, local_att_mtu=LOCAL_ATT_MTU):
         super().__init__()
 
         self.evt_sync = EvtSync(
@@ -124,6 +124,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.indication_q       = queue.Queue()
         self.att_mtu            = ATT_MTU_DEFAULT
         self.packet_size        = self.att_mtu - 3
+        self.local_att_mtu = local_att_mtu
         # fmt: on
         self.adapter.observer_register(self)
         self.adapter.driver.observer_register(self)
@@ -147,7 +148,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         if nrf_sd_ble_api_ver == 5:
             self.adapter.driver.ble_cfg_set(
                 BLEConfig.conn_gatt,
-                BLEConfigConnGatt(att_mtu=DFUAdapter.LOCAL_ATT_MTU),
+                BLEConfigConnGatt(att_mtu=self.local_att_mtu),
             )
             self.adapter.driver.ble_cfg_set(
                 BLEConfig.conn_gap, BLEConfigConnGap(event_length=5)
@@ -205,10 +206,10 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             self.encrypt()
 
         if nrf_sd_ble_api_ver >= 3:
-            if DFUAdapter.LOCAL_ATT_MTU > ATT_MTU_DEFAULT:
+            if self.local_att_mtu > ATT_MTU_DEFAULT:
                 logger.info("BLE: Enabling longer ATT MTUs")
                 self.att_mtu = self.adapter.att_mtu_exchange(
-                    self.conn_handle, DFUAdapter.LOCAL_ATT_MTU
+                    self.conn_handle, self.local_att_mtu
                 )
 
                 logger.info("BLE: Enabling longer Data Length")
@@ -551,7 +552,6 @@ class DfuTransportBle(DfuTransport):
         prn=0,
     ):
         super().__init__()
-        DFUAdapter.LOCAL_ATT_MTU = att_mtu
         self.baud_rate = baud_rate
         self.serial_port = serial_port
         self.att_mtu = att_mtu
@@ -570,7 +570,8 @@ class DfuTransportBle(DfuTransport):
         super().open()
         self.dfu_adapter = DFUAdapter(
             serial_port=self.serial_port, baud_rate=self.baud_rate,
-            bonded=self.bonded, keyset=self.keyset
+            bonded=self.bonded, keyset=self.keyset,
+            local_att_mtu=self.att_mtu
         )
         self.dfu_adapter.open()
         self.target_device_name, self.target_device_addr = self.dfu_adapter.connect(
