@@ -54,9 +54,19 @@ except ImportError as e:
     raise Exception("Try running 'pip install antlib'.")
 
 # Nordic Semiconductor imports
-from nordicsemi.dfu.dfu_transport   import DfuTransport, DfuEvent, TRANSPORT_LOGGING_LEVEL
 from pc_ble_driver_py.exceptions    import NordicSemiException
 
+# Local imports
+from nordicsemi.dfu.dfu_transport import (
+    OP_CODE,
+    DfuTransport,
+    DfuEvent,
+    TRANSPORT_LOGGING_LEVEL,
+    ValidationException,
+    OperationResCodeError,
+)
+
+logger = logging.getLogger(__name__)
 
 def platform_supported():
     """
@@ -81,13 +91,6 @@ def platform_supported():
     return can_run
 
 
-class ValidationException(NordicSemiException):
-    """"
-    Exception used when validation failed
-    """
-    pass
-
-logger = logging.getLogger(__name__)
 
 
 class AntParams:
@@ -305,19 +308,6 @@ class DfuTransportAnt(DfuTransport):
     DEFAULT_DO_PING             = True
     DEFAULT_DO_DEBUG            = False
 
-    OP_CODE = {
-        'CreateObject'          : 0x01,
-        'SetPRN'                : 0x02,
-        'CalcChecSum'           : 0x03,
-        'Execute'               : 0x04,
-        'ReadError'             : 0x05,
-        'ReadObject'            : 0x06,
-        'GetSerialMTU'          : 0x07,
-        'WriteObject'           : 0x08,
-        'Ping'                  : 0x09,
-        'Response'              : 0x60,
-    }
-
     def __init__(self,
                  ant_config=None,
                  port=DEFAULT_PORT,
@@ -364,169 +354,30 @@ class DfuTransportAnt(DfuTransport):
         if not self.__ping():
             raise NordicSemiException("No ping response from device.")
 
-        self.__set_prn()
-        self.__get_mtu()
+        logger.debug("ANT: Set Packet Receipt Notification {}".format(self.prn))
+        self._operation_cmd(OP_CODE.PRN_SET, prn=self.prn)
+        self.mtu = self._operation_cmd(OP_CODE.MTU_GET)
 
     def close(self):
         super().close()
         self.dfu_adapter.close()
 
-    def send_init_packet(self, init_packet):
-        def try_to_recover():
-            if response['offset'] == 0 or response['offset'] > len(init_packet):
-                # There is no init packet or present init packet is too long.
-                return False
+    def _operation_message_recv(self):
+        return self.dfu_adapter.get_message()
 
-            expected_crc = (binascii.crc32(init_packet[:response['offset']]) & 0xFFFFFFFF)
+    def _operation_message_send(self, txdata):
+        return self.dfu_adapter.send_message(list(txdata))
 
-            if expected_crc != response['crc']:
-                # Present init packet is invalid.
-                return False
-
-            if len(init_packet) > response['offset']:
-                # Send missing part.
-                try:
-                    self.__stream_data(data     = init_packet[response['offset']:],
-                                       crc      = expected_crc,
-                                       offset   = response['offset'])
-                except ValidationException:
-                    return False
-
-            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-            return True
-
-        response = self.dfu_adapter.op_cmd(OP_CODE.OBJECT_SELECT,object_type=OBJ_TYPE.COMMAND)
-        assert len(init_packet) <= response['max_size'], 'Init command is too long'
-
-        if try_to_recover():
-            return
-
-        try:
-            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_CREATE,object_type=OBJ_TYPE.COMMAND,size=len(init_packet))
-            self.__stream_data(data=init_packet)
-            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-        except ValidationException:
-            raise NordicSemiException("Failed to send init packet")
-
-    def send_firmware(self, firmware):
-        def try_to_recover():
-            if response['offset'] == 0:
-                # Nothing to recover
-                return
-
-            expected_crc = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
-            remainder    = response['offset'] % response['max_size']
-
-            if (expected_crc != response['crc']) or (remainder == 0):
-                # Invalid CRC. Remove corrupted data.
-                # DFU lib can't deal with recovering straight to an execute commamd,
-                # so treat remainder of 0 as a corrupted block too.
-                response['offset'] -= remainder if remainder != 0 else response['max_size']
-                response['crc']     = \
-                        binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
-                return
-
-            if (remainder != 0) and (response['offset'] != len(firmware)):
-                # Send rest of the page.
-                try:
-                    to_send             = firmware[response['offset'] : response['offset']
-                                                + response['max_size'] - remainder]
-                    response['crc']     = self.__stream_data(data   = to_send,
-                                                             crc    = response['crc'],
-                                                             offset = response['offset'])
-                    response['offset'] += len(to_send)
-                except ValidationException:
-                    # Remove corrupted data.
-                    response['offset'] -= remainder
-                    response['crc']     = \
-                        binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
-                    return
-
-            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=response['offset'])
-
-        response = self.dfu_adapter.op_cmd(OP_CODE.OBJECT_SELECT,object_type=OBJ_TYPE.DATA)
-        try_to_recover()
-        for i in range(response['offset'], len(firmware), response['max_size']):
-            data = firmware[i:i+response['max_size']]
-            try:
-                self.dfu_adapter.op_cmd(OP_CODE.OBJECT_CREATE,object_type=OBJ_TYPE.DATA,size=len(data))
-                response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
-                self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-            except ValidationException:
-                raise NordicSemiException("Failed to send firmware")
-
-            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
-
-    def __set_prn(self):
-        logger.debug("ANT: Set Packet Receipt Notification {}".format(self.prn))
-        self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['SetPRN']]
-            + list(struct.pack('<H', self.prn)))
-        self.__get_response(DfuTransportAnt.OP_CODE['SetPRN'])
-
-    def __get_mtu(self):
-        self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['GetSerialMTU']])
-        response = self.__get_response(DfuTransportAnt.OP_CODE['GetSerialMTU'])
-
-        self.mtu = struct.unpack('<H', bytearray(response))[0]
+    def _stream_data_packet(self, data):
+        return self._operation_send(OP_CODE.OBJECT_WRITE, data)
 
     def __ping(self):
         self.ping_id = (self.ping_id + 1) % 256
-
-        self.dfu_adapter.send_message([DfuTransportAnt.OP_CODE['Ping'], self.ping_id])
-        resp = self.dfu_adapter.get_message() # Receive raw response to check return code
-
-        if (resp is None):
-            logger.debug('ANT: No ping response')
-            return False
-
-        if resp[0] != DfuTransportAnt.OP_CODE['Response']:
-            logger.debug('ANT: No Response: 0x{:02X}'.format(resp[0]))
-            return False
-
-        if resp[1] != DfuTransportAnt.OP_CODE['Ping']:
-            logger.debug('ANT: Unexpected Executed OP_CODE.\n' \
-                + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(DfuTransportAnt.OP_CODE['Ping'], resp[1]))
-            return False
-
-        if resp[2] != DfuTransport.RES_CODE['Success']:
+        try:
+            rx_ping_id = self.op_cmd(OP_CODE.PING, ping_id=self.ping_id)
+        except OperationResCodeError as e:
+            logger.debug("ignoring ping response error {}".format(e))
             # Returning an error code is seen as good enough. The bootloader is up and running
             return True
-        else:
-            if struct.unpack('B', bytearray(resp[3:]))[0] == self.ping_id:
-                return True
-            else:
-                return False
 
-
-    def __stream_data(self, data, crc=0, offset=0):
-        logger.debug("ANT: Streaming Data: " +
-            "len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
-        def validate_crc():
-            if (crc != response['crc']):
-                raise ValidationException('Failed CRC validation.\n'\
-                                + 'Expected: {} Received: {}.'.format(crc, response['crc']))
-            if (offset != response['offset']):
-                raise ValidationException('Failed offset validation.\n'\
-                                + 'Expected: {} Received: {}.'.format(offset, response['offset']))
-
-        current_pnr     = 0
-
-        for i in range(0, len(data), self.mtu - 4):
-            # append the write data opcode to the front
-            # here the maximum data size is self.mtu - 4
-            # due to the header bytes in commands.
-            to_transmit = data[i:i + self.mtu - 4 ]
-            to_transmit = struct.pack('B',DfuTransportAnt.OP_CODE['WriteObject']) + to_transmit
-
-            self.dfu_adapter.send_message(list(to_transmit))
-            crc     = binascii.crc32(to_transmit[1:], crc) & 0xFFFFFFFF
-            offset += len(to_transmit) - 1
-            current_pnr    += 1
-            if self.prn == current_pnr:
-                current_pnr = 0
-                response    = self.dfu_adapter.op_read(OP_CODE.CRC_GET)()
-                validate_crc()
-        response = self.dfu_adapter.op_cmd(OP_CODE.CRC_GET)
-        validate_crc()
-        return crc
+        return bool(rx_ping_id == self.ping_id)

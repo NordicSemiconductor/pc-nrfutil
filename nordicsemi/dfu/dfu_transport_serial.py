@@ -132,7 +132,6 @@ class Slip:
         return finished
 
 
-
 class DfuTransportSerial(DfuTransport):
 
     DEFAULT_BAUD_RATE = 115200
@@ -224,7 +223,7 @@ class DfuTransportSerial(DfuTransport):
             rxdata = self._serial.read(1)
             if not rxdata:
                 logger.warning("SLIP: serial read timeout")
-                return None
+                raise OperationResponseTimeoutError("Serial read timeout")
 
             have_packet = self._slip.decode_byte(rxdata[0])
             if have_packet:
@@ -232,6 +231,20 @@ class DfuTransportSerial(DfuTransport):
                 break
 
         logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(decoded))
+
+    def _operation_recv(self, opcode):
+        # TODO is this OK? (how it was)
+        try:
+            rxdata = self._operation_message_recv()
+        except OperationResponseTimeoutError as e:
+            if opcode == OP_CODE.OBJECT_CREATE:
+                return None
+            else:
+                raise e # re-raise
+        return operation_rxd_unpack(opcode, rxdata)
+
+    def _stream_data_packet(self, data):
+        return self._operation_send(OP_CODE.OBJECT_WRITE, data)
 
     def __ensure_bootloader(self):
         lister = DeviceLister()

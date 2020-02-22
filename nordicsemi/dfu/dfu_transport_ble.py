@@ -71,6 +71,7 @@ from nordicsemi.dfu.dfu_transport import (
     DfuTransport, 
     DfuEvent, 
     ValidationException,
+    OperationTimeoutError,
     OP_CODE,
     RES_CODE,
     OBJ_TYPE,
@@ -394,6 +395,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         )
         self.evt_sync.wait("conn_sec_update")
 
+    def write_control_point(self, data):
+        self.adapter.write_req(self.conn_handle, DFUAdapter.CP_UUID, data)
 
     def write_data_point(self, data):
         self.adapter.write_cmd(self.conn_handle, DFUAdapter.DP_UUID, data)
@@ -575,19 +578,17 @@ class DfuTransportBle(DfuTransport):
     def _operation_message_recv(self):
         timeout = DfuTransportBle.DEFAULT_TIMEOUT
         try:
-            rxdata = self.dfu_adapter._notifications_q.get(timeout=timeout)
+            rxdata = self.dfu_adapter.notifications_q.get(timeout=timeout)
         except queue.Empty:
-            raise DfuOperationError("Timeout: operation {}".format(opcode))
+            raise OperationResponseTimeoutError("Timeout: operation {}".format(timeout))
         return rxdata
 
     def _operation_message_send(self, txdata):
         """ 
         Send operation command message. control point (cp) characteristic command
         """
-        txdata = op_txd_pack(opcode, **kwargs)
-        txdata = list(txdata) # TODO must it be a list?
-        self.dfu_adapter.adapter.write_req(self.conn_handle, DFUAdapter.CP_UUID, txdata)
-        pass
+        # TODO must it be a list?
+        return self.dfu_adapter.write_control_point(list(txdata) 
 
     def _stream_data_packet(self, data, crc=0, offset=0):
         self.dfu_adapter.write_data_point(list(data)) # TODO must it be a list
