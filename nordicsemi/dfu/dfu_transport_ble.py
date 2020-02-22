@@ -67,13 +67,13 @@ from pc_ble_driver_py.ble_driver import (
     NordicSemiErrorCheck,
 )
 
-from nordicsemi.dfu.dfu_transport import DfuTransport, DfuEvent, ValidationException
-from nordicsemi.dfu.operation import (
+from nordicsemi.dfu.dfu_transport import (
+    DfuTransport, 
+    DfuEvent, 
+    ValidationException,
     OP_CODE,
     RES_CODE,
     OBJ_TYPE,
-    op_txd_pack,
-    op_rxd_unpack,
 )
 
 global nrf_sd_ble_api_ver
@@ -394,30 +394,6 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         )
         self.evt_sync.wait("conn_sec_update")
 
-    def op_send(self, opcode, **kwargs):
-        """ 
-        Send operation command request. control point (cp) characteristic command
-        """
-        txdata = op_txd_pack(opcode, **kwargs)
-        txdata = list(txdata) # TODO must it be a list?
-        self._adapter.write_req(self.conn_handle, DFUAdapter.CP_UUID, txdata)
-
-    def op_recv(self, opcode):
-        try:
-            rxdata = self._notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
-        except queue.Empty:
-            raise DfuOperationError("Timeout: operation {}".format(opcode))
-
-        return op_rxd_unpack(opcode, rxdata)
-
-    def op_cmd(self, opcode, **kwargs):
-        """ 
-        control point (cp) characteristic command - handles request, 
-        parse response and verify success.
-        returns parsed payload (if any)
-        """
-        op_send(opcode, **kwargs)
-        return op_recv(opcode)
 
     def write_data_point(self, data):
         self.adapter.write_cmd(self.conn_handle, DFUAdapter.DP_UUID, data)
@@ -551,7 +527,7 @@ class DfuTransportBle(DfuTransport):
         baud_rate=1000000,
         prn=0,
     ):
-        super().__init__()
+        super().__init__(log_tag="BLE")
         self.baud_rate = baud_rate
         self.serial_port = serial_port
         self.att_mtu = att_mtu
@@ -580,10 +556,9 @@ class DfuTransportBle(DfuTransport):
         )
 
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
-        self.dfu_adapter.op_cmd(OP_CODE.PRN_SET, prn=self.prn)
+        self._operation_cmd(OP_CODE.PRN_SET, prn=self.prn)
 
     def close(self):
-
         # Get bonded status and BLE keyset from DfuAdapter
         self.bonded = self.dfu_adapter.bonded
         self.keyset = self.dfu_adapter.keyset
@@ -595,156 +570,26 @@ class DfuTransportBle(DfuTransport):
         self.dfu_adapter = None
 
     def send_init_packet(self, init_packet):
-        def try_to_recover():
-            if response["offset"] == 0 or response["offset"] > len(init_packet):
-                # There is no init packet or present init packet is too long.
-                return False
+        return super().send_init_packet(init_packet, retries=self.RETRIES_NUMBER)
 
-            expected_crc = (
-                binascii.crc32(init_packet[: response["offset"]]) & 0xFFFFFFFF
-            )
+    def _operation_message_recv(self):
+        timeout = DfuTransportBle.DEFAULT_TIMEOUT
+        try:
+            rxdata = self.dfu_adapter._notifications_q.get(timeout=timeout)
+        except queue.Empty:
+            raise DfuOperationError("Timeout: operation {}".format(opcode))
+        return rxdata
 
-            if expected_crc != response["crc"]:
-                # Present init packet is invalid.
-                return False
+    def _operation_message_send(self, txdata):
+        """ 
+        Send operation command message. control point (cp) characteristic command
+        """
+        txdata = op_txd_pack(opcode, **kwargs)
+        txdata = list(txdata) # TODO must it be a list?
+        self.dfu_adapter.adapter.write_req(self.conn_handle, DFUAdapter.CP_UUID, txdata)
+        pass
 
-            if len(init_packet) > response["offset"]:
-                # Send missing part.
-                try:
-                    self.__stream_data(
-                        data=init_packet[response["offset"] :],
-                        crc=expected_crc,
-                        offset=response["offset"],
-                    )
-                except ValidationException:
-                    return False
+    def _stream_data_packet(self, data, crc=0, offset=0):
+        self.dfu_adapter.write_data_point(list(data)) # TODO must it be a list
 
-            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-            return True
-
-        response = self.dfu_adapter.op_cmd(
-            OP_CODE.OBJECT_SELECT, object_type=OBJ_TYPE.COMMAND
-        )
-        assert len(init_packet) <= response["max_size"], "Init command is too long"
-
-        if try_to_recover():
-            return
-
-        for r in range(DfuTransportBle.RETRIES_NUMBER):
-            try:
-                self.dfu_adapter.op_cmd(
-                    OP_CODE.OBJECT_CREATE,
-                    object_type=OBJ_TYPE.COMMAND,
-                    size=len(init_packet),
-                )
-                self.__stream_data(data=init_packet)
-                self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-            except ValidationException:
-                pass
-            break
-        else:
-            raise NordicSemiException("Failed to send init packet")
-
-    def send_firmware(self, firmware):
-        def try_to_recover():
-            if response["offset"] == 0:
-                # Nothing to recover
-                return
-
-            expected_crc = binascii.crc32(firmware[: response["offset"]]) & 0xFFFFFFFF
-            remainder = response["offset"] % response["max_size"]
-
-            if expected_crc != response["crc"]:
-                # Invalid CRC. Remove corrupted data.
-                response["offset"] -= (
-                    remainder if remainder != 0 else response["max_size"]
-                )
-                response["crc"] = (
-                    binascii.crc32(firmware[: response["offset"]]) & 0xFFFFFFFF
-                )
-                return
-
-            if (remainder != 0) and (response["offset"] != len(firmware)):
-                # Send rest of the page.
-                try:
-                    to_send = firmware[
-                        response["offset"] : response["offset"]
-                        + response["max_size"]
-                        - remainder
-                    ]
-                    response["crc"] = self.__stream_data(
-                        data=to_send, crc=response["crc"], offset=response["offset"]
-                    )
-                    response["offset"] += len(to_send)
-                except ValidationException:
-                    # Remove corrupted data.
-                    response["offset"] -= remainder
-                    response["crc"] = (
-                        binascii.crc32(firmware[: response["offset"]]) & 0xFFFFFFFF
-                    )
-                    return
-
-            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-            self._send_event(
-                event_type=DfuEvent.PROGRESS_EVENT, progress=response["offset"]
-            )
-
-        response = self.dfu_adapter.op_cmd(
-            OP_CODE.OBJECT_SELECT, object_type=OBJ_TYPE.DATA
-        )
-        try_to_recover()
-
-        for i in range(response["offset"], len(firmware), response["max_size"]):
-            data = firmware[i : i + response["max_size"]]
-            for r in range(DfuTransportBle.RETRIES_NUMBER):
-                try:
-                    self.dfu_adapter.op_cmd(
-                        OP_CODE.OBJECT_CREATE, object_type=OBJ_TYPE.DATA, size=len(data)
-                    )
-                    response["crc"] = self.__stream_data(
-                        data=data, crc=response["crc"], offset=i
-                    )
-                    self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-                except ValidationException:
-                    pass
-                break
-            else:
-                raise NordicSemiException("Failed to send firmware")
-            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
-
-    def __stream_data(self, data, crc=0, offset=0):
-        logger.debug(
-            "BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(
-                len(data), offset, crc
-            )
-        )
-
-        def validate_crc():
-            if crc != response["crc"]:
-                raise ValidationException(
-                    "Failed CRC validation.\n"
-                    + "Expected: {} Received: {}.".format(crc, response["crc"])
-                )
-            if offset != response["offset"]:
-                raise ValidationException(
-                    "Failed offset validation.\n"
-                    + "Expected: {} Received: {}.".format(offset, response["offset"])
-                )
-
-        current_pnr = 0
-        for i in range(0, len(data), self.dfu_adapter.packet_size):
-            to_transmit = data[i : i + self.dfu_adapter.packet_size]
-            self.dfu_adapter.write_data_point(list(to_transmit))
-            crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
-            offset += len(to_transmit)
-            current_pnr += 1
-            if self.prn == current_pnr:
-                current_pnr = 0
-                response = self.dfu_adapter.op_recv(OP_CODE.CRC_GET)()
-                validate_crc()
-
-        response = self.dfu_adapter.op_cmd(OP_CODE.CRC_GET)
-        validate_crc()
-
-        return crc
 

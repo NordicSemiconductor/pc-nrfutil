@@ -50,20 +50,15 @@ from pc_ble_driver_py.exceptions import NordicSemiException
 
 # Local imports
 from nordicsemi.dfu.dfu_transport import (
+    OP_CODE,
     DfuTransport,
     DfuEvent,
     TRANSPORT_LOGGING_LEVEL,
     ValidationException,
+    DfuOperationResCodeError,
 )
 from nordicsemi.lister.device_lister import DeviceLister
 from nordicsemi.dfu.dfu_trigger import DFUTrigger
-from nordicsemi.dfu.operation import (
-    OP_CODE,
-    OBJ_TYPE,
-    op_txd_pack,
-    op_rxd_unpack,
-    DfuOperationResCodeError,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -137,80 +132,6 @@ class Slip:
         return finished
 
 
-class _DfuAdapter:
-    def __init__(self, com_port, baud_rate, flow_control, timeout):
-
-        self.ping_id = 0
-        self._slip = Slip()
-        self._serial = Serial(
-            port=com_port,
-            baudrate=baud_rate,
-            rtscts=1 if flow_control else 0,
-            timeout=timeout,
-        )
-
-    def _slip_send(self, data):
-        """SLIP encode message send/write it"""
-        encoded = self._slip.encode(data)
-        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: --> " + str(data))
-        try:
-            self._serial.write(encoded)
-        except SerialException as e:
-            raise NordicSemiException(
-                "Writing to serial port failed: " + str(e) + ". "
-                "If MSD is enabled on the target device, try to disable it ref. "
-                "https://wiki.segger.com/index.php?title=J-Link-OB_SAM3U"
-            )
-
-    def _slip_recv(self):
-        """ Receive/read SLIP message and decode it """
-        decoded = None
-        self._slip.reset_decoder()
-        # TODO add timeout if slip package
-        # dropped. Add SlipDecodeException or something?
-        while True:
-            rxdata = self._serial.read(1)
-            if not rxdata:
-                logger.warning("SLIP: serial read timeout")
-                return None
-
-            have_packet = self._slip.decode_byte(rxdata[0])
-            if have_packet:
-                decoded = self._slip.decoded
-                break
-
-        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(decoded))
-        return decoded
-
-    def close(self):
-        self._serial.close()
-
-    def op_recv(self, opcode):
-        rxdata = self._slip_recv()
-        # TODO is this OK? (how it was)
-        if rxdata is None and opcode == OP_CODE.OBJECT_CREATE:
-            return None
-        return op_rxd_unpack(opcode, rxdata)
-
-    def op_send(self, opcode, **kwargs):
-        txdata = op_txd_pack(opcode, **kwargs)
-        self._slip_send(txdata)
-
-    def op_cmd(self, opcode, **kwargs):
-        self.op_send(opcode, **kwargs)
-        return self.op_recv(opcode)
-
-    def ping(self):
-        self.ping_id = (self.ping_id + 1) % 256
-        try:
-            rx_ping_id = self.op_cmd(OP_CODE.PING, ping_id=self.ping_id)
-        except DfuOperationResCodeError as e:
-            logger.debug("ignoring ping response error {}".format(e))
-            # Returning an error code is seen as good enough. The bootloader is up and running
-            return True
-
-        return bool(rx_ping_id == self.ping_id)
-
 
 class DfuTransportSerial(DfuTransport):
 
@@ -237,21 +158,22 @@ class DfuTransportSerial(DfuTransport):
         self.flow_control = flow_control
         self.timeout = timeout
         self.prn = prn
-        self.dfu_adapter = None
-        self.do_ping = do_ping
         self.mtu = 0
+        self.ping_id = 0
+        self.do_ping = do_ping
+        self._slip = Slip()
+        self._serial = None
 
     def open(self):
         super().open()
         try:
             self.__ensure_bootloader()
-            self.dfu_adapter = _DfuAdapter(
-                com_port=self.com_port,
-                baud_rate=self.baud_rate,
-                flow_control=self.flow_control,
+            self._serial = Serial(
+                port=self.com_port,
+                baudrate=self.baud_rate,
+                rtscts=1 if self.flow_control else 0,
                 timeout=self.timeout,
             )
-
         except Exception as e:
             raise NordicSemiException(
                 "Serial port could not be opened on {0}"
@@ -265,128 +187,51 @@ class DfuTransportSerial(DfuTransport):
                 datetime.now() - start < timedelta(seconds=self.timeout)
                 and ping_success == False
             ):
-                if self.dfu_adapter.ping() == True:
+                if self.__ping() == True:
                     ping_success = True
 
             if ping_success == False:
                 raise NordicSemiException("No ping response after opening COM port")
 
-        self.dfu_adapter.op_cmd(OP_CODE.PRN_SET, prn=self.prn)  # self.__set_prn()
-        self.mtu = self.dfu_adapter.op_cmd(OP_CODE.MTU_GET)  # self.__get_mtu()
+        self._operation_cmd(OP_CODE.PRN_SET, prn=self.prn)
+        self.mtu = self._operation_cmd(OP_CODE.MTU_GET)
 
     def close(self):
         super().close()
-        self.dfu_adapter.close()
+        self._serial.close()
 
-    def send_init_packet(self, init_packet):
-        def try_to_recover():
-            if response["offset"] == 0 or response["offset"] > len(init_packet):
-                # There is no init packet or present init packet is too long.
-                return False
 
-            expected_crc = (
-                binascii.crc32(init_packet[: response["offset"]]) & 0xFFFFFFFF
-            )
-
-            if expected_crc != response["crc"]:
-                # Present init packet is invalid.
-                return False
-
-            if len(init_packet) > response["offset"]:
-                # Send missing part.
-                try:
-                    self.__stream_data(
-                        data=init_packet[response["offset"] :],
-                        crc=expected_crc,
-                        offset=response["offset"],
-                    )
-                except ValidationException:
-                    return False
-
-            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-            return True
-
-        response = self.dfu_adapter.op_cmd(
-            OP_CODE.OBJECT_SELECT, object_type=OBJ_TYPE.COMMAND
-        )
-        assert len(init_packet) <= response["max_size"], "Init command is too long"
-
-        if try_to_recover():
-            return
-
+    def _operation_message_send(self, data):
+        """SLIP encode message send/write it"""
+        encoded = self._slip.encode(data)
+        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: --> " + str(data))
         try:
-            self.dfu_adapter.op_cmd(
-                OP_CODE.OBJECT_CREATE,
-                object_type=OBJ_TYPE.COMMAND,
-                size=len(init_packet),
-            )
-            self.__stream_data(data=init_packet)
-            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-        except ValidationException:
-            raise NordicSemiException("Failed to send init packet")
-
-    def send_firmware(self, firmware):
-        def try_to_recover():
-            if response["offset"] == 0:
-                # Nothing to recover
-                return
-
-            expected_crc = binascii.crc32(firmware[: response["offset"]]) & 0xFFFFFFFF
-            remainder = response["offset"] % response["max_size"]
-
-            if expected_crc != response["crc"]:
-                # Invalid CRC. Remove corrupted data.
-                response["offset"] -= (
-                    remainder if remainder != 0 else response["max_size"]
-                )
-                response["crc"] = (
-                    binascii.crc32(firmware[: response["offset"]]) & 0xFFFFFFFF
-                )
-                return
-
-            if (remainder != 0) and (response["offset"] != len(firmware)):
-                # Send rest of the page.
-                try:
-                    to_send = firmware[
-                        response["offset"] : response["offset"]
-                        + response["max_size"]
-                        - remainder
-                    ]
-                    response["crc"] = self.__stream_data(
-                        data=to_send, crc=response["crc"], offset=response["offset"]
-                    )
-                    response["offset"] += len(to_send)
-                except ValidationException:
-                    # Remove corrupted data.
-                    response["offset"] -= remainder
-                    response["crc"] = (
-                        binascii.crc32(firmware[: response["offset"]]) & 0xFFFFFFFF
-                    )
-                    return
-
-            self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-            self._send_event(
-                event_type=DfuEvent.PROGRESS_EVENT, progress=response["offset"]
+            self._serial.write(encoded)
+        except SerialException as e:
+            raise NordicSemiException(
+                "Writing to serial port failed: " + str(e) + ". "
+                "If MSD is enabled on the target device, try to disable it ref. "
+                "https://wiki.segger.com/index.php?title=J-Link-OB_SAM3U"
             )
 
-        response = self.dfu_adapter.op_cmd(
-            OP_CODE.OBJECT_SELECT, object_type=OBJ_TYPE.DATA
-        )
-        try_to_recover()
-        for i in range(response["offset"], len(firmware), response["max_size"]):
-            data = firmware[i : i + response["max_size"]]
-            try:
-                self.dfu_adapter.op_cmd(
-                    OP_CODE.OBJECT_CREATE, object_type=OBJ_TYPE.DATA, size=len(data)
-                )
-                response["crc"] = self.__stream_data(
-                    data=data, crc=response["crc"], offset=i
-                )
-                self.dfu_adapter.op_cmd(OP_CODE.OBJECT_EXECUTE)
-            except ValidationException:
-                raise NordicSemiException("Failed to send firmware")
+    def _operation_message_recv(self):
+        """ Receive/read SLIP message and decode it """
+        decoded = None
+        self._slip.reset_decoder()
+        # TODO add timeout if slip package
+        # dropped. Add SlipDecodeException or something?
+        while True:
+            rxdata = self._serial.read(1)
+            if not rxdata:
+                logger.warning("SLIP: serial read timeout")
+                return None
 
-            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
+            have_packet = self._slip.decode_byte(rxdata[0])
+            if have_packet:
+                decoded = self._slip.decoded
+                break
+
+        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(decoded))
 
     def __ensure_bootloader(self):
         lister = DeviceLister()
@@ -453,39 +298,13 @@ class DfuTransportSerial(DfuTransport):
 
         return False
 
-    def __stream_data(self, data, crc=0, offset=0):
-        logger.debug(
-            "Serial: Streaming Data: "
-            + "len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc)
-        )
+    def __ping(self):
+        self.ping_id = (self.ping_id + 1) % 256
+        try:
+            rx_ping_id = self.op_cmd(OP_CODE.PING, ping_id=self.ping_id)
+        except DfuOperationResCodeError as e:
+            logger.debug("ignoring ping response error {}".format(e))
+            # Returning an error code is seen as good enough. The bootloader is up and running
+            return True
 
-        def validate_crc():
-            if crc != response["crc"]:
-                raise ValidationException(
-                    "Failed CRC validation.\n"
-                    + "Expected: {} Received: {}.".format(crc, response["crc"])
-                )
-            if offset != response["offset"]:
-                raise ValidationException(
-                    "Failed offset validation.\n"
-                    + "Expected: {} Received: {}.".format(offset, response["offset"])
-                )
-
-        current_pnr = 0
-
-        for i in range(0, len(data), (self.mtu - 1) // 2 - 1):
-            # append the write data opcode to the front
-            # here the maximum data size is self.mtu/2,
-            # due to the slip encoding which at maximum doubles the size
-            to_transmit = data[i : i + (self.mtu - 1) // 2 - 1]
-            self.dfu_adapter.op_send(OP_CODE.OBJECT_WRITE, data=list(to_transmit))
-            crc = binascii.crc32(to_transmit[1:], crc) & 0xFFFFFFFF
-            offset += len(to_transmit) - 1
-            current_pnr += 1
-            if self.prn == current_pnr:
-                current_pnr = 0
-                response = self.dfu_adapter.op_recv(OP_CODE.CRC_GET)
-                validate_crc()
-        response = self.dfu_adapter.op_cmd(OP_CODE.CRC_GET)
-        validate_crc()
-        return crc
+        return bool(rx_ping_id == self.ping_id)
