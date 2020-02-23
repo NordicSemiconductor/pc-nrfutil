@@ -400,6 +400,8 @@ class DfuTransport(ABC):
         self._name = name
         self.prn = 0  # TODO
         self._retries_number = retries_number
+        self.ping_id = 0
+
 
     @abstractmethod
     def open(self):
@@ -505,6 +507,18 @@ class DfuTransport(ABC):
         validate_crc()
 
         return crc
+
+    def _ping(self):
+        """ Not needed in BLE transport """
+        self.ping_id = (self.ping_id + 1) % 256
+        try:
+            rx_ping_id = self._operation_cmd(OP_CODE.PING, ping_id=self.ping_id)
+        except OperationResCodeError as e:
+            logger.debug("ignoring ping response error {}".format(e))
+            # Returning an error code is seen as good enough. The bootloader is up and running
+            return True
+
+        return bool(rx_ping_id == self.ping_id)
 
     def send_init_packet(self, init_packet):
         """
@@ -658,3 +672,4 @@ class DfuTransport(ABC):
         if event_type in list(self.callbacks.keys()):
             for callback in self.callbacks[event_type]:
                 callback(**kwargs)
+

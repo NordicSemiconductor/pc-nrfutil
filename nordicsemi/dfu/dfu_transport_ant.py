@@ -322,7 +322,6 @@ class DfuTransportAnt(DfuTransport):
     DEFAULT_CMD_TIMEOUT = 5.0  # Timeout on waiting for a response.
     DEFAULT_SEARCH_TIMEOUT = 10.0  # Timeout when searching for the device.
     DEFAULT_PRN = 0
-    DEFAULT_DO_PING = True
     DEFAULT_DO_DEBUG = False
 
     def __init__(
@@ -343,7 +342,6 @@ class DfuTransportAnt(DfuTransport):
         self.timeout = timeout
         self.search_timeout = search_timeout
         self.prn = prn
-        self.ping_id = 0
         self.dfu_adapter = None
         self.mtu = 0
         self.debug = debug
@@ -374,7 +372,7 @@ class DfuTransportAnt(DfuTransport):
         )
         self.dfu_adapter.open()
 
-        if not self.__ping():
+        if not self._ping():
             raise NordicSemiException("No ping response from device.")
 
         logger.debug("ANT: Set Packet Receipt Notification {}".format(self.prn))
@@ -399,13 +397,3 @@ class DfuTransportAnt(DfuTransport):
     def _stream_packet(self, txdata):
         return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
 
-    def __ping(self):
-        self.ping_id = (self.ping_id + 1) % 256
-        try:
-            rx_ping_id = self._operation_cmd(OP_CODE.PING, ping_id=self.ping_id)
-        except OperationResCodeError as e:
-            logger.debug("ignoring ping response error {}".format(e))
-            # Returning an error code is seen as good enough. The bootloader is up and running
-            return True
-
-        return bool(rx_ping_id == self.ping_id)

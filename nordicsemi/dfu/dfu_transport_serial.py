@@ -158,7 +158,6 @@ class DfuTransportSerial(DfuTransport):
         self.timeout = timeout
         self.prn = prn
         self.mtu = 0
-        self.ping_id = 0
         self.do_ping = do_ping
         self._slip = Slip()
         self._serial = None
@@ -186,7 +185,7 @@ class DfuTransportSerial(DfuTransport):
                 datetime.now() - start < timedelta(seconds=self.timeout)
                 and ping_success == False
             ):
-                if self.__ping() == True:
+                if self._ping() == True:
                     ping_success = True
 
             if ping_success == False:
@@ -236,6 +235,7 @@ class DfuTransportSerial(DfuTransport):
             rxdata = self._operation_message_recv()
         except OperationResponseTimeoutError as e:
             if opcode == OP_CODE.OBJ_CREATE:
+                logger.warning("Ignoring response timeout as OP_CODE.OBJ_CREATE")
                 return None
             else:
                 raise e  # re-raise
@@ -315,15 +315,4 @@ class DfuTransportSerial(DfuTransport):
             return True
 
         return False
-
-    def __ping(self):
-        self.ping_id = (self.ping_id + 1) % 256
-        try:
-            rx_ping_id = self._operation_cmd(OP_CODE.PING, ping_id=self.ping_id)
-        except OperationResCodeError as e:
-            logger.debug("ignoring ping response error {}".format(e))
-            # Returning an error code is seen as good enough. The bootloader is up and running
-            return True
-
-        return bool(rx_ping_id == self.ping_id)
 
