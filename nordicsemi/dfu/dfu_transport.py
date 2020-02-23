@@ -35,10 +35,22 @@
 
 import logging
 import struct
+from binascii import crc32
 from enum import IntEnum
 from abc import ABC, abstractmethod
 
 # Nordic Semiconductor imports
+
+try:
+    # If NordicSemiException raised from any method in pc_ble_driver can not
+    # have different NordicSemiException classes.
+    from pc_ble_driver_py.exceptions import NordicSemiException
+except ImportError:
+    # if pc_ble_driver not installed it doese'nt matter.
+    class NordicSemiException(Exception):
+        pass
+
+    
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +73,7 @@ class OperationError(Exception):
     """ Raised when a operation command failed. Example a write command """
     pass
 
-class OperationResTimeoutError(OperationError):
+class OperationResponseTimeoutError(OperationError):
     """ DFU operation response timeout """
     pass
 
@@ -87,7 +99,7 @@ class OP_CODE(_IntEnumFormat):
     """ 
     Operation command codes. (control point characteristic in case of BLE)
     names (more or less) according to C enum nrf_dfu_op_t (prefix: OP_CODE) 
-
+    Note: Some OP_CODE:s should not be used in some transport implementations.
     Excluded:
         `INVALID =  0xFF` 
         'ReadError' = 0x05 - for `ant` and `serial` transport. never used. deprecated?  
@@ -95,13 +107,13 @@ class OP_CODE(_IntEnumFormat):
 
     # fmt: off
     PROTOCOL_VERSION   =  0x00
-    OBJECT_CREATE      =  0x01 # aka CreateObject
-    PRN_SET            =  0x02 # aka RECEIPT_NOTIF_SET or setPRN
+    OBJECT_CREATE      =  0x01 # aka OBJECT_CREATE and CreateObject
+    PRN_SET            =  0x02 # aka RECEIPT_NOTIF_SET and setPRN
     CRC_GET            =  0x03 # aka CalcChecSum
-    OBJECT_EXECUTE     =  0x04 # aka Execute
-    OBJECT_SELECT      =  0x06 # aka ReadObject
+    OBJECT_EXECUTE     =  0x04 # aka OBJECT_EXECUTE and Execute
+    OBJECT_SELECT      =  0x06 # aka OBJECT_SELECT and ReadObject
     MTU_GET            =  0x07 # aka GetSerialMTU
-    OBJECT_WRITE       =  0x08 # aka WriteObject
+    OBJECT_WRITE       =  0x08 # aka OBJECT_WRITE and WriteObject
     PING               =  0x09 # aka Ping
     HARDWARE_VERSION   =  0x0A
     FIRMWARE_VERSION   =  0x0B
@@ -154,26 +166,42 @@ class EXT_ERROR(_IntEnumFormat):
     WRONG_SIGNATURE_TYPE  =  0x0B
     VERIFICATION_FAILED   =  0x0C
     INSUFFICIENT_SPACE    =  0x0D
+    FW_ALREADY_PRESENT    =  0x0E # not documented?
     # fmt: on
 
 
-EXT_ERROR_DESCR = [
-    "No extended error code has been set. This error indicates an implementation problem.",
-    "Invalid error code. This error code should never be used outside of development.",
-    "The format of the command was incorrect. This error code is not used in the current implementation, because @ref NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED and @ref NRF_DFU_RES_CODE_INVALID_PARAMETER cover all possible format errors.",
-    "The command was successfully parsed, but it is not supported or unknown.",
-    "The init command is invalid. The init packet either has an invalid update type or it is missing required fields for the update type (for example, the init packet for a SoftDevice update is missing the SoftDevice size field).",
-    "The firmware version is too low. For an application, the version must be greater than or equal to the current application. For a bootloader, it must be greater than the current version. This requirement prevents downgrade attacks.""",
-    "The hardware version of the device does not match the required hardware version for the update.",
-    "The array of supported SoftDevices for the update does not contain the FWID of the current SoftDevice.",
-    "The init packet does not contain a signature, but this bootloader requires all updates to have one.",
-    "The hash type that is specified by the init packet is not supported by the DFU bootloader.",
-    "The hash of the firmware image cannot be calculated.",
-    "The type of the signature is unknown or not supported by the DFU bootloader.",
-    "The hash of the received firmware image does not match the hash in the init packet.",
-    "The available space on the device is insufficient to hold the firmware.",
-    "The requested firmware to update was already present on the system.",
-]
+EXT_ERROR_DESCR = {
+    EXT_ERROR.NO_ERROR : "No extended error code has been set. This error indicates an implementation problem.",
+
+    EXT_ERROR.INVALID_ERROR_CODE : "Invalid error code. This error code should never be used outside of development.",
+    EXT_ERROR.WRONG_COMMAND_FORMAT : ("The format of the command was incorrect. "
+        "This error code is not used in the current implementation, because "
+        "@ref NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED and "
+        "@ref NRF_DFU_RES_CODE_INVALID_PARAMETER cover all possible format errors."),
+
+    EXT_ERROR.UNKNOWN_COMMAND : "The command was successfully parsed, but it is not supported or unknown.",
+    EXT_ERROR.INIT_COMMAND_INVALID : ("The init command is invalid. "
+        "The init packet either has an invalid update type or it is missing "
+        "required fields for the update type (for example, the init packet "
+        "for a SoftDevice update is missing the SoftDevice size field)."),
+    EXT_ERROR.FW_VERSION_FAILURE: ("The firmware version is too low. "
+        "For an application, the version must be greater than or equal to the "
+        "current application. For a bootloader, it must be greater than the "
+        "current version. This requirement prevents downgrade attacks."),
+    EXT_ERROR.HW_VERSION_FAILURE: ("The hardware version of the device "
+        "does not match the required hardware version for the update."),
+    EXT_ERROR.SD_VERSION_FAILURE: ("The array of supported SoftDevices "
+        "for the update does not contain the FWID of the current SoftDevice."),
+    EXT_ERROR.SIGNATURE_MISSING: ("The init packet does not contain a signature, "
+        "but this bootloader requires all updates to have one."),
+    EXT_ERROR.WRONG_HASH_TYPE: ("The hash type that is specified by the init "
+        "packet is not supported by the DFU bootloader."),
+    EXT_ERROR.HASH_FAILED: "The hash of the firmware image cannot be calculated.",
+    EXT_ERROR.WRONG_SIGNATURE_TYPE: "The type of the signature is unknown or not supported by the DFU bootloader.",
+    EXT_ERROR.VERIFICATION_FAILED: "The hash of the received firmware image does not match the hash in the init packet.",
+    EXT_ERROR.INSUFFICIENT_SPACE: "The available space on the device is insufficient to hold the firmware.",
+    EXT_ERROR.FW_ALREADY_PRESENT: "The requested firmware to update was already present on the system.",
+}
 
 class OBJ_TYPE(_IntEnumFormat):
     """ 
@@ -212,12 +240,12 @@ def operation_txd_pack(opcode, **kwargs):
         packed = struct.pack("<BH", opcode, prn)
 
     elif opcode == OP_CODE.OBJECT_SELECT:
-        obj_type = kwargs.pop("object_type")  # '<B':uint8
+        obj_type = kwargs.pop("obj_type")  # '<B':uint8
         obj_type = OBJ_TYPE(obj_type)  # raise ValueError if invalid
         packed = struct.pack("<BB", opcode, obj_type)
 
     elif opcode == OP_CODE.OBJECT_CREATE:
-        obj_type = kwargs.pop("object_type")  # B:uint8
+        obj_type = kwargs.pop("obj_type")  # B:uint8
         obj_size = kwargs.pop("size")  # '<I':uint32 (LE)
         obj_type = OBJ_TYPE(obj_type)  # raise ValueError if invalid
         packed = struct.pack("<BBI", opcode, obj_type, obj_size)
@@ -252,7 +280,7 @@ def operation_rxd_unpack(opcode, data, has_header=True):
         opcode = OP_CODE(opcode)
 
     if has_header:
-        payload = op_rxd_parse_header(opcode, data)
+        payload = operation_rxd_parse_header(opcode, data)
     else:
         payload = data
 
@@ -334,9 +362,13 @@ class DfuTransport(ABC):
     """
 
     @abstractmethod
-    def __init__(self):
-        self.callbacks = {}
+    def __init__(self, name, retries_number=0):
+        """ :retries_number: Resend retries per packet (chunk) """
 
+        self.callbacks = {}
+        self._name = name
+        self.prn = 0 # TODO
+        self._retries_number = retries_number
 
     @abstractmethod
     def open(self):
@@ -370,14 +402,15 @@ class DfuTransport(ABC):
         raise NotImplementedError()
 
     def _operation_recv(self, opcode):
-        rxdata = self._operation_read_bytes()
+        rxdata = self._operation_message_recv()
         logger.log(TRANSPORT_LOGGING_LEVEL, "{}: <-- {}".format(self._name, rxdata))
         return operation_rxd_unpack(opcode, rxdata)
 
     def _operation_send(self, opcode, **kwargs):
         """ Write/send operation data (repsonse not read). (control point characteristic in case of BLE"""
-        logger.log(TRANSPORT_LOGGING_LEVEL, "{}: <-- {}".format(self._name, rxdata))
-        operation_operation_
+        txdata = operation_txd_pack(opcode, **kwargs)
+        #logger.log(TRANSPORT_LOGGING_LEVEL, "{}: <-- {}".format(self._name, rxdata))
+        self._operation_message_send(txdata)
 
     def _operation_cmd(self, opcode, **kwargs):
 
@@ -386,38 +419,31 @@ class DfuTransport(ABC):
         recive response, parse response and verify success.
         returns parsed payload (if any)
         """
-        self._operation_send(opcode, **kwargs):
-        retrun self._operation_recv(opcode)
+        self._operation_send(opcode, **kwargs)
+        return self._operation_recv(opcode)
 
+    @property
+    @abstractmethod 
+    def _stream_data_packet_size(self):
+        """ Stream data packet size ("chunk size")
+        :return: positive non-zero in, size in bytes
+        """
+        raise NotImplementedError()
 
     @abstractmethod 
     def _stream_data_packet(self, data): # TODO name what?
-        """ aka `write_data_point` (BLE) """
-        # TODO: BLE
-            self.dfu_adapter.write_data_point(list(to_transmit))
+        """ Write a packet (chunk) of stream data  """
+        raise NotImplementedError()
 
-        # TODO: ANT
-            # append the write data opcode to the front
-            # here the maximum data size is self.mtu - 4
-            # due to the header bytes in commands.
-            to_transmit = data[i:i + self.mtu - 4 ]
-            to_transmit = struct.pack('B',DfuTransportAnt.OP_CODE['WriteObject']) + to_transmit
-
-        # TODO: SER
-            # append the write data opcode to the front
-            # here the maximum data size is self.mtu/2,
-            # due to the slip encoding which at maximum doubles the size
-            to_transmit = data[i:i + (self.mtu-1)//2 - 1 ]
-            #to_transmit = struct.pack('B',DfuTransportSerial.OP_CODE['WriteObject']) + to_transmit
-            #self.dfu_adapter.send_message(list(to_transmit))
-            self._operation_data_write(OP_CODE.OBJECT_WRITE, data)
-
-    def _stream_data(self, data, crc, offset, packet_size):
+    def _stream_data(self, data, crc=0, offset=0):
         """ packet_size differs depending on transport :
                 ANT: self.mtu - 4
                 SER: (self.mtu-1)//2 - 1)
                 BLE: self.dfu_adapter.packet_size
             """
+        packet_size = self._stream_data_packet_size
+        assert packet_size > 0
+
         logger.debug("{}: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(self._name,
             len(data), offset, crc)
         )
@@ -432,28 +458,27 @@ class DfuTransport(ABC):
         current_pnr = 0
         for i in range(0, len(data), packet_size):
             to_transmit     = data[i:i + packet_size]
-            self.dfu_adapter.write_data_point(list(to_transmit))
-            crc     = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
+            self._stream_data_packet(to_transmit)
+            crc     = crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
             current_pnr    += 1
             if self.prn == current_pnr:
                 current_pnr = 0
-                response    = self.op_read(OP_CODE.CRC_GET)
+                response    = self._operation_recv(OP_CODE.CRC_GET)
                 validate_crc()
 
-        response = self.op_cmd(OP_CODE.CRC_GET)
+        response = self._operation_cmd(OP_CODE.CRC_GET)
         validate_crc()
 
         return crc
 
-    def send_init_packet(self, init_packet, retries=0):
+    def send_init_packet(self, init_packet):
         """
         Send init_packet to device.
 
         This call will block until init_packet is sent and transfer of packet is complete.
 
         :param init_packet: Init packet
-        :param retries: retries to send if failed
         :return:
         """
         def try_to_recover():
@@ -461,7 +486,7 @@ class DfuTransport(ABC):
                 # There is no init packet or present init packet is too long.
                 return False
 
-            expected_crc = (binascii.crc32(init_packet[:response['offset']]) & 0xFFFFFFFF)
+            expected_crc = (crc32(init_packet[:response['offset']]) & 0xFFFFFFFF)
 
             if expected_crc != response['crc']:
                 # Present init packet is invalid.
@@ -470,27 +495,27 @@ class DfuTransport(ABC):
             if len(init_packet) > response['offset']:
                 # Send missing part.
                 try:
-                    self.__stream_data(data     = init_packet[response['offset']:],
-                                       crc      = expected_crc,
-                                       offset   = response['offset'])
+                    self._stream_data(data     = init_packet[response['offset']:],
+                                      crc      = expected_crc,
+                                      offset   = response['offset'])
                 except ValidationException:
                     return False
 
-            self.dfu_adapter.op_cmd(OP_CODE.OBJ_EXECUTE)
+            self._operation_cmd(OP_CODE.OBJECT_EXECUTE)
             return True
 
-        response = self.op_cmd(OP_CODE.OBJ_SELECT, obj_type=OBJ_TYPE.COMMAND)
+        response = self._operation_cmd(OP_CODE.OBJECT_SELECT, obj_type=OBJ_TYPE.COMMAND)
 
         assert len(init_packet) <= response['max_size'], 'Init command is too long'
 
         if try_to_recover():
             return
 
-        for _r in range(retries):
+        for _r in range(self._retries_number):
             try:
-                self.__create_command(len(init_packet))
+                self._operation_cmd(OP_CODE.OBJECT_CREATE, obj_type=OBJ_TYPE.COMMAND, size=len(init_packet))
                 self._stream_data(data=init_packet)
-                self.__execute()
+                self._operation_cmd(OP_CODE.OBJECT_EXECUTE)
             except ValidationException:
                 pass
             break
@@ -520,7 +545,7 @@ class DfuTransport(ABC):
             if expected_crc != response['crc'] or remainder == 0:
                 # Invalid CRC. Remove corrupted data.
                 response['offset'] -= remainder if remainder != 0 else response['max_size']
-                response['crc']     = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
+                response['crc']     = crc32(firmware[:response['offset']]) & 0xFFFFFFFF
                 return
 
             if (remainder != 0) and (response['offset'] != len(firmware)):
@@ -534,22 +559,22 @@ class DfuTransport(ABC):
                 except ValidationException:
                     # Remove corrupted data.
                     response['offset'] -= remainder
-                    response['crc']     = binascii.crc32(firmware[:response['offset']]) & 0xFFFFFFFF
+                    response['crc']     = crc32(firmware[:response['offset']]) & 0xFFFFFFFF
                     return
 
-            self.op_cmd(OP_CODE.OBJECT_EXECUTE)
+            self._operation_cmd(OP_CODE.OBJECT_EXECUTE)
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=response['offset'])
 
-        response = self._operation_cmd(OP_CODE.OBJ_SELECT, obj_type=OBJ_TYPE.DATA)
+        response = self._operation_cmd(OP_CODE.OBJECT_SELECT, obj_type=OBJ_TYPE.DATA)
         try_to_recover()
 
         for i in range(response['offset'], len(firmware), response['max_size']):
             data = firmware[i:i+response['max_size']]
-            for r in range(DfuTransportBle.RETRIES_NUMBER):
+            for r in range(self._retries_number):
                 try:
-                    self.__create_data(len(data))
-                    response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
-                    self.op_cmd(OP_CODE.OBJECT_EXECUTE)
+                    self._operation_cmd(OP_CODE.OBJECT_CREATE, obj_type=OBJ_TYPE.DATA, size=len(data))
+                    response['crc'] = self._stream_data(data=data, crc=response['crc'], offset=i)
+                    self._operation_cmd(OP_CODE.OBJECT_EXECUTE)
                 except ValidationException:
                     pass
                 break
@@ -584,3 +609,4 @@ class DfuTransport(ABC):
         if event_type in list(self.callbacks.keys()):
             for callback in self.callbacks[event_type]:
                 callback(**kwargs)
+

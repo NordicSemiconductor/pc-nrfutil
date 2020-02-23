@@ -45,9 +45,6 @@ import logging
 from serial import Serial
 from serial.serialutil import SerialException
 
-# Nordic Semiconductor imports
-from pc_ble_driver_py.exceptions import NordicSemiException
-
 # Local imports
 from nordicsemi.dfu.dfu_transport import (
     OP_CODE,
@@ -55,7 +52,10 @@ from nordicsemi.dfu.dfu_transport import (
     DfuEvent,
     TRANSPORT_LOGGING_LEVEL,
     ValidationException,
-    DfuOperationResCodeError,
+    NordicSemiException,
+    operation_rxd_unpack,
+    OperationResCodeError,
+    OperationResponseTimeoutError
 )
 from nordicsemi.lister.device_lister import DeviceLister
 from nordicsemi.dfu.dfu_trigger import DFUTrigger
@@ -151,7 +151,7 @@ class DfuTransportSerial(DfuTransport):
         do_ping=DEFAULT_DO_PING,
     ):
 
-        super().__init__()
+        super().__init__(name="SERIAL")
         self.com_port = com_port
         self.baud_rate = baud_rate
         self.flow_control = flow_control
@@ -231,9 +231,10 @@ class DfuTransportSerial(DfuTransport):
                 break
 
         logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(decoded))
+        return decoded
 
     def _operation_recv(self, opcode):
-        # TODO is this OK? (how it was)
+        # TODO is this OK? (how it was from first commit but it was not obvious)
         try:
             rxdata = self._operation_message_recv()
         except OperationResponseTimeoutError as e:
@@ -243,8 +244,15 @@ class DfuTransportSerial(DfuTransport):
                 raise e # re-raise
         return operation_rxd_unpack(opcode, rxdata)
 
-    def _stream_data_packet(self, data):
-        return self._operation_send(OP_CODE.OBJECT_WRITE, data)
+    def _stream_packet(self, txdata):
+        return self._operation_send(OP_CODE.OBJECT_WRITE, data=txdata)
+
+    @property
+    def _stream_data_packet_size(self):
+        # maximum data size is self.mtu/2,
+        # due to the slip encoding which at maximum doubles the size
+        # -1 for leading OP_CODE byte
+        return (self.mtu-1)//2 - 1 
 
     def __ensure_bootloader(self):
         lister = DeviceLister()
@@ -314,8 +322,8 @@ class DfuTransportSerial(DfuTransport):
     def __ping(self):
         self.ping_id = (self.ping_id + 1) % 256
         try:
-            rx_ping_id = self.op_cmd(OP_CODE.PING, ping_id=self.ping_id)
-        except DfuOperationResCodeError as e:
+            rx_ping_id = self._operation_cmd(OP_CODE.PING, ping_id=self.ping_id)
+        except OperationResCodeError as e:
             logger.debug("ignoring ping response error {}".format(e))
             # Returning an error code is seen as good enough. The bootloader is up and running
             return True

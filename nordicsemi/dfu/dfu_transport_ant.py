@@ -53,15 +53,14 @@ except ImportError as e:
     print(e)
     raise Exception("Try running 'pip install antlib'.")
 
-# Nordic Semiconductor imports
-from pc_ble_driver_py.exceptions    import NordicSemiException
 
 # Local imports
 from nordicsemi.dfu.dfu_transport import (
     OP_CODE,
+    TRANSPORT_LOGGING_LEVEL,
     DfuTransport,
     DfuEvent,
-    TRANSPORT_LOGGING_LEVEL,
+    NordicSemiException,
     ValidationException,
     OperationResCodeError,
 )
@@ -345,7 +344,7 @@ class DfuTransportAnt(DfuTransport):
                 ant_dev.enable_debug_logging()
         except Exception as e:
             raise NordicSemiException(
-                "Could not open {0}. Reason: {1}".format(ant_dev, e.message))
+                "Could not open {0}. Reason: {1}".format(ant_dev, e))
 
         self.dfu_adapter = DfuAdapter(
             ant_dev, self.timeout, self.search_timeout, self.ant_config)
@@ -368,13 +367,18 @@ class DfuTransportAnt(DfuTransport):
     def _operation_message_send(self, txdata):
         return self.dfu_adapter.send_message(list(txdata))
 
-    def _stream_data_packet(self, data):
-        return self._operation_send(OP_CODE.OBJECT_WRITE, data)
+    @property
+    def _stream_data_packet_size(self):
+        # maximum data size is self.mtu - 4 due to the header bytes in commands.
+        return self.mtu - 4
+
+    def _stream_data_packet(self, txdata):
+        return self._operation_send(OP_CODE.OBJECT_WRITE, data=txdata)
 
     def __ping(self):
         self.ping_id = (self.ping_id + 1) % 256
         try:
-            rx_ping_id = self.op_cmd(OP_CODE.PING, ping_id=self.ping_id)
+            rx_ping_id = self._operation_cmd(OP_CODE.PING, ping_id=self.ping_id)
         except OperationResCodeError as e:
             logger.debug("ignoring ping response error {}".format(e))
             # Returning an error code is seen as good enough. The bootloader is up and running

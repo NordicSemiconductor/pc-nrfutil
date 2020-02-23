@@ -71,7 +71,7 @@ from nordicsemi.dfu.dfu_transport import (
     DfuTransport, 
     DfuEvent, 
     ValidationException,
-    OperationTimeoutError,
+    OperationResponseTimeoutError,
     OP_CODE,
     RES_CODE,
     OBJ_TYPE,
@@ -530,7 +530,7 @@ class DfuTransportBle(DfuTransport):
         baud_rate=1000000,
         prn=0,
     ):
-        super().__init__(log_tag="BLE")
+        super().__init__(name="BLE", retries_number=self.RETRIES_NUMBER)
         self.baud_rate = baud_rate
         self.serial_port = serial_port
         self.att_mtu = att_mtu
@@ -572,8 +572,6 @@ class DfuTransportBle(DfuTransport):
         self.dfu_adapter.close()
         self.dfu_adapter = None
 
-    def send_init_packet(self, init_packet):
-        return super().send_init_packet(init_packet, retries=self.RETRIES_NUMBER)
 
     def _operation_message_recv(self):
         timeout = DfuTransportBle.DEFAULT_TIMEOUT
@@ -588,9 +586,14 @@ class DfuTransportBle(DfuTransport):
         Send operation command message. control point (cp) characteristic command
         """
         # TODO must it be a list?
-        return self.dfu_adapter.write_control_point(list(txdata) 
+        return self.dfu_adapter.write_control_point(list(txdata))
 
-    def _stream_data_packet(self, data, crc=0, offset=0):
+    def _stream_data_packet(self, data):
         self.dfu_adapter.write_data_point(list(data)) # TODO must it be a list
+
+    def _stream_packet_size(self):
+        return self.dfu_adapter.packet_size
+
+
 
 
