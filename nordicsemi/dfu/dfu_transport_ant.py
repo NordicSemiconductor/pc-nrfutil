@@ -373,7 +373,7 @@ class DfuTransportAnt(DfuTransport):
         return self.mtu - 4
 
     def _stream_data_packet(self, txdata):
-        return self._operation_send(OP_CODE.OBJECT_WRITE, data=txdata)
+        return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
 
     def __ping(self):
         self.ping_id = (self.ping_id + 1) % 256

@@ -205,7 +205,7 @@ EXT_ERROR_DESCR = {
 
 class OBJ_TYPE(_IntEnumFormat):
     """ 
-    object_type. Relates to OP_CODE.OBJECT_SELECT and OP_CODE.OBJECT_CREATE
+    object_type. Relates to OP_CODE.OBJ_SELECT and OP_CODE.OBJ_CREATE
     names according to C enum nrf_dfu_obj_type_t. 
     excluding: INVALID  =  0x00 
     """
@@ -239,18 +239,18 @@ def operation_txd_pack(opcode, **kwargs):
         prn = kwargs.pop("prn")  # '<H':uint16 (LE)
         packed = struct.pack("<BH", opcode, prn)
 
-    elif opcode == OP_CODE.OBJECT_SELECT:
+    elif opcode == OP_CODE.OBJ_SELECT:
         obj_type = kwargs.pop("obj_type")  # '<B':uint8
         obj_type = OBJ_TYPE(obj_type)  # raise ValueError if invalid
         packed = struct.pack("<BB", opcode, obj_type)
 
-    elif opcode == OP_CODE.OBJECT_CREATE:
+    elif opcode == OP_CODE.OBJ_CREATE:
         obj_type = kwargs.pop("obj_type")  # B:uint8
         obj_size = kwargs.pop("size")  # '<I':uint32 (LE)
         obj_type = OBJ_TYPE(obj_type)  # raise ValueError if invalid
         packed = struct.pack("<BBI", opcode, obj_type, obj_size)
 
-    elif opcode == OP_CODE.OBJECT_WRITE:
+    elif opcode == OP_CODE.OBJ_WRITE:
         data = kwargs.pop("data")  # bytes [int] or similar
         packed = bytes([opcode, *data])
 
@@ -284,7 +284,7 @@ def operation_rxd_unpack(opcode, data, has_header=True):
     else:
         payload = data
 
-    if opcode == OP_CODE.OBJECT_SELECT:
+    if opcode == OP_CODE.OBJ_SELECT:
         (max_size, offset, crc) = struct.unpack("<III", payload)  # '<I':uint32 (LE)
         return {"max_size": max_size, "offset": offset, "crc": crc}
 
@@ -501,10 +501,10 @@ class DfuTransport(ABC):
                 except ValidationException:
                     return False
 
-            self._operation_cmd(OP_CODE.OBJECT_EXECUTE)
+            self._operation_cmd(OP_CODE.OBJ_EXECUTE)
             return True
 
-        response = self._operation_cmd(OP_CODE.OBJECT_SELECT, obj_type=OBJ_TYPE.COMMAND)
+        response = self._operation_cmd(OP_CODE.OBJ_SELECT, obj_type=OBJ_TYPE.COMMAND)
 
         assert len(init_packet) <= response['max_size'], 'Init command is too long'
 
@@ -513,9 +513,9 @@ class DfuTransport(ABC):
 
         for _r in range(self._retries_number):
             try:
-                self._operation_cmd(OP_CODE.OBJECT_CREATE, obj_type=OBJ_TYPE.COMMAND, size=len(init_packet))
+                self._operation_cmd(OP_CODE.OBJ_CREATE, obj_type=OBJ_TYPE.COMMAND, size=len(init_packet))
                 self._stream_data(data=init_packet)
-                self._operation_cmd(OP_CODE.OBJECT_EXECUTE)
+                self._operation_cmd(OP_CODE.OBJ_EXECUTE)
             except ValidationException:
                 pass
             break
@@ -562,19 +562,19 @@ class DfuTransport(ABC):
                     response['crc']     = crc32(firmware[:response['offset']]) & 0xFFFFFFFF
                     return
 
-            self._operation_cmd(OP_CODE.OBJECT_EXECUTE)
+            self._operation_cmd(OP_CODE.OBJ_EXECUTE)
             self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=response['offset'])
 
-        response = self._operation_cmd(OP_CODE.OBJECT_SELECT, obj_type=OBJ_TYPE.DATA)
+        response = self._operation_cmd(OP_CODE.OBJ_SELECT, obj_type=OBJ_TYPE.DATA)
         try_to_recover()
 
         for i in range(response['offset'], len(firmware), response['max_size']):
             data = firmware[i:i+response['max_size']]
             for r in range(self._retries_number):
                 try:
-                    self._operation_cmd(OP_CODE.OBJECT_CREATE, obj_type=OBJ_TYPE.DATA, size=len(data))
+                    self._operation_cmd(OP_CODE.OBJ_CREATE, obj_type=OBJ_TYPE.DATA, size=len(data))
                     response['crc'] = self._stream_data(data=data, crc=response['crc'], offset=i)
-                    self._operation_cmd(OP_CODE.OBJECT_EXECUTE)
+                    self._operation_cmd(OP_CODE.OBJ_EXECUTE)
                 except ValidationException:
                     pass
                 break

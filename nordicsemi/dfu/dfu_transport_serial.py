@@ -238,14 +238,14 @@ class DfuTransportSerial(DfuTransport):
         try:
             rxdata = self._operation_message_recv()
         except OperationResponseTimeoutError as e:
-            if opcode == OP_CODE.OBJECT_CREATE:
+            if opcode == OP_CODE.OBJ_CREATE:
                 return None
             else:
                 raise e # re-raise
         return operation_rxd_unpack(opcode, rxdata)
 
     def _stream_packet(self, txdata):
-        return self._operation_send(OP_CODE.OBJECT_WRITE, data=txdata)
+        return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
 
     @property
     def _stream_data_packet_size(self):
