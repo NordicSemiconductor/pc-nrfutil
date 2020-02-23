@@ -68,8 +68,8 @@ from pc_ble_driver_py.ble_driver import (
 )
 
 from nordicsemi.dfu.dfu_transport import (
-    DfuTransport, 
-    DfuEvent, 
+    DfuTransport,
+    DfuEvent,
     ValidationException,
     OperationResponseTimeoutError,
     OP_CODE,
@@ -102,7 +102,14 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     LOCAL_ATT_MTU         = 247
     # fmt: on
 
-    def __init__(self, serial_port, baud_rate, bonded=False, keyset=None, local_att_mtu=LOCAL_ATT_MTU):
+    def __init__(
+        self,
+        serial_port,
+        baud_rate,
+        bonded=False,
+        keyset=None,
+        local_att_mtu=LOCAL_ATT_MTU,
+    ):
         super().__init__()
 
         self.evt_sync = EvtSync(
@@ -148,8 +155,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
         if nrf_sd_ble_api_ver == 5:
             self.adapter.driver.ble_cfg_set(
-                BLEConfig.conn_gatt,
-                BLEConfigConnGatt(att_mtu=self.local_att_mtu),
+                BLEConfig.conn_gatt, BLEConfigConnGatt(att_mtu=self.local_att_mtu),
             )
             self.adapter.driver.ble_cfg_set(
                 BLEConfig.conn_gap, BLEConfigConnGap(event_length=5)
@@ -548,9 +554,11 @@ class DfuTransportBle(DfuTransport):
 
         super().open()
         self.dfu_adapter = DFUAdapter(
-            serial_port=self.serial_port, baud_rate=self.baud_rate,
-            bonded=self.bonded, keyset=self.keyset,
-            local_att_mtu=self.att_mtu
+            serial_port=self.serial_port,
+            baud_rate=self.baud_rate,
+            bonded=self.bonded,
+            keyset=self.keyset,
+            local_att_mtu=self.att_mtu,
         )
         self.dfu_adapter.open()
         self.target_device_name, self.target_device_addr = self.dfu_adapter.connect(
@@ -572,7 +580,6 @@ class DfuTransportBle(DfuTransport):
         self.dfu_adapter.close()
         self.dfu_adapter = None
 
-
     def _operation_message_recv(self):
         timeout = DfuTransportBle.DEFAULT_TIMEOUT
         try:
@@ -588,12 +595,11 @@ class DfuTransportBle(DfuTransport):
         # TODO must it be a list?
         return self.dfu_adapter.write_control_point(list(txdata))
 
-    def _stream_data_packet(self, data):
-        self.dfu_adapter.write_data_point(list(data)) # TODO must it be a list
-
-    def _stream_packet_size(self):
+    @property
+    def _packet_size(self):
         return self.dfu_adapter.packet_size
 
-
+    def _stream_packet(self, data):
+        self.dfu_adapter.write_data_point(list(data))  # TODO why list
 
 

@@ -67,6 +67,7 @@ from nordicsemi.dfu.dfu_transport import (
 
 logger = logging.getLogger(__name__)
 
+
 def platform_supported():
     """
     A platform check should be performed before using this module.
@@ -84,12 +85,12 @@ def platform_supported():
             can_run = True
 
     if not can_run:
-        print("The ant dfu command is only available on Windows with a 32bit Python \n"
-              "which can be downloaded here: 'https://www.python.org/downloads/windows/'.")
+        print(
+            "The ant dfu command is only available on Windows with a 32bit Python \n"
+            "which can be downloaded here: 'https://www.python.org/downloads/windows/'."
+        )
 
     return can_run
-
-
 
 
 class AntParams:
@@ -121,7 +122,8 @@ class DfuAdapter:
         antmessage.MESG_BROADCAST_DATA_ID,
         antmessage.MESG_ACKNOWLEDGED_DATA_ID,
         antmessage.MESG_BURST_DATA_ID,
-        antmessage.MESG_ADV_BURST_DATA_ID)
+        antmessage.MESG_ADV_BURST_DATA_ID,
+    )
 
     def __init__(self, ant_dev, timeout, search_timeout, ant_config):
         self.ant_dev = ant_dev
@@ -140,45 +142,62 @@ class DfuAdapter:
         # TODO: use constant from antlib when it exists.
         # Set up advanced burst with optional frequency hopping. This can help
         # Increase the throughput by about 3x.
-        self.ant_dev.configure_advanced_burst(True, 3, 0, 0x01,
-            response_time_msec=self.ANT_RSP_TIMEOUT)
+        self.ant_dev.configure_advanced_burst(
+            True, 3, 0, 0x01, response_time_msec=self.ANT_RSP_TIMEOUT
+        )
 
         if self.ant_config.network_key is not None:
-            self.ant_dev.set_network_key(self.ANT_NET_KEY_IDX,
-                self.ant_config.network_key)
+            self.ant_dev.set_network_key(
+                self.ANT_NET_KEY_IDX, self.ant_config.network_key
+            )
 
-        self.ant_dev.assign_channel(self.ANT_DFU_CHAN, antdefines.CHANNEL_TYPE_SLAVE,
-            self.ANT_NET_KEY_IDX, response_time_msec=self.ANT_RSP_TIMEOUT)
+        self.ant_dev.assign_channel(
+            self.ANT_DFU_CHAN,
+            antdefines.CHANNEL_TYPE_SLAVE,
+            self.ANT_NET_KEY_IDX,
+            response_time_msec=self.ANT_RSP_TIMEOUT,
+        )
 
         # The params here are fairly arbitrary, but must match what the device
         # uses. These match the defaults in the example projects.
-        self.ant_dev.set_channel_freq(self.ANT_DFU_CHAN,
-            self.ant_config.rf_freq, response_time_msec=self.ANT_RSP_TIMEOUT)
+        self.ant_dev.set_channel_freq(
+            self.ANT_DFU_CHAN,
+            self.ant_config.rf_freq,
+            response_time_msec=self.ANT_RSP_TIMEOUT,
+        )
 
-        self.ant_dev.set_channel_period(self.ANT_DFU_CHAN,
+        self.ant_dev.set_channel_period(
+            self.ANT_DFU_CHAN,
             self.ant_config.channel_period,
-            response_time_msec=self.ANT_RSP_TIMEOUT)
+            response_time_msec=self.ANT_RSP_TIMEOUT,
+        )
 
-        self.ant_dev.set_channel_id(self.ANT_DFU_CHAN,
-            self.ant_config.device_num, self.ant_config.device_type,
-            self.ant_config.trans_type, response_time_msec=self.ANT_RSP_TIMEOUT)
+        self.ant_dev.set_channel_id(
+            self.ANT_DFU_CHAN,
+            self.ant_config.device_num,
+            self.ant_config.device_type,
+            self.ant_config.trans_type,
+            response_time_msec=self.ANT_RSP_TIMEOUT,
+        )
 
         # Disable high priority search. It doesn't matter much which search
         # is used as there are no other open channels, but configuring only
         # one makes sure the timeout arrives when expected.
-        self.ant_dev.set_channel_search_timeout(self.ANT_DFU_CHAN, 0,
-            response_time_msec=self.ANT_RSP_TIMEOUT)
+        self.ant_dev.set_channel_search_timeout(
+            self.ANT_DFU_CHAN, 0, response_time_msec=self.ANT_RSP_TIMEOUT
+        )
 
         self.ant_dev.set_low_priority_search_timeout(
             self.ANT_DFU_CHAN,
             int(self.search_timeout / 2.5),
-            response_time_msec=self.ANT_RSP_TIMEOUT)
+            response_time_msec=self.ANT_RSP_TIMEOUT,
+        )
 
-        self.ant_dev.open_channel(self.ANT_DFU_CHAN,
-            response_time_msec=self.ANT_RSP_TIMEOUT)
+        self.ant_dev.open_channel(
+            self.ANT_DFU_CHAN, response_time_msec=self.ANT_RSP_TIMEOUT
+        )
 
-        self.__wait_for_condition(
-            lambda: self.connected, self.search_timeout + 1.0)
+        self.__wait_for_condition(lambda: self.connected, self.search_timeout + 1.0)
 
     def close(self):
         self.ant_dev.reset_system(response_time_msec=self.ANT_RSP_TIMEOUT)
@@ -189,7 +208,7 @@ class DfuAdapter:
         logger.log(TRANSPORT_LOGGING_LEVEL, "ANT: --> {}".format(req))
 
         self.tx_seq = (self.tx_seq + 1) & 0xFF
-        data = list(struct.pack('<HB', len(req) + 3, self.tx_seq)) + req
+        data = list(struct.pack("<HB", len(req) + 3, self.tx_seq)) + req
 
         self.tx_result = None
 
@@ -217,26 +236,25 @@ class DfuAdapter:
 
         start = datetime.now()
         while not cond():
-            self.__process_mesg(timeout -
-                (datetime.now() - start).total_seconds())
+            self.__process_mesg(timeout - (datetime.now() - start).total_seconds())
 
     def __process_mesg(self, timeout):
         mesg = self.__get_ant_mesg(timeout)
 
-        if (mesg.msgid in self.DATA_MESGS):
+        if mesg.msgid in self.DATA_MESGS:
             self.__process_data_mesg(mesg)
-        elif (mesg.msgid == antmessage.MESG_RESPONSE_EVENT_ID):
-            if (mesg.data[1] == antmessage.MESG_EVENT_ID):
+        elif mesg.msgid == antmessage.MESG_RESPONSE_EVENT_ID:
+            if mesg.data[1] == antmessage.MESG_EVENT_ID:
                 self.__process_evt(mesg.data[2])
 
     def __process_data_mesg(self, mesg):
-        if (mesg.msgid == antmessage.MESG_BROADCAST_DATA_ID):
+        if mesg.msgid == antmessage.MESG_BROADCAST_DATA_ID:
             self.connected = True
             self.beacon_rx = True
             # Broadcast data should always contain the current sequence numbers.
-            if (self.tx_seq is None):
+            if self.tx_seq is None:
                 self.tx_seq = mesg.data[1]
-            if (self.rx_seq is None):
+            if self.rx_seq is None:
                 self.rx_seq = mesg.data[2]
             return
 
@@ -244,18 +262,18 @@ class DfuAdapter:
             # Ignore non-broadcast data until connection is established.
             return
 
-        data = mesg.data[1:1+antdefines.ANT_STANDARD_DATA_PAYLOAD_SIZE]
+        data = mesg.data[1 : 1 + antdefines.ANT_STANDARD_DATA_PAYLOAD_SIZE]
         is_first = False
         is_last = False
 
-        if (mesg.msgid == antmessage.MESG_ACKNOWLEDGED_DATA_ID):
+        if mesg.msgid == antmessage.MESG_ACKNOWLEDGED_DATA_ID:
             is_first = is_last = True
         else:
             if mesg.sequence_number == antdefines.SEQUENCE_FIRST_MESSAGE:
                 is_first = True
             if (mesg.sequence_number & antdefines.SEQUENCE_LAST_MESSAGE) != 0:
                 is_last = True
-            if (mesg.msgid == antmessage.MESG_ADV_BURST_DATA_ID):
+            if mesg.msgid == antmessage.MESG_ADV_BURST_DATA_ID:
                 data = mesg.data[1:]
 
         if is_first:
@@ -268,7 +286,7 @@ class DfuAdapter:
             self.rx_data = None
 
     def __process_resp(self):
-        (size, seq) = struct.unpack('<HB', bytearray(self.rx_data[:3]))
+        (size, seq) = struct.unpack("<HB", bytearray(self.rx_data[:3]))
 
         if seq == self.rx_seq:
             logger.debug("Duplicate response received")
@@ -278,13 +296,13 @@ class DfuAdapter:
         self.resp_queue.put(self.rx_data[3:size])
 
     def __process_evt(self, evt):
-        if (evt == antdefines.EVENT_CHANNEL_CLOSED):
+        if evt == antdefines.EVENT_CHANNEL_CLOSED:
             raise NordicSemiException("Device connection lost")
-        elif (evt == antdefines.EVENT_TRANSFER_TX_COMPLETED):
+        elif evt == antdefines.EVENT_TRANSFER_TX_COMPLETED:
             self.tx_result = True
-        elif (evt == antdefines.EVENT_TRANSFER_TX_FAILED):
+        elif evt == antdefines.EVENT_TRANSFER_TX_FAILED:
             self.tx_result = False
-        elif (evt == antdefines.EVENT_TRANSFER_RX_FAILED):
+        elif evt == antdefines.EVENT_TRANSFER_RX_FAILED:
             self.rx_data = None
 
     def __get_ant_mesg(self, timeout):
@@ -293,61 +311,67 @@ class DfuAdapter:
             mesg = self.ant_dev.get_message()
 
         if not mesg:
-            raise NordicSemiException('No message received from device')
+            raise NordicSemiException("No message received from device")
 
         return mesg
 
 
 class DfuTransportAnt(DfuTransport):
-    ANT_RST_TIMEOUT_MS          = 500
-    DEFAULT_PORT                = 0
-    DEFAULT_CMD_TIMEOUT         = 5.0   # Timeout on waiting for a response.
-    DEFAULT_SEARCH_TIMEOUT      = 10.0  # Timeout when searching for the device.
-    DEFAULT_PRN                 = 0
-    DEFAULT_DO_PING             = True
-    DEFAULT_DO_DEBUG            = False
+    ANT_RST_TIMEOUT_MS = 500
+    DEFAULT_PORT = 0
+    DEFAULT_CMD_TIMEOUT = 5.0  # Timeout on waiting for a response.
+    DEFAULT_SEARCH_TIMEOUT = 10.0  # Timeout when searching for the device.
+    DEFAULT_PRN = 0
+    DEFAULT_DO_PING = True
+    DEFAULT_DO_DEBUG = False
 
-    def __init__(self,
-                 ant_config=None,
-                 port=DEFAULT_PORT,
-                 timeout=DEFAULT_CMD_TIMEOUT,
-                 search_timeout=DEFAULT_SEARCH_TIMEOUT,
-                 prn=DEFAULT_PRN,
-                 debug=DEFAULT_DO_DEBUG):
+    def __init__(
+        self,
+        ant_config=None,
+        port=DEFAULT_PORT,
+        timeout=DEFAULT_CMD_TIMEOUT,
+        search_timeout=DEFAULT_SEARCH_TIMEOUT,
+        prn=DEFAULT_PRN,
+        debug=DEFAULT_DO_DEBUG,
+    ):
 
         super().__init__()
         if ant_config is None:
             ant_config = AntParams()
-        self.ant_config     = ant_config
-        self.port           = port
-        self.timeout        = timeout
+        self.ant_config = ant_config
+        self.port = port
+        self.timeout = timeout
         self.search_timeout = search_timeout
-        self.prn            = prn
-        self.ping_id        = 0
-        self.dfu_adapter    = None
-        self.mtu            = 0
-        self.debug          = debug
-
+        self.prn = prn
+        self.ping_id = 0
+        self.dfu_adapter = None
+        self.mtu = 0
+        self.debug = debug
 
     def open(self):
         super().open()
         ant_dev = None
         try:
-            ant_dev = antlib.ANTDevice(self.port, 57600,
+            ant_dev = antlib.ANTDevice(
+                self.port,
+                57600,
                 antlib.antdevice.ANTDevice.USB_PORT_TYPE,
-                antlib.antdevice.ANTDevice.FRAMER_TYPE_BASIC)
+                antlib.antdevice.ANTDevice.FRAMER_TYPE_BASIC,
+            )
             ant_dev.reset_system(response_time_msec=self.ANT_RST_TIMEOUT_MS)
             # There might be a back log of messages, clear them out.
             while ant_dev.get_message():
                 pass
-            if (self.debug):
+            if self.debug:
                 ant_dev.enable_debug_logging()
         except Exception as e:
             raise NordicSemiException(
-                "Could not open {0}. Reason: {1}".format(ant_dev, e))
+                "Could not open {0}. Reason: {1}".format(ant_dev, e)
+            )
 
         self.dfu_adapter = DfuAdapter(
-            ant_dev, self.timeout, self.search_timeout, self.ant_config)
+            ant_dev, self.timeout, self.search_timeout, self.ant_config
+        )
         self.dfu_adapter.open()
 
         if not self.__ping():
@@ -368,11 +392,11 @@ class DfuTransportAnt(DfuTransport):
         return self.dfu_adapter.send_message(list(txdata))
 
     @property
-    def _stream_data_packet_size(self):
+    def _packet_size(self):
         # maximum data size is self.mtu - 4 due to the header bytes in commands.
         return self.mtu - 4
 
-    def _stream_data_packet(self, txdata):
+    def _stream_packet(self, txdata):
         return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
 
     def __ping(self):

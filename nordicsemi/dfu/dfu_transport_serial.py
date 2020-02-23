@@ -55,7 +55,7 @@ from nordicsemi.dfu.dfu_transport import (
     NordicSemiException,
     operation_rxd_unpack,
     OperationResCodeError,
-    OperationResponseTimeoutError
+    OperationResponseTimeoutError,
 )
 from nordicsemi.lister.device_lister import DeviceLister
 from nordicsemi.dfu.dfu_trigger import DFUTrigger
@@ -199,7 +199,6 @@ class DfuTransportSerial(DfuTransport):
         super().close()
         self._serial.close()
 
-
     def _operation_message_send(self, data):
         """SLIP encode message send/write it"""
         encoded = self._slip.encode(data)
@@ -217,12 +216,10 @@ class DfuTransportSerial(DfuTransport):
         """ Receive/read SLIP message and decode it """
         decoded = None
         self._slip.reset_decoder()
-        # TODO add timeout if slip package
-        # dropped. Add SlipDecodeException or something?
+        # TODO add timeout if slip package dropped otherwise stuck in loop
         while True:
             rxdata = self._serial.read(1)
             if not rxdata:
-                logger.warning("SLIP: serial read timeout")
                 raise OperationResponseTimeoutError("Serial read timeout")
 
             have_packet = self._slip.decode_byte(rxdata[0])
@@ -234,25 +231,25 @@ class DfuTransportSerial(DfuTransport):
         return decoded
 
     def _operation_recv(self, opcode):
-        # TODO is this OK? (how it was from first commit but it was not obvious)
+        # TODO is this OK? (how it was from first commit but was not obvious)
         try:
             rxdata = self._operation_message_recv()
         except OperationResponseTimeoutError as e:
             if opcode == OP_CODE.OBJ_CREATE:
                 return None
             else:
-                raise e # re-raise
+                raise e  # re-raise
         return operation_rxd_unpack(opcode, rxdata)
 
-    def _stream_packet(self, txdata):
-        return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
-
     @property
-    def _stream_data_packet_size(self):
+    def _packet_size(self):
         # maximum data size is self.mtu/2,
         # due to the slip encoding which at maximum doubles the size
         # -1 for leading OP_CODE byte
-        return (self.mtu-1)//2 - 1 
+        return (self.mtu - 1) // 2 - 1
+
+    def _stream_packet(self, txdata):
+        return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
 
     def __ensure_bootloader(self):
         lister = DeviceLister()
@@ -329,3 +326,4 @@ class DfuTransportSerial(DfuTransport):
             return True
 
         return bool(rx_ping_id == self.ping_id)
+
