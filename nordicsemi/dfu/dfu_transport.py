@@ -350,6 +350,10 @@ def operation_rxd_parse_header(opcode, data):
     if len(data) < 3:
         raise OperationError(emsg, "incomplete size", len(data))
 
+    resp_opcode = data[0]
+    if int(resp_opcode) != int(OP_CODE.RESPONSE):
+        raise OperationError(emsg, "Invalid response code {}".format(resp_opcode))
+
     try:
         rx_opcode = OP_CODE(data[1])
     except ValueError as e:
