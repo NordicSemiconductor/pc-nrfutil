@@ -137,7 +137,6 @@ class DfuTransportSerial(DfuTransport):
     DEFAULT_BAUD_RATE = 115200
     DEFAULT_FLOW_CONTROL = True
     DEFAULT_TIMEOUT = 30.0  # Timeout time for board response
-    DEFAULT_SERIAL_PORT_TIMEOUT = 1.0  # Timeout time on serial port read
     DEFAULT_PRN = 0
     DEFAULT_DO_PING = True
 
@@ -199,7 +198,7 @@ class DfuTransportSerial(DfuTransport):
         self._serial.close()
 
     def _operation_message_send(self, data):
-        """SLIP encode message send/write it"""
+        """ Required by super(). Encode SLIP message and send/write it """
         encoded = self._slip.encode(data)
         logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: --> " + str(data))
         try:
@@ -212,7 +211,7 @@ class DfuTransportSerial(DfuTransport):
             )
 
     def _operation_message_recv(self):
-        """ Receive/read SLIP message and decode it """
+        """ Required by super(). Receive/read SLIP message and decode it """
         decoded = None
         self._slip.reset_decoder()
         # TODO add timeout if slip package dropped otherwise stuck in loop
@@ -230,6 +229,7 @@ class DfuTransportSerial(DfuTransport):
         return decoded
 
     def _operation_recv(self, opcode):
+        """ Required by super() """
         # TODO is this OK? (how it was from first commit but was not obvious)
         try:
             rxdata = self._operation_message_recv()
@@ -243,12 +243,14 @@ class DfuTransportSerial(DfuTransport):
 
     @property
     def _packet_size(self):
+        """ Required by super() """
         # maximum data size is self.mtu/2,
         # due to the slip encoding which at maximum doubles the size
         # -1 for leading OP_CODE byte
         return (self.mtu - 1) // 2 - 1
 
     def _stream_packet(self, txdata):
+        """ Required by super() """
         return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
 
     def __ensure_bootloader(self):

@@ -581,6 +581,7 @@ class DfuTransportBle(DfuTransport):
         self.dfu_adapter = None
 
     def _operation_message_recv(self):
+        """ Required by super() """
         timeout = DfuTransportBle.DEFAULT_TIMEOUT
         try:
             rxdata = self.dfu_adapter.notifications_q.get(timeout=timeout)
@@ -589,17 +590,17 @@ class DfuTransportBle(DfuTransport):
         return rxdata
 
     def _operation_message_send(self, txdata):
-        """ 
-        Send operation command message. control point (cp) characteristic command
-        """
+        """ Required by super() """
         # TODO must it be a list?
         return self.dfu_adapter.write_control_point(list(txdata))
 
     @property
     def _packet_size(self):
+        """ Required by super() """
         return self.dfu_adapter.packet_size
 
     def _stream_packet(self, data):
+        """ Required by super() """
         self.dfu_adapter.write_data_point(list(data))  # TODO why list
 
 

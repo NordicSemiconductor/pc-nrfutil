@@ -384,16 +384,20 @@ class DfuTransportAnt(DfuTransport):
         self.dfu_adapter.close()
 
     def _operation_message_recv(self):
+        """ Required by super() """
         return self.dfu_adapter.get_message()
 
     def _operation_message_send(self, txdata):
+        """ Required by super() """
         return self.dfu_adapter.send_message(list(txdata))
 
     @property
     def _packet_size(self):
+        """ Required by super() """
         # maximum data size is self.mtu - 4 due to the header bytes in commands.
         return self.mtu - 4
 
     def _stream_packet(self, txdata):
+        """ Required by super() """
         return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
 
