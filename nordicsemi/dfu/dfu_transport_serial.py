@@ -190,8 +190,8 @@ class DfuTransportSerial(DfuTransport):
             if ping_success == False:
                 raise NordicSemiException("No ping response after opening COM port")
 
-        self._operation_cmd(OP_CODE.PRN_SET, prn=self.prn)
-        self.mtu = self._operation_cmd(OP_CODE.MTU_GET)
+        self._operation_command(OP_CODE.PRN_SET, prn=self.prn)
+        self.mtu = self._operation_command(OP_CODE.MTU_GET)
 
     def close(self):
         super().close()
@@ -228,7 +228,7 @@ class DfuTransportSerial(DfuTransport):
         logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(decoded))
         return decoded
 
-    def _operation_recv(self, opcode):
+    def _operation_response(self, opcode):
         """ Required by super() """
         # TODO is this OK? (how it was from first commit but was not obvious)
         try:
@@ -251,7 +251,7 @@ class DfuTransportSerial(DfuTransport):
 
     def _stream_packet(self, txdata):
         """ Required by super() """
-        return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
+        return self._operation_request(OP_CODE.OBJ_WRITE, data=txdata)
 
     def __ensure_bootloader(self):
         lister = DeviceLister()

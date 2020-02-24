@@ -376,8 +376,8 @@ class DfuTransportAnt(DfuTransport):
             raise NordicSemiException("No ping response from device.")
 
         logger.debug("ANT: Set Packet Receipt Notification {}".format(self.prn))
-        self._operation_cmd(OP_CODE.PRN_SET, prn=self.prn)
-        self.mtu = self._operation_cmd(OP_CODE.MTU_GET)
+        self._operation_command(OP_CODE.PRN_SET, prn=self.prn)
+        self.mtu = self._operation_command(OP_CODE.MTU_GET)
 
     def close(self):
         super().close()
@@ -399,5 +399,5 @@ class DfuTransportAnt(DfuTransport):
 
     def _stream_packet(self, txdata):
         """ Required by super() """
-        return self._operation_send(OP_CODE.OBJ_WRITE, data=txdata)
+        return self._operation_request(OP_CODE.OBJ_WRITE, data=txdata)
 

@@ -424,37 +424,41 @@ class DfuTransport(ABC):
         pass
 
     @abstractmethod
-    def _operation_message_recv(self):
-        """ return bytearray/bytes operation data message without any transport
-        specific traits.  aka `get_message`.
-        Should raise OperationRxTimeoutError on response timeout"""
-        raise NotImplementedError()
-
-    @abstractmethod
     def _operation_message_send(self, txdata):
         """ write/send operation message (aka `send_message`)
         txdata - packed bytearray or bytes . 
         """
         raise NotImplementedError()
 
-    def _operation_recv(self, opcode):
-        rxdata = self._operation_message_recv()
-        logger.log(TRANSPORT_LOGGING_LEVEL, "{}: <-- {}".format(self._name, rxdata))
-        return operation_rxd_unpack(opcode, rxdata)
+    @abstractmethod
+    def _operation_message_recv(self):
+        """ return bytearray/bytes operation data message without any transport
+        specific traits.  aka `get_message`.
+        Should raise OperationResponseTimeoutError on response timeout"""
+        raise NotImplementedError()
 
-    def _operation_send(self, opcode, **kwargs):
-        """ Write/send operation data (repsonse not read). (control point characteristic in case of BLE"""
+    def _operation_request(self, opcode, **kwargs):
+        """ Write/send operation request (response not read). (control point characteristic in case of BLE"""
         txdata = operation_txd_pack(opcode, **kwargs)
         # logger.log(TRANSPORT_LOGGING_LEVEL, "{}: <-- {}".format(self._name, rxdata))
         self._operation_message_send(txdata)
 
-    def _operation_cmd(self, opcode, **kwargs):
+    def _operation_response(self, opcode):
+        """ Read/receive unpacked operation response.
+        :return: operation unpacked payload without header. (empty bytarray/bytes if none)
+        """
+        rxdata = self._operation_message_recv()
+        logger.log(TRANSPORT_LOGGING_LEVEL, "{}: <-- {}".format(self._name, rxdata))
+        return operation_rxd_unpack(opcode, rxdata)
+
+
+    def _operation_command(self, opcode, **kwargs):
         """ 
         send operation request, receive response, parse response and verify success.
         returns parsed payload (if any)
         """
-        self._operation_send(opcode, **kwargs)
-        return self._operation_recv(opcode)
+        self._operation_request(opcode, **kwargs)
+        return self._operation_response(opcode)
 
     @property
     @abstractmethod
@@ -504,10 +508,10 @@ class DfuTransport(ABC):
             current_pnr += 1
             if self.prn == current_pnr:
                 current_pnr = 0
-                response = self._operation_recv(OP_CODE.CRC_GET)
+                response = self._operation_response(OP_CODE.CRC_GET)
                 validate_crc()
 
-        response = self._operation_cmd(OP_CODE.CRC_GET)
+        response = self._operation_command(OP_CODE.CRC_GET)
         validate_crc()
 
         return crc
@@ -516,7 +520,7 @@ class DfuTransport(ABC):
         """ Not needed in BLE transport """
         self.ping_id = (self.ping_id + 1) % 256
         try:
-            rx_ping_id = self._operation_cmd(OP_CODE.PING, ping_id=self.ping_id)
+            rx_ping_id = self._operation_command(OP_CODE.PING, ping_id=self.ping_id)
         except OperationResCodeError as e:
             logger.debug("ignoring ping response error {}".format(e))
             # Returning an error code is seen as good enough. The bootloader is up and running
@@ -556,10 +560,10 @@ class DfuTransport(ABC):
                 except ValidationException:
                     return False
 
-            self._operation_cmd(OP_CODE.OBJ_EXECUTE)
+            self._operation_command(OP_CODE.OBJ_EXECUTE)
             return True
 
-        response = self._operation_cmd(OP_CODE.OBJ_SELECT, obj_type=OBJ_TYPE.COMMAND)
+        response = self._operation_command(OP_CODE.OBJ_SELECT, obj_type=OBJ_TYPE.COMMAND)
 
         assert len(init_packet) <= response["max_size"], "Init command is too long"
 
@@ -568,11 +572,11 @@ class DfuTransport(ABC):
 
         for _r in range(self._retries_number):
             try:
-                self._operation_cmd(
+                self._operation_command(
                     OP_CODE.OBJ_CREATE, obj_type=OBJ_TYPE.COMMAND, size=len(init_packet)
                 )
                 self._stream_data(data=init_packet)
-                self._operation_cmd(OP_CODE.OBJ_EXECUTE)
+                self._operation_command(OP_CODE.OBJ_EXECUTE)
             except ValidationException:
                 pass
             break
@@ -625,25 +629,25 @@ class DfuTransport(ABC):
                     response["crc"] = crc32(firmware[: response["offset"]]) & 0xFFFFFFFF
                     return
 
-            self._operation_cmd(OP_CODE.OBJ_EXECUTE)
+            self._operation_command(OP_CODE.OBJ_EXECUTE)
             self._send_event(
                 event_type=DfuEvent.PROGRESS_EVENT, progress=response["offset"]
             )
 
-        response = self._operation_cmd(OP_CODE.OBJ_SELECT, obj_type=OBJ_TYPE.DATA)
+        response = self._operation_command(OP_CODE.OBJ_SELECT, obj_type=OBJ_TYPE.DATA)
         try_to_recover()
 
         for i in range(response["offset"], len(firmware), response["max_size"]):
             data = firmware[i : i + response["max_size"]]
             for r in range(self._retries_number):
                 try:
-                    self._operation_cmd(
+                    self._operation_command(
                         OP_CODE.OBJ_CREATE, obj_type=OBJ_TYPE.DATA, size=len(data)
                     )
                     response["crc"] = self._stream_data(
                         data=data, crc=response["crc"], offset=i
                     )
-                    self._operation_cmd(OP_CODE.OBJ_EXECUTE)
+                    self._operation_command(OP_CODE.OBJ_EXECUTE)
                 except ValidationException:
                     pass
                 break

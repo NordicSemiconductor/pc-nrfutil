@@ -567,7 +567,7 @@ class DfuTransportBle(DfuTransport):
         )
 
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
-        self._operation_cmd(OP_CODE.PRN_SET, prn=self.prn)
+        self._operation_command(OP_CODE.PRN_SET, prn=self.prn)
 
     def close(self):
         # Get bonded status and BLE keyset from DfuAdapter
