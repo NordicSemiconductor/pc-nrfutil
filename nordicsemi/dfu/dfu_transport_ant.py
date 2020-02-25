@@ -334,7 +334,7 @@ class DfuTransportAnt(DfuTransport):
         debug=DEFAULT_DO_DEBUG,
     ):
 
-        super().__init__()
+        super().__init__(name="ANT")
         if ant_config is None:
             ant_config = AntParams()
         self.ant_config = ant_config

@@ -110,13 +110,13 @@ class OP_CODE(_IntEnumFormat):
 
     # fmt: off
     PROTOCOL_VERSION   =  0x00
-    OBJECT_CREATE      =  0x01 # aka OBJECT_CREATE and CreateObject
+    OBJ_CREATE         =  0x01 # aka OBJECT_CREATE and CreateObject
     PRN_SET            =  0x02 # aka RECEIPT_NOTIF_SET and setPRN
     CRC_GET            =  0x03 # aka CalcChecSum
-    OBJECT_EXECUTE     =  0x04 # aka OBJECT_EXECUTE and Execute
-    OBJECT_SELECT      =  0x06 # aka OBJECT_SELECT and ReadObject
+    OBJ_EXECUTE        =  0x04 # aka OBJECT_EXECUTE and Execute
+    OBJ_SELECT         =  0x06 # aka OBJECT_SELECT and ReadObject
     MTU_GET            =  0x07 # aka GetSerialMTU
-    OBJECT_WRITE       =  0x08 # aka OBJECT_WRITE and WriteObject
+    OBJ_WRITE          =  0x08 # aka OBJECT_WRITE and WriteObject
     PING               =  0x09 # aka Ping
     HARDWARE_VERSION   =  0x0A
     FIRMWARE_VERSION   =  0x0B
@@ -402,8 +402,8 @@ class DfuTransport(ABC):
 
         self.callbacks = {}
         self._name = name
-        self.prn = 0  # TODO
         self._retries_number = retries_number
+        self.prn = 0 
         self.ping_id = 0
 
 
