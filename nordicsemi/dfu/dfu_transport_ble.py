@@ -38,10 +38,9 @@
 # Python standard library
 import time
 import queue
-import struct
 import logging
-import binascii
 
+# Python 3rd party imports
 import wrapt
 
 from pc_ble_driver_py import config
@@ -67,14 +66,11 @@ from pc_ble_driver_py.ble_driver import (
     NordicSemiErrorCheck,
 )
 
+# Local imports
 from nordicsemi.dfu.dfu_transport import (
     DfuTransport,
-    DfuEvent,
-    ValidationException,
     OperationResponseTimeoutError,
     OP_CODE,
-    RES_CODE,
-    OBJ_TYPE,
 )
 
 global nrf_sd_ble_api_ver
@@ -122,8 +118,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             ]
         )
 
-        driver = DfuBLEDriver(serial_port=serial_port, baud_rate=baud_rate)
-        self.adapter = BLEAdapter(driver)
+        ble_driver = DfuBLEDriver(serial_port=serial_port, baud_rate=baud_rate)
+        self.adapter = BLEAdapter(ble_driver)
         # fmt: off
         self.conn_handle        = None
         self.bonded             = bonded
@@ -589,10 +585,10 @@ class DfuTransportBle(DfuTransport):
             raise OperationResponseTimeoutError("Timeout: operation {}".format(timeout))
         return rxdata
 
-    def _operation_message_send(self, txdata):
+    def _operation_message_send(self, message):
         """ Required by super() """
         # TODO must it be a list?
-        return self.dfu_adapter.write_control_point(list(txdata))
+        return self.dfu_adapter.write_control_point(list(message))
 
     @property
     def _packet_size(self):

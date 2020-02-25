@@ -38,7 +38,6 @@
 # Python imports
 import time
 from datetime import datetime, timedelta
-import binascii
 import logging
 
 # Python 3rd party imports
@@ -49,12 +48,9 @@ from serial.serialutil import SerialException
 from nordicsemi.dfu.dfu_transport import (
     OP_CODE,
     DfuTransport,
-    DfuEvent,
     TRANSPORT_LOGGING_LEVEL,
-    ValidationException,
     NordicSemiException,
     operation_rxd_unpack,
-    OperationResCodeError,
     OperationResponseTimeoutError,
 )
 from nordicsemi.lister.device_lister import DeviceLister
@@ -197,10 +193,10 @@ class DfuTransportSerial(DfuTransport):
         super().close()
         self._serial.close()
 
-    def _operation_message_send(self, data):
+    def _operation_message_send(self, message):
         """ Required by super(). Encode SLIP message and send/write it """
-        encoded = self._slip.encode(data)
-        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: --> " + str(data))
+        encoded = self._slip.encode(message)
+        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: --> " + str(message))
         try:
             self._serial.write(encoded)
         except SerialException as e:
@@ -212,7 +208,7 @@ class DfuTransportSerial(DfuTransport):
 
     def _operation_message_recv(self):
         """ Required by super(). Receive/read SLIP message and decode it """
-        decoded = None
+        message = None
         self._slip.reset_decoder()
         # TODO add timeout if slip package dropped otherwise stuck in loop
         while True:
@@ -222,11 +218,11 @@ class DfuTransportSerial(DfuTransport):
 
             have_packet = self._slip.decode_byte(rxdata[0])
             if have_packet:
-                decoded = self._slip.decoded
+                message = self._slip.decoded
                 break
 
-        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(decoded))
-        return decoded
+        logger.log(TRANSPORT_LOGGING_LEVEL, "SLIP: <-- " + str(message))
+        return message
 
     def _operation_response(self, opcode):
         """ Required by super() """
@@ -249,9 +245,9 @@ class DfuTransportSerial(DfuTransport):
         # -1 for leading OP_CODE byte
         return (self.mtu - 1) // 2 - 1
 
-    def _stream_packet(self, txdata):
+    def _stream_packet(self, data):
         """ Required by super() """
-        return self._operation_request(OP_CODE.OBJ_WRITE, data=txdata)
+        return self._operation_request(OP_CODE.OBJ_WRITE, data=data)
 
     def __ensure_bootloader(self):
         lister = DeviceLister()

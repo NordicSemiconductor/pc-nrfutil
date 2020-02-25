@@ -65,7 +65,7 @@ class DfuEvent:
 
 class ValidationException(Exception):
     """"
-    Exception used when validation failed. 
+    Exception used when validation failed.
     """
     pass
 
@@ -87,7 +87,7 @@ class OperationResCodeError(OperationError):
 
 
 class _IntEnumFormat(IntEnum):
-    """ 
+    """
     IntEnum base class for pretty formated strings
     """
 
@@ -424,9 +424,9 @@ class DfuTransport(ABC):
         pass
 
     @abstractmethod
-    def _operation_message_send(self, txdata):
+    def _operation_message_send(self, message):
         """ write/send operation message (aka `send_message`)
-        txdata - packed bytearray or bytes . 
+        :param message: bytearray or bytes (packed). 
         """
         raise NotImplementedError()
 
@@ -482,7 +482,7 @@ class DfuTransport(ABC):
         assert packet_size > 0
 
         logger.debug(
-            "{}: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(
+            "{}: Streaming Data: len:{} offset:{} crc:0x{:08X}".format(
                 self._name, len(data), offset, crc
             )
         )
@@ -502,7 +502,7 @@ class DfuTransport(ABC):
         current_pnr = 0
         for i in range(0, len(data), packet_size):
             to_transmit = data[i : i + packet_size]
-            self._stream_data_packet(to_transmit)
+            self._stream_packet(to_transmit)
             crc = crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
             current_pnr += 1
@@ -639,7 +639,7 @@ class DfuTransport(ABC):
 
         for i in range(response["offset"], len(firmware), response["max_size"]):
             data = firmware[i : i + response["max_size"]]
-            for r in range(self._retries_number):
+            for _r in range(self._retries_number):
                 try:
                     self._operation_command(
                         OP_CODE.OBJ_CREATE, obj_type=OBJ_TYPE.DATA, size=len(data)

@@ -36,13 +36,11 @@
 #
 
 # Python imports
-import binascii
 from datetime import datetime
 import logging
 import queue
 import struct
 import sys
-
 
 # Python 3rd party imports
 try:
@@ -59,10 +57,7 @@ from nordicsemi.dfu.dfu_transport import (
     OP_CODE,
     TRANSPORT_LOGGING_LEVEL,
     DfuTransport,
-    DfuEvent,
     NordicSemiException,
-    ValidationException,
-    OperationResCodeError,
 )
 
 logger = logging.getLogger(__name__)
@@ -387,9 +382,9 @@ class DfuTransportAnt(DfuTransport):
         """ Required by super() """
         return self.dfu_adapter.get_message()
 
-    def _operation_message_send(self, txdata):
+    def _operation_message_send(self, message):
         """ Required by super() """
-        return self.dfu_adapter.send_message(list(txdata))
+        return self.dfu_adapter.send_message(list(message))
 
     @property
     def _packet_size(self):
@@ -397,7 +392,7 @@ class DfuTransportAnt(DfuTransport):
         # maximum data size is self.mtu - 4 due to the header bytes in commands.
         return self.mtu - 4
 
-    def _stream_packet(self, txdata):
+    def _stream_packet(self, data):
         """ Required by super() """
-        return self._operation_request(OP_CODE.OBJ_WRITE, data=txdata)
+        return self._operation_request(OP_CODE.OBJ_WRITE, data=data)
 
