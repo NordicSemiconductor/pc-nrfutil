@@ -52,7 +52,7 @@ logger = logging.getLogger(__file__)
 def step_impl(context, application, bootloader, softdevice, package):
     runner = CliRunner()
     context.runner = runner
-    args = ['dfu', 'genpkg']
+    args = ['pkg', 'generate']
 
     if application != 'not_set':
         args.extend(['--application', os.path.join(get_resources_path(), application)])
@@ -90,56 +90,10 @@ def step_impl(context, app_ver):
         context.application_version = int_as_text_to_int(app_ver)
 
 
-@given('with option --dev-revision {dev_rev}')
-def step_impl(context, dev_rev):
-    context.dev_revision = None
-
-    if dev_rev == 'not_set':
-        context.dev_revision = 0xFFFF
-    elif dev_rev == 'none':
-        context.args.extend(['--dev-revision', 'None'])
-    else:
-        context.args.extend(['--dev-revision', dev_rev])
-        context.dev_revision = int_as_text_to_int(dev_rev)
-
-
-@given('with option --dev-type {dev_type}')
-def step_impl(context, dev_type):
-    context.dev_type = None
-
-    if dev_type == 'not_set':
-        context.dev_type = 0xFFFF
-    elif dev_type == 'none':
-        context.args.extend(['--dev-type', 'None'])
-    else:
-        context.args.extend(['--dev-type', dev_type])
-        context.dev_type = int_as_text_to_int(dev_type)
-
-
-@given('with option --dfu-ver {dfu_ver}')
-def step_impl(context, dfu_ver):
-    context.firmware_hash = None
-    context.ext_packet_id = None
-    context.init_packet_ecds = None
-
-    if dfu_ver == 'not_set':
-        context.dfu_ver = 0.5
-        context.ext_packet_id = 0
-    else:
-        if dfu_ver == 0.5:
-            pass
-        elif dfu_ver == 0.6:
-            context.ext_packet_id = 0
-        elif dfu_ver == 0.7:
-            context.ext_packet_id = 1
-            context.firmware_hash = 'exists'
-        elif dfu_ver == 0.8:
-            context.ext_packet_id = 2
-            context.firmware_hash = 'exists'
-            context.init_packet_ecds = 'exists'
-
-        context.args.extend(['--dfu-ver', dfu_ver])
-        context.dfu_ver = float(dfu_ver)
+@given('with option --hw-version {hw_ver}')
+def step_impl(context, hw_ver):
+    context.args.extend(['--hw-version', hw_ver])
+    context.hw_ver = float(hw_ver)
 
 
 @given('with option --sd-req {sd_reqs}')
@@ -166,7 +120,6 @@ def step_impl(context, sd_reqs):
 def step_impl(context, pem_file):
     if pem_file != 'not_set':
         context.args.extend(['--key-file', os.path.join(get_resources_path(), pem_file)])
-        context.dfu_ver = 0.8
 
 
 @when('user press enter')
@@ -182,6 +135,7 @@ def step_impl(context, package):
 
         result = context.runner.invoke(cli, context.args)
         logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
+        print(result.exit_code, result.output)
         assert result.exit_code == 0
 
         with ZipFile(pkg_full_name, 'r') as pkg:
@@ -212,10 +166,6 @@ def step_impl(context, package):
 
             with open('manifest.json', 'r') as f:
                 _json = json.load(f)
-
-                if context.dfu_ver:
-                    assert 'dfu_version' in _json['manifest']
-                    assert _json['manifest']['dfu_version'] == context.dfu_ver
 
                 if context.bootloader and context.softdevice:
                     data = _json['manifest']['softdevice_bootloader']['init_packet_data']

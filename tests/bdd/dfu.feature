@@ -2,7 +2,7 @@ Feature: Perform DFU
   Scenario: USB serial DFU completes without error
     Given the user wants to perform dfu usb-serial
     And using package tests\resources\blinky_mbr_sdk160.zip
-    And nrfjprog examplestests\resources\secure_bootloader_usb_mbr_pca10056_debug_sdk160.hex for usb-serial PCA10056_0
+    And nrfjprog tests\resources\secure_bootloader_usb_mbr_pca10056_debug_sdk160.hex for usb-serial PCA10056_0
     Then perform dfu
 
   Scenario: Serial DFU completes without error
@@ -26,5 +26,4 @@ Feature: Perform DFU
     Given the user wants to perform dfu usb-serial
     And using package connectivity_usb
     And -snr PCA10059
-    Then perform dfu
     Then perform dfu
