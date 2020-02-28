@@ -42,7 +42,7 @@ from zipfile import ZipFile
 from behave import given, then, when
 from click.testing import CliRunner
 from nordicsemi.__main__ import cli, int_as_text_to_int
-from .common_steps import get_resources_path
+from common_steps import get_resources_path
 
 
 logger = logging.getLogger(__file__)

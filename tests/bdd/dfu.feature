@@ -16,7 +16,7 @@ Feature: Perform DFU
     And using package examples\dfu\secure_dfu_test_images\ble\nrf52840\hrs_application_s140.zip
     And option --conn-ic-id NRF52
     And option --name DfuTarg
-    And nrfjprog examples\dfu\secure_bootloader\pca10056_ble_debug\hex\secure_bootloader_ble_s140_pca10056_debug.hex for ble PCA10056_0
+    And nrfjprog examples\dfu\secure_bootloader\pca10056_s140_ble_debug\hex\secure_bootloader_ble_s140_pca10056_debug.hex for ble PCA10056_0
     And nrfjprog connectivity for serial PCA10056_1
     Then perform dfu
 
