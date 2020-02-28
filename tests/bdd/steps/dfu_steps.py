@@ -80,12 +80,7 @@ def resolve_hex_path(filename):
 
 
     else:
-        filename = os.path.join(*filename.split("\\"))
-        assert "SDK_ROOT" in os.environ, \
-        "Environment variable 'SDK_ROOT' must be exported"
-
-        SDK_ROOT = os.environ["SDK_ROOT"]
-        return os.path.join(SDK_ROOT, filename)
+        return os.path.join(*filename.split("\\"))
 
 
 def find_nrfjprog(program):
