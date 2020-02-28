@@ -184,6 +184,13 @@ logger = logging.getLogger(__file__)
 
 STDOUT_TEXT_WAIT_TIME = 50  # Number of seconds to wait for expected output from stdout
 
+@given('the user wants to perform dfu {dfu_type}')
+def step_impl(context, dfu_type):
+    runner = CliRunner()
+    context.runner = runner
+    args = ['dfu', dfu_type]
+
+    context.args = args
 
 @given('using package {package}')
 def step_impl(context, package):
