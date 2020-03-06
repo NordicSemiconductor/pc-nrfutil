@@ -39,7 +39,7 @@ import logging
 import os
 
 from click.testing import CliRunner
-from behave import then, given
+from behave import then, given, when
 
 from nordicsemi.__main__ import cli, int_as_text_to_int
 
@@ -60,10 +60,16 @@ def step_impl(context, command):
     context.args = exec_args
 
 
+@when('user press enter')
+def step_impl(context):
+    pass
+
+
 @then('output contains \'{stdout_text}\' and exit code is {exit_code}')
 def step_impl(context, stdout_text, exit_code):
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
+    print("hello", result)
     assert result.exit_code == int_as_text_to_int(exit_code)
     assert result.output is not None
     assert result.output.find(stdout_text) >= 0
