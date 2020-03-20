@@ -13,7 +13,7 @@ Feature: Perform DFU
 
   Scenario: BLE DFU completes without error
     Given the user wants to perform dfu ble
-    And using tests\resources\hrs_application_s140_sdk160.zip
+    And using package tests\resources\hrs_application_s140_sdk160.zip
     And option --conn-ic-id NRF52
     And option --name DfuTarg
     And nrfjprog tests\resources\secure_bootloader_ble_s140_pca10056_debug_sdk160.hex for ble PCA10056_0
