@@ -91,8 +91,7 @@ def program_image_usb_serial(context, nrfjprog, full_image_path, snr):
     assert return_code == 0, "Nrfjprog could not erase board with serial number {}".format(snr)
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting for device to enumerate
 
-    devices_before_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F")
-
+    devices_before_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F") #C00A
     return_code = subprocess.call("\"{nrfjprog}\" --program {image} --chiperase -r  --snr {snr}"
     .format(nrfjprog=nrfjprog, image=full_image_path, snr=snr), shell=True)
 
@@ -101,8 +100,7 @@ def program_image_usb_serial(context, nrfjprog, full_image_path, snr):
 
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting for device to enumerate
 
-    devices_after_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F")
-
+    devices_after_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F") #C00A
     dfu_device = None
 
     for device in devices_after_programming:

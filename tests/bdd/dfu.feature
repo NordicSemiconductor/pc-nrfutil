@@ -27,3 +27,4 @@ Feature: Perform DFU
      And using package connectivity_usb
      And -snr PCA10059
      Then perform dfu
+     Then perform dfu
