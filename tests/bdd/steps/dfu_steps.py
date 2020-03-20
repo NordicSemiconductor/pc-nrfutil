@@ -49,7 +49,7 @@ from pc_ble_driver_py import config
 connectivity_root = os.path.join(os.path.dirname(config.__file__), 'hex', 'sd_api_v5')
 
 
-ENUMERATE_WAIT_TIME = 2.0 # Seconds to wait for enumeration to finish
+ENUMERATE_WAIT_TIME = 5.0 # Seconds to wait for enumeration to finish
 
 def resolve_hex_path(filename):
     if filename == "connectivity":
@@ -91,7 +91,7 @@ def program_image_usb_serial(context, nrfjprog, full_image_path, snr):
     assert return_code == 0, "Nrfjprog could not erase board with serial number {}".format(snr)
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting for device to enumerate
 
-    devices_before_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F") #C00A
+    devices_before_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F")
     return_code = subprocess.call("\"{nrfjprog}\" --program {image} --chiperase -r  --snr {snr}"
     .format(nrfjprog=nrfjprog, image=full_image_path, snr=snr), shell=True)
 
@@ -100,7 +100,7 @@ def program_image_usb_serial(context, nrfjprog, full_image_path, snr):
 
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting for device to enumerate
 
-    devices_after_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F") #C00A
+    devices_after_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F")
     dfu_device = None
 
     for device in devices_after_programming:
