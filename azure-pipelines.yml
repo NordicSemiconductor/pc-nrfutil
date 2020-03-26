@@ -15,7 +15,7 @@ jobs:
         py38:
           python_version: "3.8"
     pool:
-      vmImage: "ubuntu-16.04"
+      vmImage: "ubuntu-18.04"
     steps:
       - task: UsePythonVersion@0
         inputs:
@@ -67,7 +67,7 @@ jobs:
           python_version: '3.8.0'
           python_bin: '3.8'
     pool:
-      vmImage: "macos-10.13"
+      vmImage: "macos-10.15"
     steps:
       - bash: |
           wget https://www.python.org/ftp/python/$(python_version)/python-$(python_version)-macosx10.9.pkg
