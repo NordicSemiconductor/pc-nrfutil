@@ -222,6 +222,47 @@ def step_impl(context, image, image_type, board):
 @then('perform dfu')
 def step_impl(context):
     result = context.runner.invoke(cli, context.args)
+    print(result)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
+    assert result.exit_code == 0
+    time.sleep(ENUMERATE_WAIT_TIME) # Waiting some time to ensure enumeration before next test.
+
+
+@then('perform dfu twice with port change')
+def step_impl(context):
+    lister = DeviceLister()
+    print(context.args)
+
+    devices_before_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F")
+    print(devices_before_programming)
+
+    result = context.runner.invoke(cli, context.args)
+    logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
+    print(result)
+    assert result.exit_code == 0
+    time.sleep(ENUMERATE_WAIT_TIME) # Waiting for device to enumerate
+
+    devices_after_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="C00A")
+    dfu_device = None
+    print(devices_after_programming)
+
+    for device in devices_after_programming:
+        match = False
+        for device_old in devices_before_programming:
+            if device.serial_number == device_old.serial_number:
+                match = True
+                break
+        if not match:
+            dfu_device = device
+            break
+
+    assert dfu_device, "Device was programmed, but did not enumerate in {} seconds.".format(ENUMERATE_WAIT_TIME)
+
+    port = dfu_device.get_first_available_com_port()
+    context.args[-1] = port
+    print(context.args)
+    result = context.runner.invoke(cli, context.args)
+    logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
+    print(result)
     assert result.exit_code == 0
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting some time to ensure enumeration before next test.
