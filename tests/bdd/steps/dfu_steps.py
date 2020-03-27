@@ -250,17 +250,16 @@ def step_impl(context):
         match = False
         for device_old in devices_before_programming:
             if device.serial_number == device_old.serial_number:
+                dfu_device = device
                 match = True
                 break
-        if not match:
-            dfu_device = device
+        if match:
             break
 
     assert dfu_device, "Device was programmed, but did not enumerate in {} seconds.".format(ENUMERATE_WAIT_TIME)
 
     port = dfu_device.get_first_available_com_port()
     context.args[-1] = port
-    print(context.args)
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
     print(result)
