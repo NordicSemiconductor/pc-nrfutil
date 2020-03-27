@@ -27,13 +27,13 @@ class TestManifest(unittest.TestCase):
 
         address = 'AABBCC112233'
         result = self.runner.invoke(self.cli, argumentList + [address])
-        self.assertTrue('Invalid address' not in result.output)
-        self.assertTrue('Failed to open' in str(result.exception))
+        self.assertTrue('Error: Invalid value for address' not in result.output)
+        self.assertTrue('Board not found' in str(result.exception))
 
         address = 'AA:BB:CC:11:22:33'
         result = self.runner.invoke(self.cli, argumentList + [address])
-        self.assertTrue('Invalid address' not in result.output)
-        self.assertTrue('Failed to open' in str(result.exception))
+        self.assertTrue('Error: Invalid value for address' not in result.output)
+        self.assertTrue('Board not found' in str(result.exception))
 
         address = 'AABBCC11223'
         result = self.runner.invoke(self.cli, argumentList + [address])
