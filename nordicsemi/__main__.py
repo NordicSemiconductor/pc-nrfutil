@@ -53,7 +53,6 @@ from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
-from nordicsemi.dfu.util import query_func
 from nordicsemi.zigbee.prod_config import ProductionConfig, ProductionConfigWrongException, ProductionConfigTooLargeException
 from pc_ble_driver_py.exceptions import NordicSemiException
 from nordicsemi.lister.device_lister import DeviceLister
@@ -140,6 +139,28 @@ def int_as_text_to_int(value):
         return int(value, 10)
     except ValueError:
         raise NordicSemiException('%s is not a valid integer' % value)
+
+# TODO: Create query function that maps query-result strings with functions
+def query_func(question, default=False):
+    """
+    Ask a string question
+    No input defaults to "no" which results in False
+    """
+    valid = {"yes": True, "y": True, "no": False, "n": False}
+    if default is True:
+        prompt = " [Y/n]"
+    else:
+        prompt = " [y/N]"
+
+    while True:
+        print("%s %s" % (question, prompt))
+        choice = input().lower()
+        if choice == '':
+            return default
+        elif choice in valid:
+            return valid[choice]
+        else:
+            print("Please respond with y/n")
 
 def pause():
     while True:
