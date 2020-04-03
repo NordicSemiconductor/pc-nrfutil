@@ -41,11 +41,37 @@ from nordicsemi.lister.enumerated_device import EnumeratedDevice
 
 if sys.platform == 'win32':
     from .constants import DIGCF_PRESENT, DEVPKEY, DIGCF_DEVICEINTERFACE
-    from .structures import GUID, DeviceInfoData, ctypesInternalGUID
+    from .structures import (GUID, DeviceInfoData, ctypesInternalGUID, _GUID,
+                             ValidHandle)
 
     import ctypes
     import winreg
     setup_api = ctypes.windll.setupapi
+
+    SetupDiGetClassDevs = setup_api.SetupDiGetClassDevsW
+    SetupDiGetClassDevs.argtypes = [ctypes.POINTER(_GUID), ctypes.c_wchar_p,
+                                    ctypes.c_void_p, ctypes.c_uint32]
+    SetupDiGetClassDevs.restype = ctypes.c_void_p
+    SetupDiGetClassDevs.errcheck = ValidHandle
+
+    SetupDiEnumDeviceInfo = setup_api.SetupDiEnumDeviceInfo
+    SetupDiEnumDeviceInfo.argtypes = [ctypes.c_void_p, ctypes.c_uint32,
+                                      ctypes.POINTER(DeviceInfoData)]
+    SetupDiEnumDeviceInfo.restype = ctypes.c_bool
+
+    SetupDiGetDeviceInstanceId = setup_api.SetupDiGetDeviceInstanceIdW
+    SetupDiGetDeviceInstanceId.argtypes = [ctypes.c_void_p,
+                                           ctypes.POINTER(DeviceInfoData),
+                                           ctypes.c_wchar_p, ctypes.c_uint32,
+                                           ctypes.POINTER(ctypes.c_uint32)]
+    SetupDiGetDeviceInstanceId.restype = ctypes.c_bool
+
+    SetupDiGetDeviceProperty = setup_api.SetupDiGetDevicePropertyW
+    SetupDiGetDeviceProperty.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
+                                         ctypes.c_void_p, ctypes.c_void_p,
+                                         ctypes.c_void_p, ctypes.c_uint,
+                                         ctypes.c_void_p, ctypes.c_uint]
+    SetupDiGetDeviceProperty.restype = ctypes.c_bool
 
 #  constants
 DICS_FLAG_GLOBAL = 1
@@ -58,12 +84,11 @@ def get_serial_serial_no(vendor_id, product_id, h_dev_info, device_info_data):
     prop_type = ctypes.c_ulong()
     required_size = ctypes.c_ulong()
 
-    instance_id_buffer = ctypes.create_string_buffer(MAX_BUFSIZE)
-
-    res = setup_api.SetupDiGetDevicePropertyW(h_dev_info, ctypes.byref(device_info_data),
-                                              ctypes.byref(DEVPKEY.Device.ContainerId),
-                                              ctypes.byref(prop_type), ctypes.byref(instance_id_buffer),
-                                              MAX_BUFSIZE, ctypes.byref(required_size), 0)
+    instance_id_buffer = ctypes.create_unicode_buffer(MAX_BUFSIZE)
+    res = SetupDiGetDeviceProperty(h_dev_info, ctypes.byref(device_info_data),
+                                   ctypes.byref(DEVPKEY.Device.ContainerId),
+                                   ctypes.byref(prop_type), instance_id_buffer,
+                                   MAX_BUFSIZE, ctypes.byref(required_size), 0)
 
     wanted_GUID = GUID(ctypesInternalGUID(instance_id_buffer))
 
@@ -190,29 +215,26 @@ class Win32Lister(AbstractLister):
 
     def enumerate(self):
         enumerated_devices = []
+        h_dev_info = SetupDiGetClassDevs(ctypes.byref(self.GUID_DEVINTERFACE_USB_DEVICE._guid),
+                                         None, 0, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE)
         dev_info_data = DeviceInfoData()
-        h_dev_info = setup_api.SetupDiGetClassDevsW(ctypes.byref(self.GUID_DEVINTERFACE_USB_DEVICE._guid),
-                                                    None, None, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE)
         if h_dev_info == -1:
-            return enumeratedDevices
+            return enumerated_devices
 
         next_enum = 0
-        while True:
-            res = setup_api.SetupDiEnumDeviceInfo(h_dev_info, next_enum, ctypes.byref(dev_info_data))
+        while SetupDiEnumDeviceInfo(h_dev_info, next_enum, ctypes.byref(dev_info_data)):
             next_enum += 1
-            if not res:
-                return enumerated_devices
 
-            sz_buffer = ctypes.create_string_buffer(MAX_BUFSIZE)
+            sz_buffer = ctypes.create_unicode_buffer(MAX_BUFSIZE)
             dw_size = ctypes.c_ulong()
-            res = setup_api.SetupDiGetDeviceInstanceIdA(h_dev_info, ctypes.byref(dev_info_data),
-                                                        ctypes.byref(sz_buffer), MAX_BUFSIZE,
-                                                        ctypes.byref(dw_size))
+            res = SetupDiGetDeviceInstanceId(h_dev_info, ctypes.byref(dev_info_data),
+                                             sz_buffer, MAX_BUFSIZE,
+                                             ctypes.byref(dw_size))
             if not res:
                 #  failed to fetch pid vid
                 continue
-            vendor_id = sz_buffer.raw[8:12]
-            product_id = sz_buffer.raw[17:21]
+            vendor_id = sz_buffer.value[8:12]
+            product_id = sz_buffer.value[17:21]
 
             serial_number = get_serial_serial_no(vendor_id, product_id, h_dev_info, dev_info_data)
             if not serial_number:

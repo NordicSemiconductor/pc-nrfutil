@@ -32,7 +32,7 @@ class _GUID(ctypes.Structure):
         ('Data1', ctypes.c_uint32),
         ('Data2', ctypes.c_uint16),
         ('Data3', ctypes.c_uint16),
-        ('Data4', ctypes.c_ubyte * 8)
+        ('Data4', ctypes.c_ubyte * 8),
     ]
 
     def __init__(self, guid="{00000000-0000-0000-0000-000000000000}"):
@@ -112,12 +112,15 @@ class DeviceInfoData(ctypes.Structure):
         ('cbSize', ctypes.c_ulong),
         ('ClassGuid', _GUID),
         ('DevInst', ctypes.c_ulong),
-        ('Reserved', ctypes.c_void_p)
+        ('Reserved', ctypes.c_void_p),
     ]
 
     def __init__(self):
         super().__init__()
         self.cbSize = ctypes.sizeof(self)
+
+    def __str__(self):
+        return "ClassGuid:{} DevInst:{}".format(self.ClassGuid, self.DevInst)
 
 
 class ctypesInternalGUID:
@@ -125,7 +128,13 @@ class ctypesInternalGUID:
         self._internal = bytes
 
     def __bytes__(self):
-        return self._internal.raw
+        return bytes(self._internal)
+
+
+def ValidHandle(value, func, arguments):
+    if value == 0:
+        raise ctypes.WinError()
+    return value
 
 
 DeviceInfoData.size = DeviceInfoData.cbSize

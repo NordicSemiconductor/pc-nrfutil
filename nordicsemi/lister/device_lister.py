@@ -64,7 +64,8 @@ class DeviceLister:
                 continue
             if "product_id" in kwargs and kwargs["product_id"].lower() != dev.product_id.lower():
                 continue
-            if "serial_number" in kwargs and kwargs["serial_number"].lower() != dev.serial_number.lower():
+            if "serial_number" in kwargs and (kwargs["serial_number"].lower().lstrip('0') !=
+                                              dev.serial_number.lower().lstrip('0')):
                 continue
             if "com" in kwargs and not dev.has_com_port(kwargs["com"]):
                 continue

@@ -55,8 +55,6 @@ try:
 except Exception:
     print("Failed to import ecdsa, cannot do signing")
 
-from pc_ble_driver_py.exceptions import InvalidArgumentException, IllegalStateException
-
 
 keys_default_pem = """-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIGvsrpXh8m/E9bj1dq/0o1aBPQVAFJQ6Pzusx685URE0oAoGCCqGSM49
@@ -96,7 +94,7 @@ class Signing:
         """
         # Add assertion of init_packet
         if self.sk is None:
-            raise IllegalStateException("Can't save key. No key created/loaded")
+            raise AssertionError("Can't save key. No key created/loaded")
 
         # Sign the init-packet
         signature = self.sk.sign(init_packet_data, hashfunc=hashlib.sha256, sigencode=sigencode_string)
@@ -108,7 +106,7 @@ class Signing:
         """
         # Add assertion of init_packet
         if self.sk is None:
-            raise IllegalStateException("Can't save key. No key created/loaded")
+            raise AssertionError("Can't save key. No key created/loaded")
 
         vk = self.sk.get_verifying_key()
 
@@ -125,10 +123,10 @@ class Signing:
         Get public key (as hex, code or pem)
         """
         if self.sk is None:
-            raise IllegalStateException("Can't get key. No key created/loaded")
+            raise AssertionError("Can't get key. No key created/loaded")
 
         if output_type is None:
-            raise InvalidArgumentException("Invalid output type for public key.")
+            raise ValueError("Invalid output type for public key.")
         elif output_type == 'hex':
             return self.get_vk_hex()
         elif output_type == 'code':
@@ -136,33 +134,33 @@ class Signing:
         elif output_type == 'pem':
             return self.get_vk_pem()
         else:
-            raise InvalidArgumentException("Invalid argument. Can't get key")
+            raise ValueError("Invalid argument. Can't get key")
 
     def get_sk(self, output_type, dbg) -> str:
         """
         Get private key (as hex, code or pem)
         """
         if self.sk is None:
-            raise IllegalStateException("Can't get key. No key created/loaded")
+            raise AssertionError("Can't get key. No key created/loaded")
 
         if output_type is None:
-            raise InvalidArgumentException("Invalid output type for private key.")
+            raise ValueError("Invalid output type for private key.")
         elif output_type == 'hex':
             return self.get_sk_hex()
         elif output_type == 'code':
-            raise InvalidArgumentException("Private key cannot be shown as code")
+            raise ValueError("Private key cannot be shown as code")
         elif output_type == 'pem':
             # Return pem as str to conform in type with the other cases.
             return self.sk.to_pem().decode()
         else:
-            raise InvalidArgumentException("Invalid argument. Can't get key")
+            raise ValueError("Invalid argument. Can't get key")
 
     def get_sk_hex(self):
         """
         Get the verification key as hex
         """
         if self.sk is None:
-            raise IllegalStateException("Can't get key. No key created/loaded")
+            raise AssertionError("Can't get key. No key created/loaded")
 
         # Reverse the key for display. This emulates a memory
         # dump of the key interpreted a 256bit little endian
@@ -177,7 +175,7 @@ class Signing:
         Get the verification key as hex
         """
         if self.sk is None:
-            raise IllegalStateException("Can't get key. No key created/loaded")
+            raise AssertionError("Can't get key. No key created/loaded")
 
         # Reverse the two halves of key for display. This
         # emulates a memory dump of the key interpreted as two
@@ -219,7 +217,7 @@ class Signing:
         Get the verification key as code
         """
         if self.sk is None:
-            raise IllegalStateException("Can't get key. No key created/loaded")
+            raise AssertionError("Can't get key. No key created/loaded")
 
         to_two_digit_hex_with_0x = '0x{0:02x}'.format
 
@@ -247,7 +245,7 @@ __ALIGN(4) const uint8_t pk[64] =
         Get the verification key as PEM
         """
         if self.sk is None:
-            raise IllegalStateException("Can't get key. No key created/loaded")
+            raise AssertionError("Can't get key. No key created/loaded")
 
         vk = self.sk.get_verifying_key()
         vk_pem = vk.to_pem()
