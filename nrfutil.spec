@@ -27,7 +27,7 @@ datas.append((os.path.join(nrfutil_path, "libusb", "x64", "libusb-1.0.dll"), os.
 a = Analysis(['nordicsemi/__main__.py'],
              binaries=None,
              datas=datas,
-             hiddenimports=[],
+             hiddenimports=['usb1'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
