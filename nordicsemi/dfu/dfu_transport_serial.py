@@ -198,7 +198,7 @@ class DfuTransportSerial(DfuTransport):
             self.serial_port = Serial(port=self.com_port,
                 baudrate=self.baud_rate, rtscts=self.flow_control, timeout=self.DEFAULT_SERIAL_PORT_TIMEOUT)
             self.dfu_adapter = DFUAdapter(self.serial_port)
-        except Exception as e:
+        except OSError as e:
             raise NordicSemiException("Serial port could not be opened on {0}"
               ". Reason: {1}".format(self.com_port, e.strerror))
 
