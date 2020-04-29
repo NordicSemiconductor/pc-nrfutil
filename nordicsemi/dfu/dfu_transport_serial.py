@@ -167,7 +167,7 @@ class DfuTransportSerial(DfuTransport):
                 rtscts=1 if self.flow_control else 0,
                 timeout=self.timeout,
             )
-        except Exception as e:
+        except OSError as e:
             raise NordicSemiException(
                 "Serial port could not be opened on {0}"
                 ". Reason: {1}".format(self.com_port, str(e))
