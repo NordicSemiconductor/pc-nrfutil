@@ -53,7 +53,6 @@ from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
 from nordicsemi.dfu.package import Package
 from nordicsemi import version as nrfutil_version
 from nordicsemi.dfu.signing import Signing
-from nordicsemi.dfu.util import query_func
 from nordicsemi.zigbee.prod_config import ProductionConfig, ProductionConfigWrongException, ProductionConfigTooLargeException
 from pc_ble_driver_py.exceptions import NordicSemiException
 from nordicsemi.lister.device_lister import DeviceLister
@@ -62,7 +61,7 @@ import spinel.util as util
 logger = logging.getLogger(__name__)
 
 def ble_driver_init(conn_ic_id):
-    global BLEDriver, Flasher, DfuTransportBle
+    global BLEDriver, Flasher, DfuTransportBle, config
     from pc_ble_driver_py import config
     config.__conn_ic_id__ = conn_ic_id
     from pc_ble_driver_py.ble_driver    import BLEDriver, Flasher
@@ -140,6 +139,28 @@ def int_as_text_to_int(value):
         return int(value, 10)
     except ValueError:
         raise NordicSemiException('%s is not a valid integer' % value)
+
+# TODO: Create query function that maps query-result strings with functions
+def query_func(question, default=False):
+    """
+    Ask a string question
+    No input defaults to "no" which results in False
+    """
+    valid = {"yes": True, "y": True, "no": False, "n": False}
+    if default is True:
+        prompt = " [Y/n]"
+    else:
+        prompt = " [y/N]"
+
+    while True:
+        print("%s %s" % (question, prompt))
+        choice = input().lower()
+        if choice == '':
+            return default
+        elif choice in valid:
+            return valid[choice]
+        else:
+            print("Please respond with y/n")
 
 def pause():
     while True:
@@ -1036,23 +1057,41 @@ def serial(package, port, connect_delay, flow_control, packet_receipt_notificati
 
 
 def enumerate_ports():
-    descs   = list(BLEDriver.enum_serial_ports())
+    device_lister = DeviceLister()
+    descs = device_lister.enumerate()
     if len(descs) == 0:
-        return None
+        raise click.UsageError("\nNo boards found.")
+
     click.echo('Please select connectivity serial port:')
     for i, choice in enumerate(descs):
-        click.echo('\t{} : {} - {}'.format(i, choice.port, choice.serial_number))
+        click.echo('\t{} : {} - {}'.format(
+                                        i,
+                                        choice.get_first_available_com_port(),
+                                        choice.serial_number))
 
-    index = click.prompt('Enter your choice: ', type=click.IntRange(0, len(descs)))
-    return descs[index].port
+    index = click.prompt('Enter your choice: ',
+                         type=click.IntRange(0, len(descs)))
+    device = descs[index]
+    is_jlink = device.vendor_id == "1366"
+    return device.get_first_available_com_port(), is_jlink
+
 
 def get_port_by_snr(snr):
-    serial_ports = BLEDriver.enum_serial_ports()
-    try:
-        serial_port = [d.port for d in serial_ports if d.serial_number.lstrip('0') == snr.lstrip('0')][0]
-    except IndexError:
-        raise NordicSemiException('board not found')
-    return serial_port
+    device_lister = DeviceLister()
+    device = device_lister.get_device(serial_number=snr)
+    if not device:
+        raise NordicSemiException('Board not found')
+    is_jlink = device.vendor_id == "1366"
+    return device.get_first_available_com_port(), is_jlink
+
+
+def port_is_jlink(port):
+    device_lister = DeviceLister()
+    device = device_lister.get_device(com=port)
+    if not device:
+        raise NordicSemiException('Board not found')
+    return device.vendor_id == "1366"
+
 
 @dfu.command(short_help="Update the firmware on a device over a BLE connection.")
 @click.option('-pkg', '--package',
@@ -1109,23 +1148,39 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
                                      'e.g. ABCDEF123456 or AB:CD:EF:12:34:56.', param_hint='address')
 
     if port is None and jlink_snr is not None:
-        port = get_port_by_snr(jlink_snr)
-
+        port, is_jlink = get_port_by_snr(jlink_snr)
     elif port is None:
-        port = enumerate_ports()
-        if port is None:
-            raise click.UsageError("\nNo Segger USB CDC ports found, please connect your board.")
+        port, is_jlink = enumerate_ports()
+    else:
+        is_jlink = port_is_jlink(port)
 
     if flash_connectivity:
-        flasher = Flasher(serial_port=port, snr = jlink_snr)
-        if flasher.fw_check():
-            click.echo("Board already flashed with connectivity firmware.")
+        if is_jlink:
+            flasher = Flasher(serial_port=port, snr=jlink_snr)
+            if flasher.fw_check():
+                click.echo("Board already flashed with connectivity firmware.")
+            else:
+                click.echo("Flashing connectivity firmware...")
+                flasher.fw_flash()
+                click.echo("Connectivity firmware flashed.")
+            flasher.reset()
+            time.sleep(1)
         else:
             click.echo("Flashing connectivity firmware...")
-            flasher.fw_flash()
+            serial_backend = DfuTransportSerial(com_port=str(port))
+            serial_backend.register_events_callback(DfuEvent.PROGRESS_EVENT,
+                                                    update_progress)
+            connectivity_firmware = os.path.join(
+                                        os.path.dirname(config.__file__),
+                                        "hex",
+                                        "sd_api_v5",
+                                        "connectivity_4.1.1_usb_with_s132_5.1.0_dfu_pkg.zip"
+                                    )
+            dfu = Dfu(zip_file_path=connectivity_firmware,
+                      dfu_transport=serial_backend,
+                      connect_delay=connect_delay)
+            dfu.dfu_send_images()
             click.echo("Connectivity firmware flashed.")
-        flasher.reset()
-        time.sleep(1)
 
     logger.info("Using connectivity board at serial port: {}".format(port))
     ble_backend = DfuTransportBle(serial_port=str(port),
@@ -1133,7 +1188,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
                                   target_device_name=str(name),
                                   target_device_addr=str(address))
     ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    dfu = Dfu(zip_file_path = package, dfu_transport = ble_backend, connect_delay = connect_delay)
+    dfu = Dfu(zip_file_path=package, dfu_transport=ble_backend, connect_delay=connect_delay)
 
     if logger.getEffectiveLevel() > logging.INFO:
         with click.progressbar(length=dfu.dfu_get_total_size()) as bar:
@@ -1324,8 +1379,8 @@ def thread(package, port, address, server_port, panid, channel, jlink_snr, flash
             return 2
 
         elif port is None:
-            port = get_port_by_snr(jlink_snr)
-            if port is None:
+            port, is_jlink = get_port_by_snr(jlink_snr)
+            if port is None or not is_jlink:
                 click.echo("\nNo Segger USB CDC ports found, please connect your board.")
                 return 3
 

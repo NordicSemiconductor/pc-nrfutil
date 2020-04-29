@@ -15,7 +15,7 @@ jobs:
         py38:
           python_version: "3.8"
     pool:
-      vmImage: "ubuntu-16.04"
+      vmImage: "ubuntu-18.04"
     steps:
       - task: UsePythonVersion@0
         inputs:
@@ -67,7 +67,7 @@ jobs:
           python_version: '3.8.0'
           python_bin: '3.8'
     pool:
-      vmImage: "macos-10.13"
+      vmImage: "macos-10.15"
     steps:
       - bash: |
           wget https://www.python.org/ftp/python/$(python_version)/python-$(python_version)-macosx10.9.pkg
@@ -174,3 +174,32 @@ jobs:
           isDraft: "true"
           addChangeLog: "false"
         condition: ne(variables['Build.Reason'], 'PullRequest')
+
+  # 
+  - job: TriggerTest
+    dependsOn: [
+      Windows,
+      Linux,
+      macOS,
+    ]
+    strategy:
+      matrix:
+        linux:
+          osType: 'linux'
+        mac:
+          osType: 'mac'
+        win64:
+          osType: 'win64'
+        win32:
+          osType: 'win32'
+    pool: server
+    steps:
+    - task: InvokeRESTAPI@1
+      displayName: 'Trigger test (check test result on Jenkins)'
+      inputs:
+        connectionType: 'connectedServiceName'
+        serviceConnection: 'waylandJenkins'
+        method: 'POST'
+        urlSuffix: 'view/pc-nrfutil/job/pc-nrfutil-$(osType)/buildWithParameters?BRANCH=$(Build.SourceBranch)&VSTS_URL=$(system.CollectionUri)&TOKEN=$(system.AccessToken)&PROJECT_ID=$(system.teamProjectId)&HUB_NAME=$(system.hostType)&PLAN_ID=$(system.planId)&TASK_ID=$(system.taskInstanceId)&JOB_ID=$(system.jobId)'
+        waitForCompletion: 'false'
+      condition: ne(variables['Build.Reason'], 'PullRequest')

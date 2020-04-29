@@ -7,14 +7,9 @@ Feature: Help information
   Scenario: User does not type mandatory arguments
     Given user types 'nrfutil pkg generate'
     When user press enter
-    Then output contains 'Error: Missing argument "ZIPFILE".' and exit code is 2
+    Then output contains 'Error: Missing argument 'ZIPFILE'.' and exit code is 2
 
     Scenario: User types --help
       Given user types 'nrfutil --help'
       When user press enter
       Then output contains 'Show this message and exit.' and exit code is 0
-
-    Scenario: User types version
-      Given user types 'nrfutil version'
-      When user press enter
-      Then output version is correct
