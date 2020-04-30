@@ -63,11 +63,7 @@ def exe_runner(exe_name):
     @click.command(name=exe_name, context_settings=dict(ignore_unknown_options=True,))
     @click.argument('command', nargs=-1)
     def f(command):
-        print([exe_name[1:-2], *command])
-        res = subprocess.run([exe_name[1:-2], *command], capture_out=True)
-        click.echo(res)
-        logger.info(res)
-        print(res)
+        subprocess.run([exe_name, *command], shell=True)
     return f
 
 
@@ -264,10 +260,8 @@ def step_impl(context, nrfutil):
         nrfutil = cli
     else:
         nrfutil = exe_runner(os.environ[nrfutil])
-    logger.info(f'Nrfutil: {nrfutil.name}')
 
     result = context.runner.invoke(nrfutil, context.args)
-    logger.info(result.output)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
     assert result.exit_code == 0
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting some time to ensure enumeration before next test.
@@ -280,7 +274,6 @@ def step_impl(context):
     devices_before_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F")
 
     result = context.runner.invoke(cli, context.args)
-    logger.info(result)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
     assert result.exit_code == 0
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting for device to enumerate
