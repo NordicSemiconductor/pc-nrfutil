@@ -23,11 +23,13 @@ nrfutil_path = os.path.dirname(os.path.abspath(SPEC))
 datas.append((os.path.join(nrfutil_path, "libusb", "x64", "libusb-1.0.dylib"), os.path.join("libusb", "x64")))
 datas.append((os.path.join(nrfutil_path, "libusb", "x86", "libusb-1.0.dll"), os.path.join("libusb", "x86")))
 datas.append((os.path.join(nrfutil_path, "libusb", "x64", "libusb-1.0.dll"), os.path.join("libusb", "x64")))
+datas.append((os.path.join(nrfutil_path, "nordicsemi", "zigbee", "hex", "ota.hex"),
+              os.path.join("nordicsemi", "zigbee", "hex")))
 
 a = Analysis(['nordicsemi/__main__.py'],
              binaries=None,
              datas=datas,
-             hiddenimports=[],
+             hiddenimports=['usb1'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
