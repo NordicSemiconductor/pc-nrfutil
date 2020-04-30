@@ -212,7 +212,7 @@ def step_impl(context, device):
         except:
             assert False, "Environment variable '{}' must be exported with device serial number or a device must be connected".format(device)
     elif device in os.environ:
-        snr = str(int(os.environ[device])) # Remove zeros to the left.
+        snr = os.environ[device].lower().lstrip('0') # Remove zeros to the left.
     else:
         snr = boards[device].serial_number.lower().lstrip('0')
     context.args.extend(["-snr", snr])
