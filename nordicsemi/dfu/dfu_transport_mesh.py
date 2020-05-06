@@ -150,7 +150,12 @@ class DfuTransportMesh(DfuTransport):
     DFU_PACKET_MAX_SIZE = 16  # The DFU packet max size
     ACK_WAIT_TIME = 0.5 # Time to wait for an ack before attempting to resend a packet.
     MAX_CONTINUOUS_MESSAGE_INTERBYTE_GAP = 0.1 # Maximal time to wait between two bytes in the same packet
-    MAX_RETRIES = 5 # Number of send retries before the serial connection is considered lost.
+    MAX_RETRIES = 10 # Number of send retries before the serial connection is considered lost.
+
+    # Worst case page erase time (max time + max time * worst case % of HFINT accuracy):
+    # 52832: 89.7 + 6%: 95.08 ms; 52833: 87.5 + 9%: 88.59 ms; 52840: 85 + 8% : 86.08
+    PAGE_ERASE_TIME_MAX = 95.08/1000
+    PAGE_SIZE = 4096
 
     def __init__(self, com_port, baud_rate=DEFAULT_BAUD_RATE, flow_control=DEFAULT_FLOW_CONTROL, timeout=DEFAULT_SERIAL_PORT_TIMEOUT, interval=SEND_DATA_PACKET_WAIT_TIME):
         super(DfuTransportMesh, self).__init__()
@@ -236,6 +241,7 @@ class DfuTransportMesh(DfuTransport):
         ready += self.info.ver.get_number(self.info.dfu_type)
 
         ready_packet = SerialPacket(ready)
+        logger.info("Sending ready packet")
         self.send_packet(ready_packet)
         time.sleep(DfuTransportMesh.SEND_START_DFU_WAIT_TIME)
 
@@ -253,8 +259,13 @@ class DfuTransportMesh(DfuTransport):
         start_data += '\x0C'
 
         start_packet = SerialPacket(start_data)
+        logger.info("Sending start packet")
         self.send_packet(start_packet)
-        time.sleep(DfuTransportMesh.SEND_START_DFU_WAIT_TIME)
+
+        # Wait time: time to erase flash + 50% margin for stack operation and timeslots if GATT is connected
+        wait_time = DfuTransportMesh.PAGE_ERASE_TIME_MAX * (self.info.fw_len / DfuTransportMesh.PAGE_SIZE) * 1.50
+        logger.info("Waiting for %.1f seconds for flash bank erase to complete." % wait_time)
+        time.sleep(wait_time)
 
     def send_activate_firmware(self):
         super(DfuTransportMesh, self).send_activate_firmware()
@@ -333,7 +344,7 @@ class DfuTransportMesh(DfuTransport):
         self.pending_packets.append(pkt)
         retries = 0
         while retries < DfuTransportMesh.MAX_RETRIES and pkt in self.pending_packets:
-            logger.info("PC -> target: " + binascii.hexlify(pkt.data))
+            logger.info(str(retries + 1) + ": PC -> target: " + binascii.hexlify(pkt.data))
             self.serial_port.write(pkt.data)
             timeout = wait_time + time.clock()
             while pkt in self.pending_packets and time.clock() < timeout:
