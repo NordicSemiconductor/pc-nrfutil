@@ -345,6 +345,8 @@ def serial(package, port, baudrate, flowcontrol, interval, mesh):
         click.echo("- baud rate or flow control is not the same as in the target bootloader.")
         click.echo("- target is not in DFU mode. If using the SDK examples, "
                    "press Button 4 and RESET and release both to enter DFU mode.")
+        click.echo("- if the error is ERROR_BUSY at the beginning of the DFU process,"
+                   "increase the value of PAGE_ERASE_TIME_MAX by few milliseconds. ")
 
         #click.echo("Trace:\r\n{0}".format(traceback.print_exc()))
         exit(-1)
