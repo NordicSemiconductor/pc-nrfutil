@@ -41,6 +41,7 @@ import subprocess
 import time
 
 from click.testing import CliRunner
+import click
 from behave import then, given
 
 from nordicsemi.__main__ import cli
@@ -50,6 +51,21 @@ connectivity_root = os.path.join(os.path.dirname(config.__file__), 'hex', 'sd_ap
 
 
 ENUMERATE_WAIT_TIME = 5.0 # Seconds to wait for enumeration to finish
+
+all_boards = {
+    'PCA10056': DeviceLister().get_device(get_all=True, vendor_id='1366'),
+    'PCA10059': DeviceLister().get_device(get_all=True, vendor_id='1915')
+} 
+boards = {}
+
+
+def exe_runner(exe_name):
+    @click.command(name=exe_name, context_settings=dict(ignore_unknown_options=True,))
+    @click.argument('command', nargs=-1)
+    def f(command):
+        subprocess.run([exe_name, *command], shell=True)
+    return f
+
 
 def resolve_hex_path(filename):
     if filename == "connectivity":
@@ -83,6 +99,7 @@ def find_nrfjprog(program):
                 return exe_file
 
     return None
+
 
 def program_image_usb_serial(context, nrfjprog, full_image_path, snr):
     lister = DeviceLister()
@@ -163,6 +180,7 @@ logger = logging.getLogger(__file__)
 
 STDOUT_TEXT_WAIT_TIME = 50  # Number of seconds to wait for expected output from stdout
 
+
 @given('the user wants to perform dfu {dfu_type}')
 def step_impl(context, dfu_type):
     runner = CliRunner()
@@ -171,23 +189,34 @@ def step_impl(context, dfu_type):
 
     context.args = args
 
+
 @given('using package {package}')
 def step_impl(context, package):
     full_package_path = resolve_hex_path(package)
     context.args.extend(['-pkg', full_package_path])
     context.pkg = full_package_path
 
+
 @given('option {args}')
 def step_impl(context, args):
     context.args.extend(args.split(" "))
 
+
 @given('-snr {device}')
 def step_impl(context, device):
-    assert device in os.environ, \
-    "Environment variable '{}' must be exported with device serial number".format(device)
-
-    snr = str(os.environ[device])
+    snr = False
+    if device not in os.environ and device not in boards:
+        try:
+            boards[device] = all_boards[device.split('_')[0]].pop()
+            snr = boards[device].serial_number.lower().lstrip('0')
+        except:
+            assert False, "Environment variable '{}' must be exported with device serial number or a device must be connected".format(device)
+    elif device in os.environ:
+        snr = os.environ[device].lower().lstrip('0') # Remove zeros to the left.
+    else:
+        snr = boards[device].serial_number.lower().lstrip('0')
     context.args.extend(["-snr", snr])
+
 
 @given('nrfjprog {image} for {image_type} {board}')
 def step_impl(context, image, image_type, board):
@@ -200,11 +229,17 @@ def step_impl(context, image, image_type, board):
 
     assert nrfjprog, "nrfjprog is not installed"
 
-    assert board in os.environ, \
-    "Environment variable '{}' must be exported with JLink serial number".format(board)
-
-    snr = str(int(os.environ[board])) # Remove zeros to the left.
-
+    if board not in os.environ and board not in boards:
+        try:
+            boards[board] = all_boards[board.split('_')[0]].pop()
+            snr = boards[board].serial_number.lower().lstrip('0')
+        except:
+            assert False, "Environment variable '{}' must be exported with JLink serial number or a JLink board must be connected".format(board)
+    elif board in os.environ:
+        snr = str(int(os.environ[board])) # Remove zeros to the left.
+    else:
+        snr = boards[board].serial_number.lower().lstrip('0')
+    
     if image_type == "usb-serial":
         port = program_image_usb_serial(context, nrfjprog, full_image_path, snr)
         context.args.extend(['-p', port])
@@ -219,10 +254,14 @@ def step_impl(context, image, image_type, board):
         assert False, "Invalid dfu transport."
 
 
-@then('perform dfu')
-def step_impl(context):
-    result = context.runner.invoke(cli, context.args)
-    print(result)
+@then('perform dfu using nrfutil {nrfutil}')
+def step_impl(context, nrfutil):
+    if nrfutil not in os.environ:
+        nrfutil = cli
+    else:
+        nrfutil = exe_runner(os.environ[nrfutil])
+
+    result = context.runner.invoke(nrfutil, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
     assert result.exit_code == 0
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting some time to ensure enumeration before next test.
@@ -231,20 +270,16 @@ def step_impl(context):
 @then('perform dfu twice with port change')
 def step_impl(context):
     lister = DeviceLister()
-    print(context.args)
 
     devices_before_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="521F")
-    print(devices_before_programming)
 
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
-    print(result)
     assert result.exit_code == 0
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting for device to enumerate
 
     devices_after_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="C00A")
     dfu_device = None
-    print(devices_after_programming)
 
     for device in devices_after_programming:
         match = False
@@ -262,6 +297,5 @@ def step_impl(context):
     context.args[-1] = port
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
-    print(result)
     assert result.exit_code == 0
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting some time to ensure enumeration before next test.
