@@ -137,7 +137,7 @@ class NoseTestCommand(TestCommand):
 setup(
     name="nrfutil",
     version=version.NRFUTIL_VERSION,
-    license="Modified BSD License",
+    license="Other/Proprietary License",
     author="Nordic Semiconductor ASA",
     url="https://github.com/NordicSemiconductor/pc-nrfutil",
     description="Nordic Semiconductor nrfutil utility and Python library",
