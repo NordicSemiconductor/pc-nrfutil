@@ -57,6 +57,18 @@ from pc_ble_driver_py import config
 global nrf_sd_ble_api_ver
 nrf_sd_ble_api_ver = config.sd_api_ver_get()
 
+from pc_ble_driver_py.ble_driver import (
+    BLEDriver,
+    BLEAdvData,
+    BLEEvtID,
+    BLEEnableParams,
+    BLEGapTimeoutSrc,
+    BLEUUID,
+    BLEGapScanParams,
+    BLEConfigCommon,
+    BLEConfig,
+    BLEConfigConnGatt,
+)
 
 class ValidationException(NordicSemiException):
     """"
@@ -79,9 +91,11 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
     CP_UUID     = BLEUUID(0x0001, BASE_UUID)
     DP_UUID     = BLEUUID(0x0002, BASE_UUID)
 
-    CONNECTION_ATTEMPTS   = 3
+    CONNECTION_ATTEMPTS   = 1000
+    #CONNECTION_ATTEMPTS   = 3
     ERROR_CODE_POS        = 2
     LOCAL_ATT_MTU         = 247
+    #LOCAL_ATT_MTU         = 23
 
     def __init__(self, adapter, bonded=False, keyset=None):
         super().__init__()
@@ -148,8 +162,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.target_device_name = target_device_name
         self.target_device_addr = target_device_addr
 
-        logger.info('BLE: Scanning for {}'.format(self.target_device_name))
-        self.adapter.driver.ble_gap_scan_start()
+        logger.info('BLE: Scanning for {} or {}'.format(self.target_device_name, self.target_device_addr))
+        self.adapter.driver.ble_gap_scan_start( scan_params=BLEGapScanParams(interval_ms=480, window_ms=430, timeout_s=0) )
         self.verify_stable_connection()
         if self.conn_handle is None:
             raise NordicSemiException('Timeout. Target device not found.')
@@ -237,7 +251,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             True if connected, else False.
 
         """
-        self.conn_handle = self.evt_sync.wait('connected')
+        self.conn_handle = self.evt_sync.wait('connected', timeout=55)
         if self.conn_handle is not None:
             retries = DFUAdapter.CONNECTION_ATTEMPTS
             while retries:
@@ -259,7 +273,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             logger.info("Successfully Connected")
             return
 
-        self.adapter.driver.ble_gap_scan_stop()
+        self.close()
+        #self.adapter.driver.ble_gap_scan_stop()
         raise Exception("Connection Failure - Device not found!")
 
     def setup_keyset(self):
@@ -367,6 +382,9 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
 
     def on_gap_evt_disconnected(self, ble_driver, conn_handle, reason):
         self.evt_sync.notify(evt = 'disconnected', data = conn_handle)
+        if str(reason) == 'BLEHci.connection_timeout':
+            self.close()
+            logger.info('BLE: Close COM port')
         self.conn_handle = None
         logger.info('BLE: Disconnected with reason: {}'.format(reason))
 
@@ -378,9 +396,19 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         elif BLEAdvData.Types.short_local_name in adv_data.records:
             dev_name_list = adv_data.records[BLEAdvData.Types.short_local_name]
 
+        klk_data = None
+        if BLEAdvData.Types.manufacturer_specific_data in adv_data.records:
+            manuf_spec_data = adv_data.records[BLEAdvData.Types.manufacturer_specific_data]
+            if manuf_spec_data[0] == 0xFF and manuf_spec_data[1] == 0xFF :
+                klk_data = manuf_spec_data[2:]
+
         dev_name        = "".join(chr(e) for e in dev_name_list)
         address_string  = "".join("{0:02X}".format(b) for b in peer_addr.addr)
-        logger.info('Received advertisement report, address: 0x{}, device_name: {}'.format(address_string, dev_name))
+        if klk_data == None:
+            logger.info('Received adv report, address: 0x{}, device_name: {}, rssi: {}'.format(address_string, dev_name, rssi))
+        else:
+            klk_data_string = "".join("{0:02X}".format(b) for b in klk_data)
+            logger.info('Received KLK adv report, address: 0x{}, device_name: {}, rssi: {}, KLK_data: {}'.format(address_string, dev_name, rssi, klk_data_string))
 
         if (dev_name == self.target_device_name) or (address_string == self.target_device_addr):
             self.conn_params = BLEGapConnParams(min_conn_interval_ms = 7.5,
