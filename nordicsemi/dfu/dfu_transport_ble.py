@@ -163,7 +163,7 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         self.target_device_addr = target_device_addr
 
         logger.info('BLE: Scanning for {} or {}'.format(self.target_device_name, self.target_device_addr))
-        self.adapter.driver.ble_gap_scan_start( scan_params=BLEGapScanParams(interval_ms=480, window_ms=430, timeout_s=0) )
+        self.adapter.driver.ble_gap_scan_start( scan_params=BLEGapScanParams(interval_ms=480, window_ms=430, timeout_s=1) )
         self.verify_stable_connection()
         if self.conn_handle is None:
             raise NordicSemiException('Timeout. Target device not found.')
@@ -273,8 +273,9 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
             logger.info("Successfully Connected")
             return
 
+        self.adapter.driver.ble_gap_scan_stop()
         self.close()
-        #self.adapter.driver.ble_gap_scan_stop()
+        
         raise Exception("Connection Failure - Device not found!")
 
     def setup_keyset(self):
@@ -405,7 +406,8 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
         dev_name        = "".join(chr(e) for e in dev_name_list)
         address_string  = "".join("{0:02X}".format(b) for b in peer_addr.addr)
         if klk_data == None:
-            logger.info('Received adv report, address: 0x{}, device_name: {}, rssi: {}'.format(address_string, dev_name, rssi))
+            # logger.info('Received adv report, address: 0x{}, device_name: {}, rssi: {}'.format(address_string, dev_name, rssi))
+            pass
         else:
             klk_data_string = "".join("{0:02X}".format(b) for b in klk_data)
             logger.info('Received KLK adv report, address: 0x{}, device_name: {}, rssi: {}, KLK_data: {}'.format(address_string, dev_name, rssi, klk_data_string))
