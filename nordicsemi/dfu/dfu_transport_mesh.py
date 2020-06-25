@@ -150,6 +150,7 @@ class DfuTransportMesh(DfuTransport):
     SEND_DATA_PACKET_WAIT_TIME = 0.5 # Time between each data packet
     DFU_PACKET_MAX_SIZE = 16  # The DFU packet max size
     ACK_WAIT_TIME = 0.5 # Time to wait for an ack before attempting to resend a packet.
+    DATA_REQ_WAIT_TIME = 10.0 # Time to wait for missing packet requests after sending all packets
     MAX_CONTINUOUS_MESSAGE_INTERBYTE_GAP = 0.1 # Maximal time to wait between two bytes in the same packet
     MAX_RETRIES = 10 # Number of send retries before the serial connection is considered lost.
 
@@ -319,7 +320,7 @@ class DfuTransportMesh(DfuTransport):
             time.sleep(self.interval)
 
         # Wait for any final missing packet requests
-        time.sleep(4)
+        time.sleep(DfuTransportMesh.DATA_REQ_WAIT_TIME)
         while len(self.requested_packets) > 0:
             self.send_packet(SerialPacket(self.requested_packets.popleft()))
             time.sleep(self.interval)
