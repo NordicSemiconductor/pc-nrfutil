@@ -34,6 +34,7 @@ import logging
 from threading import Thread, Lock
 import struct
 import random
+from collections import deque
 
 # Python 3rd party imports
 from serial import Serial
@@ -149,6 +150,7 @@ class DfuTransportMesh(DfuTransport):
     SEND_DATA_PACKET_WAIT_TIME = 0.5 # Time between each data packet
     DFU_PACKET_MAX_SIZE = 16  # The DFU packet max size
     ACK_WAIT_TIME = 0.5 # Time to wait for an ack before attempting to resend a packet.
+    DATA_REQ_WAIT_TIME = 10.0 # Time to wait for missing packet requests after sending all packets
     MAX_CONTINUOUS_MESSAGE_INTERBYTE_GAP = 0.1 # Maximal time to wait between two bytes in the same packet
     MAX_RETRIES = 10 # Number of send retries before the serial connection is considered lost.
 
@@ -173,6 +175,7 @@ class DfuTransportMesh(DfuTransport):
         self.packet_handlers['\x81'] = self._handle_started
         self.packet_handlers['\x82'] = self._handle_echo
         self.packet_handlers['\x84'] = self._handle_ack
+        self.requested_packets = deque()
         self.info = None
         self.tid = 0
         self.firmware = None
@@ -307,10 +310,20 @@ class DfuTransportMesh(DfuTransport):
         # Send firmware packets
         self.temp_progress = 0.0
         for (count, pkt) in enumerate(frames):
+            # First resend any requested packets
+            while len(self.requested_packets) > 0:
+                self.send_packet(SerialPacket(self.requested_packets.popleft()))
+                time.sleep(self.interval)
+            # Then send next frame
             self.send_packet(SerialPacket(pkt))
             self.log_progress(100.0 / float(frames_count))
             time.sleep(self.interval)
 
+        # Wait for any final missing packet requests
+        time.sleep(DfuTransportMesh.DATA_REQ_WAIT_TIME)
+        while len(self.requested_packets) > 0:
+            self.send_packet(SerialPacket(self.requested_packets.popleft()))
+            time.sleep(self.interval)
 
         while len(self.pending_packets) > 0:
             time.sleep(0.01)
@@ -385,13 +398,13 @@ class DfuTransportMesh(DfuTransport):
 
 ############### PACKET HANDLERS
     def _handle_dfu(self, data):
-        handle = bytes_to_int32(data[:2])
-        if handle is MESH_DFU_PACKET_FWID:
-            _handle_dfu_fwid(data[2:])
-        elif handle is MESH_DFU_PACKET_STATE:
-            _handle_dfu_state(data[2:])
-        elif handle is MESH_DFU_PACKET_DATA_REQ:
-            _handle_dfu_data_req(data[2:])
+        handle = bytes_to_int32(data[1:3])
+        if handle == MESH_DFU_PACKET_FWID:
+            self._handle_dfu_fwid(data[3:])
+        elif handle == MESH_DFU_PACKET_STATE:
+            self._handle_dfu_state(data[3:])
+        elif handle == MESH_DFU_PACKET_DATA_REQ:
+            self._handle_dfu_data_req(data[3:])
 
     def _handle_echo(self, data):
         for packet in self.pending_packets:
@@ -418,19 +431,18 @@ class DfuTransportMesh(DfuTransport):
                     app_ver = bytes_to_int32(data[10:14]))
 
     def _handle_dfu_data_req(self, data):
-        segment = data[0:2]
-        tid = data[2:6]
-        if tid is self.tid and firmware and segment > 0:
+        segment = bytes_to_int32(data[0:2])
+        tid = bytes_to_int32(data[2:6])
+        if (tid == self.tid) and (self.firmware is not None) and (segment > 0):
             rsp = ''
             rsp += int16_to_bytes(MESH_DFU_PACKET_DATA_RSP)
             rsp += data[:6]
-            fw_segment = get_fw_segment(segment)
+            fw_segment = self.get_fw_segment(segment)
             if not fw_segment:
                 return # invalid segment number
             rsp += fw_segment
 
-            rsp_packet = SerialPacket(rsp)
-            self.send_packet(rsp_packet)
+            self.requested_packets.append(rsp)
 
     def _handle_dfu_state(self, data):
         pass
@@ -445,6 +457,7 @@ def get_longest_matching(lst, data):
 class SerialPacket(object):
     FAIL_REASON = {
         '\x02': 'Failed to establish connection',
+        '\x78\xFA\xFF': 'Lost connection in the middle of responding to a missing packet request',
         '\x78\xFC\xFF\x00\x00': 'Crashed on start packet',
         '\x78\xFC\xFF': 'Lost connection in the middle of the transfer',
         '\x78\xFD\xFF': 'Lost connection in the setup phase',
@@ -477,6 +490,7 @@ class SerialPacket(object):
     '\x78\xFD': 'DFU state beacon',
     '\x78\xFC\x00\x00': 'DFU start',
     '\x78\xFC': 'DFU data',
+    '\x78\xFA': 'DFU data response',
     '\x7A': 'Value get',
     '\x7B': 'Build version get',
     '\x7C': 'Access addr get',
