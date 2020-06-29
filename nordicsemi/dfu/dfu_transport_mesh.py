@@ -399,11 +399,7 @@ class DfuTransportMesh(DfuTransport):
 ############### PACKET HANDLERS
     def _handle_dfu(self, data):
         handle = bytes_to_int32(data[1:3])
-        if handle == MESH_DFU_PACKET_FWID:
-            self._handle_dfu_fwid(data[3:])
-        elif handle == MESH_DFU_PACKET_STATE:
-            self._handle_dfu_state(data[3:])
-        elif handle == MESH_DFU_PACKET_DATA_REQ:
+        if handle == MESH_DFU_PACKET_DATA_REQ:
             self._handle_dfu_data_req(data[3:])
 
     def _handle_echo(self, data):
@@ -420,16 +416,6 @@ class DfuTransportMesh(DfuTransport):
     def _handle_started(self, data):
         pass
 
-    def _handle_dfu_fwid(self, data):
-        if self.init_info:
-            other_ver = DfuVersion(
-                    sd = bytes_to_int32(data[0:2]),
-                    bl_id = data[2],
-                    bl_ver = data[3],
-                    company_id = bytes_to_int32(data[4:8]),
-                    app_id = bytes_to_int32(data[8:10]),
-                    app_ver = bytes_to_int32(data[10:14]))
-
     def _handle_dfu_data_req(self, data):
         segment = bytes_to_int32(data[0:2])
         tid = bytes_to_int32(data[2:6])
@@ -443,9 +429,6 @@ class DfuTransportMesh(DfuTransport):
             rsp += fw_segment
 
             self.requested_packets.append(rsp)
-
-    def _handle_dfu_state(self, data):
-        pass
 
 def get_longest_matching(lst, data):
     i = max([k for k in lst if data.startswith(k)], key=lambda k: len(k))
