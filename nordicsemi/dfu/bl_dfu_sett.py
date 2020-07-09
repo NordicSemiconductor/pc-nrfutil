@@ -173,7 +173,7 @@ class BLDFUSettings:
         return binascii.crc32(bytearray(list)) & 0xFFFFFFFF
 
     def generate(self, arch, app_file, app_ver, bl_ver, bl_sett_ver, custom_bl_sett_addr, no_backup,
-                 backup_address, app_boot_validation_type, sd_boot_validation_type, sd_file, key_file):
+                 backup_address, app_boot_validation_type, sd_boot_validation_type, sd_file, signer):
 
         self.set_arch(arch)
 
@@ -217,7 +217,7 @@ class BLDFUSettings:
                 self.app_boot_validation_bytes = Package.calculate_sha256_hash(self.app_bin)[::-1]
             elif app_boot_validation_type == 'VALIDATE_ECDSA_P256_SHA256':
                 self.app_boot_validation_type = 3 & 0xffffffff
-                self.app_boot_validation_bytes = Package.sign_firmware(key_file, self.app_bin)
+                self.app_boot_validation_bytes = Package.sign_firmware(signer, self.app_bin)
             else:  # This also covers 'NO_VALIDATION' case
                 self.app_boot_validation_type = 0 & 0xffffffff
                 self.app_boot_validation_bytes = bytes(0)
@@ -257,7 +257,7 @@ class BLDFUSettings:
                 self.sd_boot_validation_bytes = Package.calculate_sha256_hash(self.sd_bin)[::-1]
             elif sd_boot_validation_type == 'VALIDATE_ECDSA_P256_SHA256':
                 self.sd_boot_validation_type = 3 & 0xffffffff
-                self.sd_boot_validation_bytes = Package.sign_firmware(key_file, self.sd_bin)
+                self.sd_boot_validation_bytes = Package.sign_firmware(signer, self.sd_bin)
             else:  # This also covers 'NO_VALIDATION_CASE'
                 self.sd_boot_validation_type = 0 & 0xffffffff
                 self.sd_boot_validation_bytes = bytes(0)
