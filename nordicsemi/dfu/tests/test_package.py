@@ -43,6 +43,7 @@ from zipfile import ZipFile
 import shutil
 
 from nordicsemi.dfu.package import Package
+from nordicsemi.dfu.signing import Signing
 
 
 class TestPackage(unittest.TestCase):
@@ -53,10 +54,13 @@ class TestPackage(unittest.TestCase):
         shutil.rmtree(self.work_directory, ignore_errors=True)
 
     def test_generate_package_application(self):
+        signer = Signing()
+        signer.load_key('key.pem')
+
         self.p = Package(app_version=100,
             sd_req=[0x1000, 0xfffe],
             app_fw="firmwares/bar.hex",
-            key_file="key.pem"
+            signer=signer
         )
 
         pkg_name = "mypackage.zip"
@@ -83,11 +87,14 @@ class TestPackage(unittest.TestCase):
                 self.assertTrue('bootloader' not in _json['manifest'])
 
     def test_generate_package_sd_bl(self):
+        signer = Signing()
+        signer.load_key('key.pem')
+
         self.p = Package(app_version=100,
                          sd_req=[0x1000, 0xfffe],
                          softdevice_fw="firmwares/foo.hex",
                          bootloader_fw="firmwares/bar.hex",
-                         key_file="key.pem")
+                         signer=signer)
 
 
         pkg_name = "mypackage.zip"
@@ -112,10 +119,13 @@ class TestPackage(unittest.TestCase):
                 self.assertEqual('sd_bl.dat', _json['manifest']['softdevice_bootloader']['dat_file'])
 
     def test_unpack_package_a(self):
+        signer = Signing()
+        signer.load_key('key.pem')
+
         self.p = Package(app_version=100,
                          sd_req=[0x1000, 0xffff],
                          softdevice_fw="firmwares/bar.hex",
-                         key_file="key.pem")
+                         signer=signer)
         pkg_name = os.path.join(self.work_directory, "mypackage.zip")
         self.p.generate_package(pkg_name, preserve_work_dir=False)
 
@@ -127,10 +137,13 @@ class TestPackage(unittest.TestCase):
 #         self.assertIsNotNone(manifest.softdevice.init_packet_data.firmware_crc16)
 
     def test_unpack_package_b(self):
+        signer = Signing()
+        signer.load_key('key.pem')
+
         self.p = Package(app_version=100,
                          sd_req=[0x1000, 0xffff],
                          softdevice_fw="firmwares/bar.hex",
-                         key_file="key.pem")
+                         signer=signer)
         pkg_name = os.path.join(self.work_directory, "mypackage.zip")
         self.p.generate_package(pkg_name, preserve_work_dir=False)
 
@@ -140,10 +153,13 @@ class TestPackage(unittest.TestCase):
         self.assertEqual('bar.bin', manifest.softdevice.bin_file)
 
     def test_unpack_package_c(self):
+        signer = Signing()
+        signer.load_key('key.pem')
+
         self.p = Package(app_version=100,
                          sd_req=[0x1000, 0xffff],
                          softdevice_fw="firmwares/bar.hex",
-                         key_file="key.pem")
+                         signer=signer)
         pkg_name = os.path.join(self.work_directory, "mypackage.zip")
         self.p.generate_package(pkg_name, preserve_work_dir=False)
 

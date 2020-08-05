@@ -41,6 +41,7 @@ import struct
 import unittest
 from nordicsemi.dfu.bl_dfu_sett import BLDFUSettings
 from nordicsemi.dfu.nrfhex import nRFArch
+from nordicsemi.dfu.signing import Signing
 
 
 class TestBLDFUSettingsV1(unittest.TestCase):
@@ -79,7 +80,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(nRFArch.NRF52, settings.arch)
         self.assertEqual('nRF52', settings.arch_str)
@@ -107,7 +108,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(nRFArch.NRF52, settings.arch)
         self.assertEqual('nRF52', settings.arch_str)
@@ -135,7 +136,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(settings.bl_sett_addr, 0x0006F000)
 
@@ -152,7 +153,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                              app_boot_validation_type=None,
                              sd_boot_validation_type=None,
                              sd_file=None,
-                             key_file=None)
+                             signer=None)
 
         settings = BLDFUSettings()
         settings.generate(arch='NRF52',
@@ -166,7 +167,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(len(list(settings.ihex.todict().keys())), len(list(settings_raw.ihex.todict().keys())) * 2)
 
@@ -183,7 +184,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         backup_dict = {(k + settings.bl_sett_backup_offset): v for k, v in list(settings.ihex.todict().items()) if k < settings.bl_sett_addr}
         settings_dict = {k: v for k, v in list(settings.ihex.todict().items()) if k >= settings.bl_sett_addr}
@@ -202,7 +203,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(settings.backup_address, 0x0006F000)
         self.assertTrue(0x0006F000 in list(settings.ihex.todict().keys()))
@@ -220,7 +221,7 @@ class TestBLDFUSettingsV1(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(settings.backup_address, (0x0006F000 - settings.bl_sett_backup_offset))
         self.assertTrue((0x0006F000 - settings.bl_sett_backup_offset) in list(settings.ihex.todict().keys()))
@@ -267,7 +268,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(nRFArch.NRF52, settings.arch)
         self.assertEqual('nRF52', settings.arch_str)
@@ -301,7 +302,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file='firmwares/s132_nrf52_mini.hex',
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(nRFArch.NRF52, settings.arch)
         self.assertEqual('nRF52', settings.arch_str)
@@ -335,7 +336,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(settings.bl_sett_addr, 0x0006F000)
 
@@ -352,7 +353,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                              app_boot_validation_type=None,
                              sd_boot_validation_type=None,
                              sd_file=None,
-                             key_file=None)
+                             signer=None)
 
         settings = BLDFUSettings()
         settings.generate(arch='NRF52',
@@ -366,7 +367,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(len(list(settings.ihex.todict().keys())), len(list(settings_raw.ihex.todict().keys())) * 2)
 
@@ -383,7 +384,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         backup_dict = {(k + settings.bl_sett_backup_offset): v for k, v in list(settings.ihex.todict().items()) if k < settings.bl_sett_addr}
         settings_dict = {k: v for k, v in list(settings.ihex.todict().items()) if k >= settings.bl_sett_addr}
@@ -402,7 +403,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(settings.backup_address, 0x0006F000)
         self.assertTrue(0x0006F000 in list(settings.ihex.todict().keys()))
@@ -420,7 +421,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(settings.backup_address, (0x0006F000 - settings.bl_sett_backup_offset))
         self.assertTrue((0x0006F000 - settings.bl_sett_backup_offset) in list(settings.ihex.todict().keys()))
@@ -438,7 +439,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type='VALIDATE_GENERATED_CRC',
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(0x1316CFD0, settings.crc)
         self.assertEqual(0x49A0F45A, settings.boot_validation_crc)
@@ -458,7 +459,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type='VALIDATE_GENERATED_SHA256',
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(0x1316CFD0, settings.crc)
         self.assertEqual(0xF78E451E, settings.boot_validation_crc)
@@ -468,6 +469,10 @@ class TestBLDFUSettingsV2(unittest.TestCase):
 
     def test_generate_with_app_boot_validation_ecdsa(self):
         settings = BLDFUSettings()
+
+        signer = Signing()
+        signer.load_key('key.pem')
+
         settings.generate(arch='NRF52',
                           app_file='firmwares/s132_nrf52_mini.hex',
                           app_ver=1,
@@ -479,7 +484,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type='VALIDATE_ECDSA_P256_SHA256',
                           sd_boot_validation_type=None,
                           sd_file=None,
-                          key_file='key.pem')
+                          signer=signer)
 
         # Since ECDSA contains a random component the signature will be different every time
         # it is generated. Therefore only overall structure of the boot validation will be checked.
@@ -499,7 +504,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type='VALIDATE_GENERATED_CRC',
                           sd_file='firmwares/s132_nrf52_mini.hex',
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(0x4637019F, settings.crc)
         self.assertEqual(0xCB5F90FB, settings.boot_validation_crc)
@@ -519,7 +524,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type='VALIDATE_GENERATED_SHA256',
                           sd_file='firmwares/s132_nrf52_mini.hex',
-                          key_file=None)
+                          signer=None)
 
         self.assertEqual(0x4637019F, settings.crc)
         self.assertEqual(0x9C761426, settings.boot_validation_crc)
@@ -529,6 +534,10 @@ class TestBLDFUSettingsV2(unittest.TestCase):
 
     def test_generate_with_sd_boot_validation_ecdsa(self):
         settings = BLDFUSettings()
+
+        signer = Signing()
+        signer.load_key('key.pem')
+
         settings.generate(arch='NRF52',
                           app_file=None,
                           app_ver=1,
@@ -540,7 +549,7 @@ class TestBLDFUSettingsV2(unittest.TestCase):
                           app_boot_validation_type=None,
                           sd_boot_validation_type='VALIDATE_ECDSA_P256_SHA256',
                           sd_file='firmwares/s132_nrf52_mini.hex',
-                          key_file='key.pem')
+                          signer=signer)
 
         # Since ECDSA contains a random component the signature will be different every time
         # it is generated. Therefore only overall structure of the boot validation will be checked.
