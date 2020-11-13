@@ -120,10 +120,12 @@ class DFUTrigger:
             self.context.close()
 
     def select_device(self, listed_device):
+        device_vid = int(listed_device.vendor_id, 16)
+        device_pid = int(listed_device.product_id, 16)
         all_devices = self.context.getDeviceList()
         filtered_devices = [dev for dev in all_devices
-            if hex(dev.getVendorID())[2:].lower() == listed_device.vendor_id.lower() and
-            hex(dev.getProductID())[2:].lower() == listed_device.product_id.lower()]
+            if dev.getVendorID() == device_vid and
+            dev.getProductID() == device_pid]
 
         access_error = False
         triggerless_devices = 0
