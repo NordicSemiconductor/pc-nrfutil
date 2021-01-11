@@ -16,7 +16,7 @@ try:
     from ecdsa.curves import NIST256p
     from ecdsa.keys import sigencode_string
 except Exception:
-    print "Failed to import ecdsa, cannot do signing"
+    print("Failed to import ecdsa, cannot do signing")
 
 from nordicsemi.exceptions import InvalidArgumentException, IllegalStateException
 

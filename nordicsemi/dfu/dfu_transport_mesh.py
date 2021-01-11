@@ -94,7 +94,7 @@ class DfuVersion:
             number += int32_to_bytes(self.app_ver)
             return number
         else:
-            print "UNABLE TO GET DFU NUMBER WITH TYPE {0}".format(ord(dfu_type))
+            print("UNABLE TO GET DFU NUMBER WITH TYPE {0}".format(ord(dfu_type)))
             return None
 
 
@@ -187,7 +187,7 @@ class DfuTransportMesh(DfuTransport):
 
         try:
             self.serial_port = Serial(port=self.com_port, baudrate=self.baud_rate, rtscts=self.flow_control, timeout=DfuTransportMesh.MAX_CONTINUOUS_MESSAGE_INTERBYTE_GAP)
-        except Exception, e:
+        except Exception as e:
             if self.serial_port:
                 self.serial_port.close()
             raise NordicSemiException("Serial port could not be opened on {0}. Reason: {1}".format(self.com_port, e.message))
@@ -342,7 +342,7 @@ class DfuTransportMesh(DfuTransport):
 
     def get_fw_segment(self, segment):
         i = (segment - 1) * DfuTransportMesh.DFU_PACKET_MAX_SIZE
-        if segment is 1 and self.info.start_addr != 0xFFFFFFFF:
+        if segment == 1 and self.info.start_addr != 0xFFFFFFFF:
             # first packet must normalize 16-byte alignment
             return self.firmware[i:i + 16 - (self.info.start_addr % 16)]
         elif i >= len(self.firmware):

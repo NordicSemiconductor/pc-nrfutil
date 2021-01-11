@@ -189,7 +189,7 @@ class PacketMesh(object):
                 packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_COMPANY_ID])
                 packet_elems.append(self.init_packet_fields[PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_APPLICATION_ID])
                 packet_elems.append(self.init_packet_fields[PacketField.APP_VERSION])
-        except KeyError, e:
+        except KeyError as e:
             raise NordicSemiException("A field required for generating a mesh package was omitted: {0}".format(e.message))
 
         return struct.pack(format_string, *packet_elems)

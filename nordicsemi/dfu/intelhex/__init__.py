@@ -319,12 +319,12 @@ class IntelHex(object):
         @return         array of unsigned char data.
         '''
         if not isinstance(pad, _DeprecatedParam):
-            print "IntelHex.tobinarray: 'pad' parameter is deprecated."
+            print("IntelHex.tobinarray: 'pad' parameter is deprecated.")
             if pad is not None:
-                print "Please, use IntelHex.padding attribute instead."
+                print("Please, use IntelHex.padding attribute instead.")
             else:
-                print "Please, don't pass it explicitly."
-                print "Use syntax like this: ih.tobinarray(start=xxx, end=yyy, size=zzz)"
+                print("Please, don't pass it explicitly.")
+                print("Use syntax like this: ih.tobinarray(start=xxx, end=yyy, size=zzz)")
         else:
             pad = None
         return self._tobinarray_really(start, end, pad, size)
@@ -359,12 +359,12 @@ class IntelHex(object):
         @return         string of binary data.
         '''
         if not isinstance(pad, _DeprecatedParam):
-            print "IntelHex.tobinstr: 'pad' parameter is deprecated."
+            print("IntelHex.tobinstr: 'pad' parameter is deprecated.")
             if pad is not None:
-                print "Please, use IntelHex.padding attribute instead."
+                print("Please, use IntelHex.padding attribute instead.")
             else:
-                print "Please, don't pass it explicitly."
-                print "Use syntax like this: ih.tobinstr(start=xxx, end=yyy, size=zzz)"
+                print("Please, don't pass it explicitly.")
+                print("Use syntax like this: ih.tobinstr(start=xxx, end=yyy, size=zzz)")
         else:
             pad = None
         return self._tobinstr_really(start, end, pad, size)
@@ -384,12 +384,12 @@ class IntelHex(object):
         @param  size    size of the block, used with start or end parameter.
         '''
         if not isinstance(pad, _DeprecatedParam):
-            print "IntelHex.tobinfile: 'pad' parameter is deprecated."
+            print("IntelHex.tobinfile: 'pad' parameter is deprecated.")
             if pad is not None:
-                print "Please, use IntelHex.padding attribute instead."
+                print("Please, use IntelHex.padding attribute instead.")
             else:
-                print "Please, don't pass it explicitly."
-                print "Use syntax like this: ih.tobinfile(start=xxx, end=yyy, size=zzz)"
+                print("Please, don't pass it explicitly.")
+                print("Use syntax like this: ih.tobinfile(start=xxx, end=yyy, size=zzz)")
         else:
             pad = None
         if getattr(fobj, "write", None) is None:
@@ -963,7 +963,7 @@ def hex2bin(fin, fout, start=None, end=None, size=None, pad=None):
     """
     try:
         h = IntelHex(fin)
-    except HexReaderError, e:
+    except HexReaderError as e:
         txt = "ERROR: bad HEX file: %s" % str(e)
         print(txt)
         return 1
@@ -985,7 +985,7 @@ def hex2bin(fin, fout, start=None, end=None, size=None, pad=None):
             # using .padding attribute rather than pad argument to function call
             h.padding = pad
         h.tobinfile(fout, start, end)
-    except IOError, e:
+    except IOError as e:
         txt = "ERROR: Could not write to file: %s: %s" % (fout, str(e))
         print(txt)
         return 1
@@ -1005,14 +1005,14 @@ def bin2hex(fin, fout, offset=0):
     h = IntelHex()
     try:
         h.loadbin(fin, offset)
-    except IOError, e:
+    except IOError as e:
         txt = 'ERROR: unable to load bin file:', str(e)
         print(txt)
         return 1
 
     try:
         h.tofile(fout, format='hex')
-    except IOError, e:
+    except IOError as e:
         txt = "ERROR: Could not write to file: %s: %s" % (fout, str(e))
         print(txt)
         return 1
@@ -1215,7 +1215,7 @@ class IntelHexError(Exception):
             return self.msg
         try:
             return self._fmt % self.__dict__
-        except (NameError, ValueError, KeyError), e:
+        except (NameError, ValueError, KeyError) as e:
             return 'Unprintable exception %s: %s' \
                 % (repr(e), str(e))
 
