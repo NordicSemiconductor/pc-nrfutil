@@ -44,7 +44,7 @@ from nordicsemi.dfu.manifest import ManifestGenerator, Manifest
 from nordicsemi.dfu.model import HexType, FirmwareKeys
 from nordicsemi.dfu.crc16 import *
 
-from signing import Signing
+from nordicsemi.dfu.signing import Signing
 
 
 class Package(object):

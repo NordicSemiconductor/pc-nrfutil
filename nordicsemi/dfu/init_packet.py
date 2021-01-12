@@ -29,7 +29,6 @@
 from enum import Enum
 from nordicsemi.exceptions import *
 from nordicsemi.dfu.model import HexType
-from exceptions import KeyError
 import struct
 
 
@@ -96,7 +95,6 @@ class Packet(object):
                 args.extend(self.init_packet_fields[key])
             else:
                 args.append(self.init_packet_fields[key])
-
         return struct.pack(format_string, *args)
 
     def __generate_struct_format_string(self):
@@ -129,6 +127,18 @@ class Packet(object):
                 format_string += Packet.UNSIGNED_SHORT
             elif key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
                 format_string += "64{0}".format(Packet.CHAR_ARRAY)  # ECDS based on P-256 using SHA-256 requires 64 bytes
+            elif key ==PacketField.NORDIC_PROPRIETARY_OPT_DATA_IS_MESH:
+                format_string += Packet.UNSIGNED_SHORT
+            elif key ==PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_START_ADDR:
+                format_string += Packet.UNSIGNED_INT  
+            elif key ==PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE:
+                format_string += Packet.UNSIGNED_INT  
+                
+    # TODO: Add MESH support 
+    # NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE = 13
+    # NORDIC_PROPRIETARY_OPT_DATA_MESH_COMPANY_ID = 14
+    # NORDIC_PROPRIETARY_OPT_DATA_MESH_APPLICATION_ID = 15
+    # NORDIC_PROPRIETARY_OPT_DATA_MESH_BOOTLOADER_ID = 16
 
         return format_string
 

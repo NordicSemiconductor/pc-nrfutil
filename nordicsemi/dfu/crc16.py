@@ -37,7 +37,10 @@ def calc_crc16(binary_data, crc=0xffff):
 
     for b in binary_data:
         crc = (crc >> 8 & 0x00FF) | (crc << 8 & 0xFF00)
-        crc ^= ord(b)
+        if isinstance(b, str) and len(b) == 1:
+            crc ^= ord(b)
+        else:
+            crc ^= b
         crc ^= (crc & 0x00FF) >> 4
         crc ^= (crc << 8) << 4
         crc ^= ((crc & 0x00FF) << 4) << 1

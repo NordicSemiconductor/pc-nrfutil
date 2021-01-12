@@ -39,18 +39,18 @@
 
 __docformat__ = "javadoc"
 
-
+import binascii
 import sys
 
 if sys.version_info[0] >= 3:
     def asbytes(s):
         if isinstance(s, bytes):
             return s
-        return s.encode('latin1')
+        return str.encode(s)
     def asstr(s):
         if isinstance(s, str):
             return s
-        return s.decode('latin1')
+        return binascii.hexlify(s).decode()
 else:
     asbytes = str
     asstr = str

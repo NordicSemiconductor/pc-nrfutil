@@ -80,6 +80,7 @@ class nRFHex(intelhex.IntelHex):
         try:
             potential_magic_number = self.gets(address, 4)
             potential_magic_number = unpack('L', potential_magic_number)[0]
+            print(potential_magic_number)
             return nRFHex.info_struct_magic_number == potential_magic_number
         except Exception:
             return False
@@ -90,7 +91,7 @@ class nRFHex(intelhex.IntelHex):
         if self.address_has_magic_number(potential_magic_number_address):
             return "s1x0"
 
-        for i in xrange(4):
+        for i in range(4):
             potential_magic_number_address += nRFHex.info_struct_address_offset
 
             if self.address_has_magic_number(potential_magic_number_address):

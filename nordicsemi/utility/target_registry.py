@@ -64,7 +64,7 @@ class EnvTargetDatabase(TargetDatabase):
         if self.targets is None:
             self.targets = []
 
-            for key, value in os.environ.iteritems():
+            for key, value in os.environ.items():
                 match = re.match("NORDICSEMI_TARGET_(?P<target>\d+)_(?P<key>[a-zA-Z_]+)", key)
 
                 if match:

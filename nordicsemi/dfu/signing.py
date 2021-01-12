@@ -31,19 +31,22 @@ class Signing(object):
         """
         self.sk = SigningKey.generate(curve=NIST256p)
 
-        with open(filename, "w") as sk_file:
+        with open(filename, "wb") as sk_file:
             sk_file.write(self.sk.to_pem())
 
     def load_key(self, filename):
         """
         Load signing key (from pem file)
         """
-        with open(filename, "r") as sk_file:
+        with open(filename, "rb") as sk_file:
             sk_pem = sk_file.read()
 
         self.sk = SigningKey.from_pem(sk_pem)
 
-        sk_hex = "".join(c.encode('hex') for c in self.sk.to_string())
+        string_sk = binascii.hexlify(self.sk.to_string()).decode()
+
+        sk_hex = "".join(c.encode().hex() for c in string_sk)
+        #sk_hex = "".join(str(c).encode().hex() for c in self.sk.to_string())
 
     def sign(self, init_packet_data):
         """
@@ -102,7 +105,7 @@ class Signing(object):
             raise IllegalStateException("Can't get key. No key created/loaded")
 
         vk = self.sk.get_verifying_key()
-        vk_hexlify = binascii.hexlify(vk.to_string())
+        vk_hexlify = binascii.hexlify(vk.to_string()).decode()
 
         vk_hex = "Verification key Qx: {0}\n".format(vk_hexlify[0:64])
         vk_hex += "Verification key Qy: {0}".format(vk_hexlify[64:128])
@@ -120,14 +123,14 @@ class Signing(object):
         vk_hex = binascii.hexlify(vk.to_string())
 
         vk_x_separated = ""
-        vk_x_str = vk_hex[0:64]
-        for i in xrange(0, len(vk_x_str), 2):
+        vk_x_str = vk_hex[0:64].decode()
+        for i in range(0, len(vk_x_str), 2):
             vk_x_separated += "0x" + vk_x_str[i:i+2] + ", "
         vk_x_separated = vk_x_separated[:-2]
 
         vk_y_separated = ""
-        vk_y_str = vk_hex[64:128]
-        for i in xrange(0, len(vk_y_str), 2):
+        vk_y_str = vk_hex[64:128].decode()
+        for i in range(0, len(vk_y_str), 2):
             vk_y_separated += "0x" + vk_y_str[i:i+2] + ", "
         vk_y_separated = vk_y_separated[:-2]
 
@@ -144,6 +147,6 @@ class Signing(object):
             raise IllegalStateException("Can't get key. No key created/loaded")
 
         vk = self.sk.get_verifying_key()
-        vk_pem = vk.to_pem()
+        vk_pem = vk.to_pem().decode()
 
         return vk_pem

@@ -46,7 +46,7 @@ def query_func(question, default=False):
 
     while True:
         print("%s %s" % (question, prompt))
-        choice = raw_input().lower()
+        choice = input().lower()
         if choice == '':
             return default
         elif choice in valid:

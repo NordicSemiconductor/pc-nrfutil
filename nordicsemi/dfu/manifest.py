@@ -85,11 +85,11 @@ class ManifestGenerator(object):
                 elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH:
                     init_packet_data.firmware_length = field
                 elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
-                    init_packet_data.firmware_hash = binascii.hexlify(field)
+                    init_packet_data.firmware_hash = binascii.hexlify(field).decode()
                 elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_CRC16:
                     init_packet_data.firmware_crc16 = field
                 elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_INIT_PACKET_ECDS:
-                    init_packet_data.init_packet_ecds = binascii.hexlify(field)
+                    init_packet_data.init_packet_ecds = binascii.hexlify(field).decode()
                 # mesh specific:
                 elif init_packet_data_key == PacketField.NORDIC_PROPRIETARY_OPT_DATA_MESH_TYPE:
                     pass #handled below
@@ -124,10 +124,11 @@ class ManifestGenerator(object):
 
     def to_json(self):
         def remove_none_entries(d):
+            print(d)
             if not isinstance(d, dict):
                 return d
 
-            return dict((k, remove_none_entries(v)) for k, v in d.iteritems() if v is not None)
+            return dict((k, remove_none_entries(v)) for k, v in d.items() if v is not None)
 
         return json.dumps({'manifest': self.manifest},
                           default=lambda o: remove_none_entries(o.__dict__),
