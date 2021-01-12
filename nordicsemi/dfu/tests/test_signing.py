@@ -77,7 +77,7 @@ class TestSinging(unittest.TestCase):
             PacketField.NORDIC_PROPRIETARY_OPT_DATA_EXT_PACKET_ID: 2,
             PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_LENGTH: 1234,
             PacketField.NORDIC_PROPRIETARY_OPT_DATA_FIRMWARE_HASH:
-                '\xc9\xd3\xbfi\xf2\x1e\x88\xa01\x1e\r\xd2BSa\x12\xf8BW\x9b\xef&Z$\xbd\x02U\xfdD?u\x9e',
+                b'\xc9\xd3\xbfi\xf2\x1e\x88\xa01\x1e\r\xd2BSa\x12\xf8BW\x9b\xef&Z$\xbd\x02U\xfdD?u\x9e',
         }
         init_packet = Packet(init_packet_fields)
         init_packet_data = init_packet.generate_packet()
