@@ -1,3 +1,10 @@
+""" 
+The tests seems to work with `python -m unittest`, but not by being called directly from the CLI 
+The setUp is called twice, and crashes when being asked to  do a `cd ./tests` for a second time 
+Look into a cleanup function 
+
+The behavior is inconsistent between 3.9 and 3.7 (3.7 fails)
+"""
 import os
 import unittest
 from click.testing import CliRunner
