@@ -14,12 +14,19 @@ from nordicsemi import __main__
 class TestManifest(unittest.TestCase):
     runner = CliRunner()
     cli = __main__.cli
+    original_path = os.path.abspath(os.path.curdir)
 
     def setUp(self):
         script_abspath = os.path.abspath(__file__)
         script_dirname = os.path.dirname(script_abspath)
+        self.original_path = os.path.abspath(os.path.curdir) # Make it possible to go back 
         os.chdir(script_dirname)
 
+    def tearDown(self) -> None:
+        """ 
+        Go back to the old dir
+        """
+        os.chdir(self.original_path)
     def test_pkg_gen(self):
         result = self.runner.invoke(self.cli,
                                     ['pkg', 'generate',
