@@ -10,6 +10,6 @@ piccata==2.0.1
 protobuf==3.10.0
 pyserial==3.4
 pyspinel==1.0.0a3
-PyYAML==5.1.2
+PyYAML==5.4
 tqdm==4.36.1
 wrapt==1.11.2
