@@ -106,7 +106,6 @@ class FileTargetDatabase(TargetDatabase):
         if not self.targets:
             with open(self.filename, "r") as f:
                 self.targets = json.load(f)["targets"]
-
         return self.targets
 
     def get_target(self, target_id):
