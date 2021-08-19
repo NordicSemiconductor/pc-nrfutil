@@ -71,7 +71,9 @@ class EnvTargetDatabase(TargetDatabase):
             self.targets = []
 
             for key, value in os.environ.items():
-                match = re.match(r"NORDICSEMI_TARGET_(?P<target>\d+)_(?P<key>[a-zA-Z_]+)", key)
+                match = re.match(
+                    r"NORDICSEMI_TARGET_(?P<target>\d+)_(?P<key>[a-zA-Z_]+)", key
+                )
 
                 if match:
                     key_value = match.groupdict()
@@ -102,7 +104,7 @@ class FileTargetDatabase(TargetDatabase):
 
     def get_targets(self):
         if not self.targets:
-            with open(self.filename, "r") as f: 
+            with open(self.filename, "r") as f:
                 self.targets = json.load(f)["targets"]
 
         return self.targets
