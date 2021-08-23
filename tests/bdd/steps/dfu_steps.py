@@ -55,7 +55,7 @@ ENUMERATE_WAIT_TIME = 5.0 # Seconds to wait for enumeration to finish
 all_boards = {
     'PCA10056': DeviceLister().get_device(get_all=True, vendor_id='1366'),
     'PCA10059': DeviceLister().get_device(get_all=True, vendor_id='1915')
-} 
+}
 boards = {}
 
 
@@ -239,7 +239,7 @@ def step_impl(context, image, image_type, board):
         snr = str(int(os.environ[board])) # Remove zeros to the left.
     else:
         snr = boards[board].serial_number.lower().lstrip('0')
-    
+
     if image_type == "usb-serial":
         port = program_image_usb_serial(context, nrfjprog, full_image_path, snr)
         context.args.extend(['-p', port])
@@ -263,7 +263,7 @@ def step_impl(context, nrfutil):
 
     result = context.runner.invoke(nrfutil, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, "exit_code: {}, output: \'{}\'".format( result.exit_code, result.output)
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting some time to ensure enumeration before next test.
 
 
@@ -275,7 +275,7 @@ def step_impl(context):
 
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, "exit_code: {}, output: \'{}\'".format( result.exit_code, result.output)
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting for device to enumerate
 
     devices_after_programming = lister.get_device(get_all=True, vendor_id="1915", product_id="C00A")
@@ -297,5 +297,5 @@ def step_impl(context):
     context.args[-1] = port
     result = context.runner.invoke(cli, context.args)
     logger.debug("exit_code: %s, output: \'%s\'", result.exit_code, result.output)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, "exit_code: {}, output: \'{}\'".format( result.exit_code, result.output)
     time.sleep(ENUMERATE_WAIT_TIME) # Waiting some time to ensure enumeration before next test.
