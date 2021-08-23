@@ -14,3 +14,7 @@ nrfutil.egg-info/
 /tests/test.zip
 .eggs/
 unittests.xml
+
+
+# Ignore vscode settings and debug-options
+.vscode/
