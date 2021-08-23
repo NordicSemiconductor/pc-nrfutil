@@ -373,9 +373,16 @@ def generate(hex_file,
     if bl_settings_version == 1 and (app_boot_validation or sd_boot_validation):
         raise click.BadParameter("Bootloader settings version 1 does not support boot validation.", param_hint='bl_settings_version')
 
-    if (app_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None) or \
-        (sd_boot_validation == 'VALIDATE_ECDSA_P256_SHA256' and key_file is None):
-        raise click.UsageError("Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
+    # load signing key (if needed) only once
+    if 'VALIDATE_ECDSA_P256_SHA256' in (app_boot_validation, sd_boot_validation):
+        if not os.path.isfile(key_file):
+            raise click.UsageError("Key file must be given when 'VALIDATE_ECDSA_P256_SHA256' boot validation is used")
+        signer = Signing()
+        default_key = signer.load_key(key_file)
+        if default_key:
+            display_sec_warning()
+    else:
+        signer = None
 
     if app_boot_validation and not application:
         raise click.UsageError("--application hex file must be set when using --app_boot_validation")
@@ -393,7 +400,7 @@ def generate(hex_file,
     sett.generate(arch=family, app_file=application, app_ver=application_version_internal, bl_ver=bootloader_version,
                   bl_sett_ver=bl_settings_version, custom_bl_sett_addr=start_address, no_backup=no_backup,
                   backup_address=backup_address, app_boot_validation_type=app_boot_validation,
-                  sd_boot_validation_type=sd_boot_validation, sd_file=softdevice, key_file=key_file)
+                  sd_boot_validation_type=sd_boot_validation, sd_file=softdevice, signer=signer)
     sett.tohexfile(hex_file)
 
     click.echo("\nGenerated Bootloader DFU settings .hex file and stored it in: {}".format(hex_file))
@@ -809,6 +816,7 @@ def generate(zipfile,
 
     if key_file is None:
         display_nokey_warning()
+        signer = None
     else:
         signer = Signing()
         default_key = signer.load_key(key_file)
@@ -869,7 +877,7 @@ def generate(zipfile,
                       softdevice,
                       sd_boot_validation,
                       app_boot_validation,
-                      key_file,
+                      signer,
                       inner_external_app,
                       zigbee,
                       zigbee_manufacturer_id,
@@ -903,7 +911,7 @@ def generate(zipfile,
                           None,
                           None,
                           None,
-                          key_file,
+                          signer,
                           True)
 
         package.generate_package(zipfile_path)

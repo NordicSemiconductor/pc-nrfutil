@@ -46,6 +46,7 @@ def calc_crc16(binary_data: bytes, crc=0xffff):
 
     for b in binary_data:
         crc = (crc >> 8 & 0x00FF) | (crc << 8 & 0xFF00)
+        crc ^= ord(b)
         crc ^= (crc & 0x00FF) >> 4
         crc ^= (crc << 8) << 4
         crc ^= ((crc & 0x00FF) << 4) << 1

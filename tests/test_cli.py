@@ -1,3 +1,10 @@
+""" 
+The tests seems to work with `python -m unittest`, but not by being called directly from the CLI 
+The setUp is called twice, and crashes when being asked to  do a `cd ./tests` for a second time 
+Look into a cleanup function 
+
+The behavior is inconsistent between 3.9 and 3.7 (3.7 fails)
+"""
 import os
 import unittest
 from click.testing import CliRunner
@@ -7,12 +14,19 @@ from nordicsemi import __main__
 class TestManifest(unittest.TestCase):
     runner = CliRunner()
     cli = __main__.cli
+    original_path = os.path.abspath(os.path.curdir)
 
     def setUp(self):
         script_abspath = os.path.abspath(__file__)
         script_dirname = os.path.dirname(script_abspath)
+        self.original_path = os.path.abspath(os.path.curdir) # Make it possible to go back 
         os.chdir(script_dirname)
 
+    def tearDown(self) -> None:
+        """ 
+        Go back to the old dir
+        """
+        os.chdir(self.original_path)
     def test_pkg_gen(self):
         result = self.runner.invoke(self.cli,
                                     ['pkg', 'generate',
