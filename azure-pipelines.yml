@@ -175,7 +175,6 @@ jobs:
           addChangeLog: "false"
         condition: ne(variables['Build.Reason'], 'PullRequest')
 
-  # 
   - job: TriggerTest
     dependsOn: [
       Windows,
