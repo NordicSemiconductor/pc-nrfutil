@@ -1182,7 +1182,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
                                         os.path.dirname(config.__file__),
                                         "hex",
                                         "sd_api_v5",
-                                        "connectivity_4.1.2_usb_with_s132_5.1.0_dfu_pkg.zip"
+                                        "connectivity_4.1.4_usb_with_s132_5.1.0_dfu_pkg.zip"
                                     )
             dfu = Dfu(zip_file_path=connectivity_firmware,
                       dfu_transport=serial_backend,
