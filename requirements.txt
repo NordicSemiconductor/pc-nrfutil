@@ -3,7 +3,7 @@ click
 crcmod
 ecdsa
 intelhex
-libusb1
+libusb1==1.9.3
 pc_ble_driver_py >= 0.16.1
 piccata
 protobuf
