@@ -373,7 +373,6 @@ class BLDFUSettings:
                 self.probe_settings(BLDFUSettings.bl_sett_52_addr)
                 self.set_arch('NRF52')
             except Exception as e:
-                print(e)
                 try:
                     self.probe_settings(BLDFUSettings.bl_sett_52_qfab_addr)
                     self.set_arch('NRF52QFAB')
