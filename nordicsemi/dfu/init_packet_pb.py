@@ -132,10 +132,6 @@ class InitPacketPB:
             raise RuntimeError("sd_size is not set. It must be set when type is SOFTDEVICE")
         elif self.init_command.type == pb.BOOTLOADER and self.init_command.bl_size == 0:
             raise RuntimeError("bl_size is not set. It must be set when type is BOOTLOADER")
-        elif self.init_command.type == pb.SOFTDEVICE_BOOTLOADER and \
-                (self.init_command.sd_size == 0 or self.init_command.bl_size == 0):
-            raise RuntimeError("Either sd_size or bl_size is not set. Both must be set when type "
-                               "is SOFTDEVICE_BOOTLOADER")
 
         if self.init_command.fw_version < 0 or self.init_command.fw_version > 0xffffffff or \
            self.init_command.hw_version < 0 or self.init_command.hw_version > 0xffffffff:

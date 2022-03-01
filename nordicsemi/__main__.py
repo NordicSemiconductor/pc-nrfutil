@@ -664,17 +664,13 @@ def generate(zipfile,
 
     * BL + SD: Supported.
 
-    * BL + APP: Not supported (use two packages instead).
+    * BL + APP: Supported.
 
     * BL + SD + APP: Supported.
 
     * SD + APP: Supported (SD of same Major Version).
     """
     zipfile_path = zipfile
-
-    # Check combinations
-    if bootloader is not None and application is not None and softdevice is None:
-        raise click.UsageError("Invalid combination: use two .zip packages instead.")
 
     if debug_mode is None:
         debug_mode = False
