@@ -280,7 +280,7 @@ def settings():
               help='The application version.',
               type=BASED_INT_OR_NONE)
 @click.option('--application-version-string',
-              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 207031.',
+              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 20731.',
               type=click.STRING)
 @click.option('--bootloader-version',
               help='The bootloader version.',
@@ -514,7 +514,7 @@ def pkg():
               help='The application version.',
               type=BASED_INT_OR_NONE)
 @click.option('--application-version-string',
-              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 207031.',
+              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 20731.',
               type=click.STRING)
 @click.option('--bootloader',
               help='The bootloader firmware file.',
