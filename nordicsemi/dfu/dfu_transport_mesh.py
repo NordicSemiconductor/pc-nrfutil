@@ -280,10 +280,7 @@ class DfuTransportMesh(DfuTransport):
         frames = []
         self._send_event(DfuEvent.PROGRESS_EVENT, progress=0, done=False, log_message="")
 
-        fw_segments = len(firmware) / DfuTransportMesh.DFU_PACKET_MAX_SIZE
-
-        if len(firmware) % DfuTransportMesh.DFU_PACKET_MAX_SIZE > 0:
-            fw_segments += 1
+        fw_segments = self.get_fw_segments()
 
         for segment in range(1, 1 + fw_segments):
             data_packet = ''
@@ -295,14 +292,7 @@ class DfuTransportMesh(DfuTransport):
 
         # add signature at the end
         for (segment, i) in enumerate(range(0, self.info.sign_len, DfuTransportMesh.DFU_PACKET_MAX_SIZE)):
-            sign_packet = ''
-            sign_packet += int16_to_bytes(MESH_DFU_PACKET_DATA)
-            sign_packet += int16_to_bytes(segment + fw_segments + 1)
-            sign_packet += int32_to_bytes(self.tid)
-            if i >= self.info.sign_len:
-                sign_packet += self.info.signature[i:]
-            else:
-                sign_packet += self.info.signature[i:i + DfuTransportMesh.DFU_PACKET_MAX_SIZE]
+            sign_packet = self.get_sign_packet(segment, i)
             frames.append(sign_packet)
 
         frames_count = len(frames)
@@ -339,6 +329,13 @@ class DfuTransportMesh(DfuTransport):
                              done=False)
             self.temp_progress = 0.0
 
+    def get_fw_segments(self):
+        fw_segments = len(self.firmware) / DfuTransportMesh.DFU_PACKET_MAX_SIZE
+
+        if len(self.firmware) % DfuTransportMesh.DFU_PACKET_MAX_SIZE > 0:
+            fw_segments += 1
+
+        return fw_segments
 
     def get_fw_segment(self, segment):
         i = (segment - 1) * DfuTransportMesh.DFU_PACKET_MAX_SIZE
@@ -351,6 +348,17 @@ class DfuTransportMesh(DfuTransport):
             return self.firmware[i:]
         else:
             return self.firmware[i:i + DfuTransportMesh.DFU_PACKET_MAX_SIZE]
+
+    def get_sign_packet(self, segment, i, rsp=False):
+        sign_packet = ''
+        sign_packet += int16_to_bytes(MESH_DFU_PACKET_DATA_RSP if rsp else MESH_DFU_PACKET_DATA)
+        sign_packet += int16_to_bytes(segment + self.get_fw_segments() + 1)
+        sign_packet += int32_to_bytes(self.tid)
+        if i >= self.info.sign_len:
+            sign_packet += self.info.signature[i:]
+        else:
+            sign_packet += self.info.signature[i:i + DfuTransportMesh.DFU_PACKET_MAX_SIZE]
+        return sign_packet
 
     def send_packet(self, pkt):
         wait_time = DfuTransportMesh.ACK_WAIT_TIME
@@ -424,9 +432,15 @@ class DfuTransportMesh(DfuTransport):
             rsp += int16_to_bytes(MESH_DFU_PACKET_DATA_RSP)
             rsp += data[:6]
             fw_segment = self.get_fw_segment(segment)
-            if not fw_segment:
+            if fw_segment:
+                rsp += fw_segment
+            elif (segment > self.get_fw_segments() and
+                segment <= self.get_fw_segments() +
+                (self.info.sign_len /  DfuTransportMesh.DFU_PACKET_MAX_SIZE)):
+                index = segment - self.get_fw_segments() - 1
+                rsp = self.get_sign_packet(index, index * DfuTransportMesh.DFU_PACKET_MAX_SIZE, True)
+            else:
                 return # invalid segment number
-            rsp += fw_segment
 
             self.requested_packets.append(rsp)
 
