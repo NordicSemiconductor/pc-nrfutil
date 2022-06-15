@@ -85,13 +85,11 @@ class nRFHex(intelhex.IntelHex):
 
     def _removeuicr(self):
         uicr_start_address = 0x10000000
-        maxaddress = self.maxaddr()
         self._buf = {k: v for k, v in self._buf.items() if k < uicr_start_address}
 
     def _removembr(self):
         mbr_end_address = 0x1000
-        minaddress = super().minaddr()
-        self._buf = {k: v for k, v in self._buf.items() if k > mbr_end_address}
+        self._buf = {k: v for k, v in self._buf.items() if k >= mbr_end_address}
 
     def address_has_magic_number(self, address):
         try:
