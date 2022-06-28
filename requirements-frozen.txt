@@ -4,7 +4,7 @@ crcmod==1.7
 ecdsa==0.17.0
 intelhex==2.3.0
 libusb1==1.9.3
-# pc-ble-driver-py==0.16.1
+pc-ble-driver-py==0.16.4
 piccata==2.0.1
 protobuf==3.17.3
 pyserial==3.5
