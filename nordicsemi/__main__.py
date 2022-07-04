@@ -280,7 +280,7 @@ def settings():
               help='The application version.',
               type=BASED_INT_OR_NONE)
 @click.option('--application-version-string',
-              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 207031.',
+              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 20731.',
               type=click.STRING)
 @click.option('--bootloader-version',
               help='The bootloader version.',
@@ -514,7 +514,7 @@ def pkg():
               help='The application version.',
               type=BASED_INT_OR_NONE)
 @click.option('--application-version-string',
-              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 207031.',
+              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 20731.',
               type=click.STRING)
 @click.option('--bootloader',
               help='The bootloader firmware file.',
@@ -1182,7 +1182,7 @@ def ble(package, conn_ic_id, port, connect_delay, name, address, jlink_snr, flas
                                         os.path.dirname(config.__file__),
                                         "hex",
                                         "sd_api_v5",
-                                        "connectivity_4.1.1_usb_with_s132_5.1.0_dfu_pkg.zip"
+                                        "connectivity_4.1.2_usb_with_s132_5.1.0_dfu_pkg.zip"
                                     )
             dfu = Dfu(zip_file_path=connectivity_firmware,
                       dfu_transport=serial_backend,

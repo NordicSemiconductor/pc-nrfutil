@@ -25,7 +25,9 @@ datas.append((os.path.join(nrfutil_path, "libusb", "x86", "libusb-1.0.dll"), os.
 datas.append((os.path.join(nrfutil_path, "libusb", "x64", "libusb-1.0.dll"), os.path.join("libusb", "x64")))
 datas.append((os.path.join(nrfutil_path, "nordicsemi", "zigbee", "hex", "ota.hex"),
               os.path.join("nordicsemi", "zigbee", "hex")))
-
+datas.append((os.path.join(nrfutil_path, "nordicsemi", "thread", "hex", "ncp.hex"),
+              os.path.join("nordicsemi", "thread", "hex")))
+              
 a = Analysis(['nordicsemi/__main__.py'],
              binaries=None,
              datas=datas,
