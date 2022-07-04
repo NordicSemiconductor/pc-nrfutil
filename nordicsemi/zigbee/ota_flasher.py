@@ -92,12 +92,16 @@ class OTAFlasher(Flasher):
         '''Check if the path_to_file hexfile was flashed correctly'''
         try:
             result = self.verify(path_to_file)
-        except subprocess.CalledProcessError as e:
-            if (e.returncode == OTAFlasher.ERROR_CODE_VERIFY_ERROR):
+        except subprocess.CalledProcessError as e:  # for pc-ble-driver <= 0.14.2, can be removed when requirements
+            # will be updated to >= 0.15.0
+            if e.returncode == OTAFlasher.ERROR_CODE_VERIFY_ERROR:
                 return False
             else:
                 raise
-        return (re.search('^Verified OK.$', result, re.MULTILINE) is not None)
+        except RuntimeError:  # for pc-ble-driver >= 0.15.0
+            return False
+
+        return (re.search(b'^Verified OK.$', result, re.MULTILINE) is not None)
 
     def fw_check(self):
         '''Check if all the hex files (OTA Server firmware and Zigbee Update file) were flashed correctly'''

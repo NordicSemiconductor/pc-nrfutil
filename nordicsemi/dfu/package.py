@@ -127,7 +127,7 @@ class Package:
                  softdevice_fw=None,
                  sd_boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
                  app_boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
-                 key_file=None,
+                 signer=None,
                  is_external=False,
                  zigbee_format=False,
                  manufacturer_id=0,
@@ -148,7 +148,7 @@ class Package:
         :param str app_fw: Path to application firmware file
         :param str bootloader_fw: Path to bootloader firmware file
         :param str softdevice_fw: Path to softdevice firmware file
-        :param str key_file: Path to Signing key file (PEM)
+        :param Signing signer: Instance of Signing() for Signing key file (PEM)
         :param int zigbee_ota_min_hw_version: Minimal zigbee ota hardware version
         :param int zigbee_ota_max_hw_version: Maximum zigbee ota hardware version
         :return: None
@@ -201,7 +201,8 @@ class Package:
                                      boot_validation_type=sd_boot_validation_type,
                                      init_packet_data=init_packet_vars)
 
-        self.key_file = key_file
+        assert(not signer or isinstance(signer, Signing))
+        self.signer = signer
 
         self.work_dir = None
         self.manifest = None
@@ -436,9 +437,9 @@ DFU Package: <{0}>:
             for x in boot_validation_type_array:
                 if x  == ValidationTypes.VALIDATE_ECDSA_P256_SHA256:
                     if key == HexType.SD_BL:
-                        boot_validation_bytes_array.append(Package.sign_firmware(self.key_file, sd_bin_path))
+                        boot_validation_bytes_array.append(Package.sign_firmware(self.signer, sd_bin_path))
                     else:
-                        boot_validation_bytes_array.append(Package.sign_firmware(self.key_file, bin_file_path))
+                        boot_validation_bytes_array.append(Package.sign_firmware(self.signer, bin_file_path))
                 else:
                     boot_validation_bytes_array.append(b'')
 
@@ -458,10 +459,8 @@ DFU Package: <{0}>:
                             bl_size=bl_size,
                             sd_req=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.REQUIRED_SOFTDEVICES_ARRAY])
 
-            if (self.key_file is not None):
-                signer = Signing()
-                signer.load_key(self.key_file)
-                signature = signer.sign(init_packet.get_init_command_bytes())
+            if (self.signer is not None):
+                signature = self.signer.sign(init_packet.get_init_command_bytes())
                 init_packet.set_signature(signature, SigningTypes.ECDSA_P256_SHA256)
 
             # Store the .dat file in the work directory
@@ -573,12 +572,11 @@ DFU Package: <{0}>:
             raise ValueError("Invalid CRC type")
 
     @staticmethod
-    def sign_firmware(key, firmware_filename):
+    def sign_firmware(signer, firmware_filename):
+        assert(isinstance(signer, Signing))
         data_buffer = b''
         with open(firmware_filename, 'rb') as firmware_file:
             data_buffer = firmware_file.read()
-        signer = Signing()
-        signer.load_key(key)
         return signer.sign(data_buffer)
 
     def create_manifest(self):

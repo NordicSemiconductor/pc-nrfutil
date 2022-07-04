@@ -303,10 +303,10 @@ class DFUAdapter(BLEDriverObserver, BLEAdapterObserver):
                 )
                 time.sleep(1)
 
-                self.adapter.connect(
-                    address=self.target_device_addr_type, conn_params=self.conn_params
-                )
-                self.conn_handle = self.evt_sync.wait("connected")
+                self.adapter.connect(address=self.target_device_addr_type,
+                                     conn_params=self.conn_params,
+                                     tag=1)
+                self.conn_handle = self.evt_sync.wait('connected')
                 retries -= 1
             else:
                 if self.evt_sync.wait("disconnected", timeout=1) is not None:
