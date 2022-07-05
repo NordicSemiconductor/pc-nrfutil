@@ -280,7 +280,7 @@ def settings():
               help='The application version.',
               type=BASED_INT_OR_NONE)
 @click.option('--application-version-string',
-              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 207031.',
+              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 20731.',
               type=click.STRING)
 @click.option('--bootloader-version',
               help='The bootloader version.',
@@ -514,7 +514,7 @@ def pkg():
               help='The application version.',
               type=BASED_INT_OR_NONE)
 @click.option('--application-version-string',
-              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 207031.',
+              help='The application version string, e.g. "2.7.31". Will be converted to an integer, e.g. 20731.',
               type=click.STRING)
 @click.option('--bootloader',
               help='The bootloader firmware file.',
@@ -537,12 +537,18 @@ def pkg():
                    '\n|s112_nrf52_6.1.1|0xB8|'
                    '\n|s112_nrf52_7.0.0|0xC4|'
                    '\n|s112_nrf52_7.0.1|0xCD|'
+                   '\n|s112_nrf52_7.2.0|0x103|'
+                   '\n|s112_nrf52_7.3.0|0x126|'
                    '\n|s113_nrf52_7.0.0|0xC3|'
                    '\n|s113_nrf52_7.0.1|0xCC|'
+                   '\n|s113_nrf52_7.2.0|0x102|'
+                   '\n|s113_nrf52_7.3.0|0x125|'
+                   '\n|s122_nrf52_8.0.0|0xEA|'
+                   '\n|s122_nrf52_8.1.1|0x112|'
                    '\n|s130_nrf51_1.0.0|0x67|'
                    '\n|s130_nrf51_2.0.0|0x80|'
-                   '\n|s132_nrf52_2.0.0|0x81|'
                    '\n|s130_nrf51_2.0.1|0x87|'
+                   '\n|s132_nrf52_2.0.0|0x81|'
                    '\n|s132_nrf52_2.0.1|0x88|'
                    '\n|s132_nrf52_3.0.0|0x8C|'
                    '\n|s132_nrf52_3.1.0|0x91|'
@@ -558,11 +564,15 @@ def pkg():
                    '\n|s132_nrf52_6.1.1|0xB7|'
                    '\n|s132_nrf52_7.0.0|0xC2|'
                    '\n|s132_nrf52_7.0.1|0xCB|'
+                   '\n|s132_nrf52_7.2.0|0x101|'
+                   '\n|s132_nrf52_7.3.0|0x124|'
                    '\n|s140_nrf52_6.0.0|0xA9|'
                    '\n|s140_nrf52_6.1.0|0xAE|'
                    '\n|s140_nrf52_6.1.1|0xB6|'
                    '\n|s140_nrf52_7.0.0|0xC1|'
                    '\n|s140_nrf52_7.0.1|0xCA|'
+                   '\n|s140_nrf52_7.2.0|0x100|'
+                   '\n|s140_nrf52_7.3.0|0x123|'
                    '\n|s212_nrf52_6.1.1|0xBC|'
                    '\n|s332_nrf52_6.1.1|0xBA|'
                    '\n|s340_nrf52_6.1.1|0xB9|',
