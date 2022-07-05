@@ -176,6 +176,9 @@ class Package:
 
         self.firmwares_data = {}
 
+        if sd_req is not None:
+            init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
+
         if app_fw:
             firmware_type = HexType.EXTERNAL_APPLICATION if is_external else HexType.APPLICATION
             self.__add_firmware_info(firmware_type=firmware_type,
@@ -184,8 +187,6 @@ class Package:
                                      boot_validation_type=app_boot_validation_type,
                                      init_packet_data=init_packet_vars)
 
-        if sd_req is not None:
-            init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
 
         if bootloader_fw:
             self.__add_firmware_info(firmware_type=HexType.BOOTLOADER,
