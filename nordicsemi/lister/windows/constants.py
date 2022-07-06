@@ -57,6 +57,8 @@ class DevicePropertyKeys:
         """DEVPKEY_Device_xxx constants"""
         ContainerId = DevicePropertyKey('{8c7ed206-3f8a-4827-b3ab-ae9e1faefc6c}', 2,
                                         'DEVPKEY_Device_ContainerId')
+        DeviceAddress = DevicePropertyKey('{a45c254e-df1c-4efd-8020-67d146a850e0}', 30,
+                                        'DEVPKEY_Device_Address')
 
 # noinspection SpellCheckingInspection
 DIGCF_DEFAULT = DiGetClassDevsFlags.Default
