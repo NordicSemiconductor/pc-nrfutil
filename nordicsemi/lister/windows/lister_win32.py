@@ -92,6 +92,12 @@ def get_serial_serial_no(vendor_id, product_id, h_dev_info, device_info_data):
 
     wanted_GUID = GUID(ctypesInternalGUID(instance_id_buffer))
 
+    device_address = ctypes.c_int32()
+    res = setup_api.SetupDiGetDevicePropertyW(h_dev_info, ctypes.byref(device_info_data),
+                                              ctypes.byref(DEVPKEY.Device.DeviceAddress),
+                                              ctypes.byref(prop_type), ctypes.byref(device_address),
+                                              ctypes.sizeof(ctypes.c_int32), ctypes.byref(required_size), 0)
+
     hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}".format(vendor_id, product_id)
     try:
         vendor_product_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
@@ -120,9 +126,15 @@ def get_serial_serial_no(vendor_id, product_id, h_dev_info, device_info_data):
             winreg.CloseKey(device_hkey)
             continue
 
+        try:
+            queried_address = winreg.QueryValueEx(device_hkey, "Address")[0]
+        except EnvironmentError as err:
+            winreg.CloseKey(device_hkey)
+            continue
+
         winreg.CloseKey(device_hkey)
 
-        if queried_container_id.lower() == str(wanted_GUID).lower():
+        if queried_container_id.lower() == str(wanted_GUID).lower() and queried_address == device_address.value:
             winreg.CloseKey(vendor_product_hkey)
             return serial_number
 
