@@ -6,7 +6,7 @@ intelhex==2.3.0
 libusb1==1.9.3
 pc-ble-driver-py==0.17.0
 piccata==2.0.1
-protobuf==3.17.3
+protobuf==3.18.3
 pyserial==3.5
 pyspinel==1.0.3
 PyYAML==5.4.1
