@@ -190,8 +190,8 @@ class Package:
         # softdevice. Moving the setting of the `REQUIRED_SOFTDEVICES_ARRAY`
         # field to be `sd_req` to before the `self__.add_firmware_info` call
         # for HexType.EXTERNAL_APPLICATION can lead customers potentially
-        # bricking their devices when updating the app. There may be
-        # configurations that avoid the issues referenced in
+        # bricking their devices when updating the application on the device.
+        # There may be configurations that avoid the issues referenced in
         # https://github.com/NordicSemiconductor/pc-nrfutil/pull/349, but a
         # stable solution is currently favored, and changes will not be
         # accepted without some level of testing to ensure that a similar but
