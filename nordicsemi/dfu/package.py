@@ -176,8 +176,6 @@ class Package:
 
         self.firmwares_data = {}
 
-        if sd_req is not None:
-            init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
 
         if app_fw:
             firmware_type = HexType.EXTERNAL_APPLICATION if is_external else HexType.APPLICATION
@@ -187,6 +185,26 @@ class Package:
                                      boot_validation_type=app_boot_validation_type,
                                      init_packet_data=init_packet_vars)
 
+        # WARNING
+        # Do not move the setting of the `REQUIRED_SOFTDEVICES_ARRAY`
+        # field to be `sd_req` to before the `self__.add_firmware_info` call
+        # for HexType.EXTERNAL_APPLICATION.
+        #
+        # When doing a dfu update, the sd_req, specifies that whatever is being
+        # updated requires some version of the softdevice. In the case when
+        # somebody does a an update with both an application and a softdevice,
+        # both sd_req and sd_id are used at the same time. Moving assignment up
+        # will cause the versions accepted for the softdevice to also be
+        # accepted for the application, which can lead to invalid updates. If
+        # the value 0x00 is provided, it can also lead to the softdevice being
+        # deleted.
+        #
+        # Moving was tried https://github.com/NordicSemiconductor/pc-nrfutil/pull/349, but a
+        # stable solution is currently favored over one solving this particular
+        # issue. Any changes will have to be sufficiently tested to enusre a
+        # similar bug has not been introduced.
+        if sd_req is not None:
+            init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
 
         if bootloader_fw:
             self.__add_firmware_info(firmware_type=HexType.BOOTLOADER,
