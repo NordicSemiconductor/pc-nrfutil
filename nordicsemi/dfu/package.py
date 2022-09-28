@@ -187,7 +187,7 @@ class Package:
 
         # WARNING
         # The code 0x00 in the sd_req field translates to deleting the
-        # softdevice, so moving the setting of the sd_req the REQUIRED_SOFTDEVICES_ARRAY field  to
+        # softdevice, so moving the setting of the sd_req the REQUIRED_SOFTDEVICES_ARRAY field to
         # before the `self.add_firmware_info` is called can lead to customers potentially
         # bricking their devices. There may be configurations that avoid the
         # issues referenced in
