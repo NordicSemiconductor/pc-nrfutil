@@ -185,6 +185,16 @@ class Package:
                                      boot_validation_type=app_boot_validation_type,
                                      init_packet_data=init_packet_vars)
 
+        # WARNING
+        # The code 0x00 in the sd_req filed translates to deleting the
+        # softdevice, so moving the setting of the sd_req the REQUIRED_SOFTDEVICES_ARRAY field  to
+        # before the `self.add_firmware_info` is called can lead to customers potentially
+        # bricking their devices. There may be configurations that avoid the
+        # issues referenced in
+        # https://github.com/NordicSemiconductor/pc-nrfutil/pull/349PR , but a
+        # stable solution is currently favored, and changes will not be accepted
+        # without some level of testing to ensure that a similar but has not
+        # been introduced. 
         if sd_req is not None:
             init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
 
