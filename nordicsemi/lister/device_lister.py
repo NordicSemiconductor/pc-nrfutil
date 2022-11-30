@@ -60,11 +60,11 @@ class DeviceLister:
         devices = self.enumerate()
         matching_devices = []
         for dev in devices:
-            if "vendor_id" in kwargs and kwargs["vendor_id"].lower() != dev.vendor_id.lower():
+            if kwargs.get("vendor_id", None) and kwargs["vendor_id"].lower() != dev.vendor_id.lower():
                 continue
-            if "product_id" in kwargs and kwargs["product_id"].lower() != dev.product_id.lower():
+            if kwargs.get("product_id", None) and kwargs["product_id"].lower() != dev.product_id.lower():
                 continue
-            if "serial_number" in kwargs and (kwargs["serial_number"].lower().lstrip('0') !=
+            if kwargs.get("serial_number", None) and (kwargs["serial_number"].lower().lstrip('0') !=
                                               dev.serial_number.lower().lstrip('0')):
                 continue
             if "com" in kwargs and not dev.has_com_port(kwargs["com"]):
