@@ -112,7 +112,9 @@ class Signing:
 
         # Verify init packet
         try:
-            vk.verify(signature, init_packet, hashfunc=hashlib.sha256)
+            # swap signature back, as done in sign function
+            swapped_signature = signature[31::-1] + signature[63:31:-1]
+            vk.verify(swapped_signature, init_packet, hashfunc=hashlib.sha256)
         except:
             return False
 
