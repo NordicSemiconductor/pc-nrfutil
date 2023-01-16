@@ -1,9 +1,15 @@
 # nRF Util
 
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
 [![Latest version](https://img.shields.io/pypi/v/nrfutil.svg)](https://pypi.python.org/pypi/nrfutil)
 [![License](https://img.shields.io/pypi/l/nrfutil.svg)](https://pypi.python.org/pypi/nrfutil)
-[![Build Status](https://dev.azure.com/NordicSemiconductor/Wayland/_apis/build/status/pc-nrfutil?branchName=master)](https://dev.azure.com/NordicSemiconductor/Wayland/_build?definitionId=30)
 
+## DEPRECATION NOTICE
+This tool is deprecated. The feature set in this tool is available through a new tool with the same name.
+If you need the feature set in this version, please install the new nrfutil from the [official page](https://www.nordicsemi.com/Products/Development-tools/nrf-util).
+
+
+## Intro
 nRF Util is a Python package and command-line utility that supports Device Firmware Updates (DFU) and cryptographic functionality.
 
 ![screenshot](screenshot.gif)
